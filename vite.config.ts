@@ -70,6 +70,62 @@ function resolveProjectPath(project: ActiveProject, projectRelativePath: string)
   return resolved;
 }
 
+interface DirTreeNode {
+  name: string;
+  path: string;
+  type: "dir" | "file";
+  ext?: string;
+  size?: number;
+  children?: DirTreeNode[];
+}
+
+// Read-only recursive listing of a project directory. Used by the editor's
+// Content Drawer to mirror the live asset folders. Depth and entry count are
+// capped so a stray symlink loop or huge tree cannot stall the dev server.
+async function readDirTree(
+  absDir: string,
+  relDir: string,
+  depth: number,
+  budget: { remaining: number },
+): Promise<DirTreeNode[]> {
+  if (depth <= 0 || budget.remaining <= 0) return [];
+  const entries = await readdir(absDir, { withFileTypes: true });
+  const nodes: DirTreeNode[] = [];
+  for (const entry of entries) {
+    if (budget.remaining <= 0) break;
+    if (entry.name.startsWith(".")) continue;
+    budget.remaining -= 1;
+    const childRel = relDir ? `${relDir}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      nodes.push({
+        name: entry.name,
+        path: childRel,
+        type: "dir",
+        children: await readDirTree(
+          resolve(absDir, entry.name),
+          childRel,
+          depth - 1,
+          budget,
+        ),
+      });
+    } else if (entry.isFile()) {
+      const fileStat = await stat(resolve(absDir, entry.name));
+      nodes.push({
+        name: entry.name,
+        path: childRel,
+        type: "file",
+        ext: extname(entry.name).toLowerCase().replace(/^\./, ""),
+        size: fileStat.size,
+      });
+    }
+  }
+  nodes.sort((a, b) => {
+    if (a.type !== b.type) return a.type === "dir" ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+  return nodes;
+}
+
 function contentTypeFor(path: string): string {
   const ext = extname(path).toLowerCase();
   if (ext === ".json") return "application/json; charset=utf-8";
@@ -90,45 +146,60 @@ function isNumberTuple(value: unknown): value is [number, number, number] {
   );
 }
 
-function validatePlacement(value: unknown): {
-  position: [number, number, number];
-  rotationYDeg?: number;
-  scale?: number;
-} {
+function validateRotationDeg(value: unknown, label: string): number {
+  const degrees = Number(value);
+  if (!Number.isFinite(degrees) || degrees < -360 || degrees > 360) {
+    throw new Error(`invalid ${label}: ${value}`);
+  }
+  return Number(degrees.toFixed(1));
+}
+
+function validateScaleValue(value: unknown, label: string): number {
+  const scale = Number(value);
+  if (!Number.isFinite(scale) || scale <= 0 || scale > 8) {
+    throw new Error(`invalid ${label}: ${value}`);
+  }
+  return Number(scale.toFixed(3));
+}
+
+/** Copies the optional transform/authoring fields onto `target`, validating each. */
+function applyTransformFields(
+  entry: Record<string, unknown>,
+  target: Record<string, unknown>,
+  label: string,
+): void {
+  if (typeof entry.name === "string") target.name = entry.name;
+  if (entry.hidden === true) target.hidden = true;
+  if (entry.locked === true) target.locked = true;
+  if (entry.scaleLocked === true) target.scaleLocked = true;
+
+  if (entry.rotationYDeg !== undefined) {
+    target.rotationYDeg = validateRotationDeg(entry.rotationYDeg, `${label} rotationYDeg`);
+  }
+  if (entry.rotation !== undefined) {
+    if (!isNumberTuple(entry.rotation)) throw new Error(`invalid ${label} rotation`);
+    target.rotation = entry.rotation.map((axis) =>
+      validateRotationDeg(axis, `${label} rotation component`),
+    );
+  }
+  if (entry.scale !== undefined) {
+    target.scale = isNumberTuple(entry.scale)
+      ? entry.scale.map((axis) => validateScaleValue(axis, `${label} scale component`))
+      : validateScaleValue(entry.scale, `${label} scale`);
+  }
+}
+
+function validatePlacement(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object") {
     throw new Error("placement must be an object");
   }
   const entry = value as Record<string, unknown>;
   if (!isNumberTuple(entry.position)) throw new Error("invalid placement position");
 
-  const placement: {
-    position: [number, number, number];
-    rotationYDeg?: number;
-    scale?: number;
-  } = {
-    position: entry.position.map((item) => Number(item.toFixed(3))) as [
-      number,
-      number,
-      number,
-    ],
+  const placement: Record<string, unknown> = {
+    position: entry.position.map((item) => Number(item.toFixed(3))),
   };
-
-  if (entry.rotationYDeg !== undefined) {
-    const rotationYDeg = Number(entry.rotationYDeg);
-    if (!Number.isFinite(rotationYDeg) || rotationYDeg < -360 || rotationYDeg > 360) {
-      throw new Error(`invalid rotationYDeg: ${entry.rotationYDeg}`);
-    }
-    placement.rotationYDeg = Number(rotationYDeg.toFixed(1));
-  }
-
-  if (entry.scale !== undefined) {
-    const scale = Number(entry.scale);
-    if (!Number.isFinite(scale) || scale <= 0 || scale > 8) {
-      throw new Error(`invalid scale: ${entry.scale}`);
-    }
-    placement.scale = Number(scale.toFixed(3));
-  }
-
+  applyTransformFields(entry, placement, "placement");
   return placement;
 }
 
@@ -177,22 +248,8 @@ function validateLayout(value: unknown): unknown {
       assetId: item.assetId,
       position: item.position.map((number) => Number(number.toFixed(3))),
     };
-    if (typeof item.name === "string") entry.name = item.name;
     if (typeof item.animation === "string") entry.animation = item.animation;
-    if (item.rotationYDeg !== undefined) {
-      const rotationYDeg = Number(item.rotationYDeg);
-      if (!Number.isFinite(rotationYDeg) || rotationYDeg < -360 || rotationYDeg > 360) {
-        throw new Error(`invalid character rotationYDeg: ${item.rotationYDeg}`);
-      }
-      entry.rotationYDeg = Number(rotationYDeg.toFixed(1));
-    }
-    if (item.scale !== undefined) {
-      const scale = Number(item.scale);
-      if (!Number.isFinite(scale) || scale <= 0 || scale > 8) {
-        throw new Error(`invalid character scale: ${item.scale}`);
-      }
-      entry.scale = Number(scale.toFixed(3));
-    }
+    applyTransformFields(item, entry, "character");
     return entry;
   });
 
@@ -217,11 +274,46 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
 }
 
+// Endpoints that write files, spawn processes, or open host-side OS dialogs.
+// These must never be reachable from the LAN even when `server.host` is true;
+// only the read-only endpoints (/__project, /__project-file, /__recent-projects)
+// stay open so real-device (LAN) testing can still render scenes.
+const PRIVILEGED_URL_PREFIXES = ["/__studio/"];
+const PRIVILEGED_URLS = new Set(["/__save-layout", "/__select-directory"]);
+
+function isPrivilegedUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  const path = url.split("?")[0] ?? url;
+  if (PRIVILEGED_URLS.has(path)) return true;
+  return PRIVILEGED_URL_PREFIXES.some((prefix) => path.startsWith(prefix));
+}
+
+// Trust only the real peer socket address, never spoofable forwarded headers.
+function isLocalRequest(req: IncomingMessage): boolean {
+  const address = req.socket.remoteAddress ?? "";
+  return (
+    address === "::1" ||
+    address === "::ffff:127.0.0.1" ||
+    address.startsWith("127.")
+  );
+}
+
 function layoutEditorPlugin(): Plugin {
   return {
     name: "3dgamedev-layout-editor",
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
+        if (isPrivilegedUrl(req.url) && !isLocalRequest(req)) {
+          res.statusCode = 403;
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(
+            JSON.stringify({
+              error: "Forbidden: authoring endpoints are restricted to localhost.",
+            }),
+          );
+          return;
+        }
+
         if (req.url === "/__project") {
           try {
             const project = await loadActiveProject();
@@ -330,6 +422,28 @@ function layoutEditorPlugin(): Plugin {
                 error: error instanceof Error ? error.message : String(error),
               }),
             );
+          }
+          return;
+        }
+
+        if (req.url?.startsWith("/__project-dir/")) {
+          try {
+            const project = await loadActiveProject();
+            const encodedPath = req.url.slice("/__project-dir/".length).split("?")[0] ?? "";
+            const projectPath = decodeURIComponent(encodedPath);
+            const dirPath = resolveProjectPath(project, projectPath);
+            const dirStat = await stat(dirPath);
+            if (!dirStat.isDirectory()) throw new Error(`not a directory: ${projectPath}`);
+            const normalizedRoot = projectPath.replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
+            const children = await readDirTree(dirPath, normalizedRoot, 12, {
+              remaining: 5000,
+            });
+            res.setHeader("Content-Type", "application/json; charset=utf-8");
+            res.end(JSON.stringify({ root: normalizedRoot, children }));
+          } catch (error) {
+            res.statusCode = 404;
+            res.setHeader("Content-Type", "application/json; charset=utf-8");
+            res.end(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }));
           }
           return;
         }

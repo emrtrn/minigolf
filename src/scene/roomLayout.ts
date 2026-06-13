@@ -1,7 +1,18 @@
+export type Vec3 = [number, number, number];
+
 export interface LayoutPlacement {
-  position: [number, number, number];
+  name?: string;
+  hidden?: boolean;
+  locked?: boolean;
+  position: Vec3;
+  /** Legacy Y-only rotation in degrees. Read as a fallback when `rotation` is absent. */
   rotationYDeg?: number;
-  scale?: number;
+  /** Full Euler rotation (XYZ order) in degrees. Preferred over `rotationYDeg`. */
+  rotation?: Vec3;
+  /** Uniform scalar (legacy) or per-axis scale. */
+  scale?: number | Vec3;
+  /** Editor hint: keep scale axes proportional when editing. */
+  scaleLocked?: boolean;
 }
 
 export interface LayoutModelInstances {
@@ -12,9 +23,17 @@ export interface LayoutModelInstances {
 export interface LayoutCharacter {
   assetId: string;
   name?: string;
-  position: [number, number, number];
+  hidden?: boolean;
+  locked?: boolean;
+  position: Vec3;
+  /** Legacy Y-only rotation in degrees. Read as a fallback when `rotation` is absent. */
   rotationYDeg?: number;
-  scale?: number;
+  /** Full Euler rotation (XYZ order) in degrees. Preferred over `rotationYDeg`. */
+  rotation?: Vec3;
+  /** Uniform scalar (legacy) or per-axis scale. */
+  scale?: number | Vec3;
+  /** Editor hint: keep scale axes proportional when editing. */
+  scaleLocked?: boolean;
   animation?: string;
 }
 
@@ -45,4 +64,22 @@ export async function loadRoomLayout(pathOrName: string): Promise<RoomLayout> {
 
 export function degreesToRadians(degrees: number | undefined): number {
   return ((degrees ?? 0) * Math.PI) / 180;
+}
+
+/** Resolves a placement's rotation to a full XYZ Euler vector (degrees). */
+export function readRotation(
+  source: { rotation?: Vec3; rotationYDeg?: number },
+): Vec3 {
+  if (source.rotation) {
+    return [source.rotation[0], source.rotation[1], source.rotation[2]];
+  }
+  return [0, source.rotationYDeg ?? 0, 0];
+}
+
+/** Resolves a placement's scale (uniform scalar or per-axis) to an XYZ vector. */
+export function readScale(source: { scale?: number | Vec3 }): Vec3 {
+  const scale = source.scale;
+  if (Array.isArray(scale)) return [scale[0], scale[1], scale[2]];
+  const value = scale ?? 1;
+  return [value, value, value];
 }
