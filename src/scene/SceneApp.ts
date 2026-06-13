@@ -57,8 +57,14 @@ const GIZMO_OPACITY = 0.42;
 const GIZMO_ACTIVE_OPACITY = 0.62;
 const GIZMO_ACTIVE_COLOR = 0xff9f1a;
 const CAMERA_MOVE_SPEED = 5.5;
+const CAMERA_MIN_MOVE_SPEED = 0.8;
+const CAMERA_MAX_MOVE_SPEED = 28;
 const CAMERA_LOOK_SENSITIVITY = 0.003;
 const CAMERA_PITCH_LIMIT = Math.PI * 0.47;
+const CAMERA_ORBIT_SENSITIVITY = 0.006;
+const CAMERA_PAN_SENSITIVITY = 0.0025;
+const CAMERA_DOLLY_SENSITIVITY = 0.018;
+const GIZMO_SCREEN_SIZE_PX = 118;
 
 type EditorTool = "select" | "move" | "rotate" | "scale";
 type TransformSpace = "world" | "local";
@@ -86,6 +92,22 @@ interface LinkedMoveStart {
   selection: Selection;
   startTransform: EditableTransform;
 }
+
+type CameraDrag =
+  | {
+      mode: "orbit";
+      pointerId: number;
+      target: Vector3;
+      distance: number;
+    }
+  | {
+      mode: "pan";
+      pointerId: number;
+    }
+  | {
+      mode: "dolly";
+      pointerId: number;
+    };
 
 export interface EditableTransform {
   position: Vec3;
@@ -176,6 +198,8 @@ export class SceneApp {
   private cameraNavigationPointerId: number | null = null;
   private cameraYaw = 0;
   private cameraPitch = 0;
+  private cameraMoveSpeed = CAMERA_MOVE_SPEED;
+  private cameraDrag: CameraDrag | null = null;
 
   private manifest: AssetManifest | null = null;
   private layout: RoomLayout | null = null;
@@ -292,6 +316,7 @@ export class SceneApp {
 
       for (const mixer of this.mixers) mixer.update(deltaMs / 1000);
       this.updateCameraNavigation(deltaMs / 1000);
+      this.updateGizmoScreenScale();
 
       this.renderer.render(this.scene, this.camera);
       this.onFrame?.(deltaMs);
@@ -484,7 +509,7 @@ export class SceneApp {
   }
 
   isCameraNavigating(): boolean {
-    return this.cameraNavigationActive;
+    return this.cameraNavigationActive || this.cameraDrag !== null;
   }
 
   setSnapSettings(values: Partial<typeof this.snapSettings>): void {
@@ -500,13 +525,15 @@ export class SceneApp {
 
   focusSelected(): void {
     const selected = this.getSelected();
-    if (!selected) {
+    if (!selected || !this.selection) {
       this.onStatus?.("No selected object to focus.", "warning");
       return;
     }
 
-    const target = new Vector3(...selected.position);
-    target.y += 0.65;
+    const box = this.getSelectionWorldBox(this.selection);
+    const target = box && !box.isEmpty()
+      ? box.getCenter(new Vector3())
+      : new Vector3(selected.position[0], selected.position[1] + 0.65, selected.position[2]);
 
     const viewDirection = new Vector3();
     this.camera.getWorldDirection(viewDirection);
@@ -514,12 +541,35 @@ export class SceneApp {
       viewDirection.copy(CAMERA_TARGET).sub(this.camera.position).normalize();
     }
 
-    const distance = clamp(4.5 * Math.max(...selected.scale, 0.8), 3, 8);
+    const radius = box && !box.isEmpty() ? box.getSize(new Vector3()).length() * 0.5 : 0.8;
+    const distance = clamp(radius * 1.8, 1.25, 4.2);
     this.camera.position.copy(target).addScaledVector(viewDirection, -distance);
+    this.camera.up.set(0, 1, 0);
     this.camera.lookAt(target);
     this.cameraNavigationTouched = true;
     this.syncCameraAnglesFromCurrentView();
     this.onStatus?.(`Focused ${selected.label}.`, "info");
+  }
+
+  setTechnicalView(view: "top" | "front" | "side"): void {
+    const target = this.getCameraOrbitTarget();
+    const distance = clamp(this.camera.position.distanceTo(target), 3, 10);
+    this.cameraNavigationTouched = true;
+
+    if (view === "top") {
+      this.camera.up.set(0, 0, -1);
+      this.camera.position.copy(target).add(new Vector3(0, distance, 0));
+    } else if (view === "front") {
+      this.camera.up.set(0, 1, 0);
+      this.camera.position.copy(target).add(new Vector3(0, 0, distance));
+    } else {
+      this.camera.up.set(0, 1, 0);
+      this.camera.position.copy(target).add(new Vector3(distance, 0, 0));
+    }
+
+    this.camera.lookAt(target);
+    this.syncCameraAnglesFromCurrentView();
+    this.onStatus?.(`${view[0]!.toUpperCase()}${view.slice(1)} view`, "info");
   }
 
   surfaceSnapSelected(): void {
@@ -1591,6 +1641,15 @@ export class SceneApp {
 
   private bindEditorPointerEvents(): void {
     this.canvas.addEventListener("pointerdown", (event) => {
+      if (event.altKey) {
+        const gizmoHandle = this.pickGizmoHandle(event.clientX, event.clientY);
+        if (event.button === 0 && gizmoHandle && this.selection) {
+          this.startGizmoDrag(gizmoHandle, event);
+          return;
+        }
+        if (this.beginAltCameraDrag(event)) return;
+      }
+
       if (event.button === 2) {
         this.beginCameraNavigation(event);
         return;
@@ -1627,6 +1686,11 @@ export class SceneApp {
         return;
       }
 
+      if (this.cameraDrag?.pointerId === event.pointerId) {
+        this.updateCameraDrag(event);
+        return;
+      }
+
       if (!this.pointerDrag || this.pointerDrag.pointerId !== event.pointerId) return;
       const selected = this.getSelected();
       if (!selected) return;
@@ -1643,6 +1707,9 @@ export class SceneApp {
     const clearDrag = (event: PointerEvent) => {
       if (this.cameraNavigationPointerId === event.pointerId) {
         this.endCameraNavigation(event);
+      }
+      if (this.cameraDrag?.pointerId === event.pointerId) {
+        this.endCameraDrag(event);
       }
       if (this.pointerDrag?.pointerId === event.pointerId) {
         const drag = this.pointerDrag;
@@ -1675,6 +1742,7 @@ export class SceneApp {
       if (!assetId) return;
       this.addAssetAt(assetId, event.clientX, event.clientY);
     });
+    this.canvas.addEventListener("wheel", this.handleWheel, { passive: false });
   }
 
   private beginCameraNavigation(event: PointerEvent): void {
@@ -1682,6 +1750,7 @@ export class SceneApp {
     this.cameraNavigationActive = true;
     this.cameraNavigationTouched = true;
     this.cameraNavigationPointerId = event.pointerId;
+    this.camera.up.set(0, 1, 0);
     this.pointerDrag = null;
     this.pendingAssetId = null;
     this.canvas.style.cursor = "none";
@@ -1707,6 +1776,101 @@ export class SceneApp {
     this.canvas.style.cursor = "";
   }
 
+  private beginAltCameraDrag(event: PointerEvent): boolean {
+    if (event.button !== 0 && event.button !== 1 && event.button !== 2) return false;
+    event.preventDefault();
+    this.cameraNavigationTouched = true;
+    this.pointerDrag = null;
+    this.pendingAssetId = null;
+
+    if (event.button === 0) {
+      this.camera.up.set(0, 1, 0);
+      const target = this.getCameraOrbitTarget();
+      this.cameraDrag = {
+        mode: "orbit",
+        pointerId: event.pointerId,
+        target,
+        distance: Math.max(0.3, this.camera.position.distanceTo(target)),
+      };
+      this.canvas.style.cursor = "grabbing";
+      this.onStatus?.("Camera orbit");
+    } else if (event.button === 1) {
+      this.cameraDrag = { mode: "pan", pointerId: event.pointerId };
+      this.canvas.style.cursor = "move";
+      this.onStatus?.("Camera pan");
+    } else {
+      this.camera.up.set(0, 1, 0);
+      this.cameraDrag = { mode: "dolly", pointerId: event.pointerId };
+      this.canvas.style.cursor = "ns-resize";
+      this.onStatus?.("Camera dolly");
+    }
+
+    try {
+      this.canvas.setPointerCapture(event.pointerId);
+    } catch {
+      // Pointer capture can be unavailable in synthetic events.
+    }
+    return true;
+  }
+
+  private updateCameraDrag(event: PointerEvent): void {
+    if (!this.cameraDrag) return;
+    event.preventDefault();
+    this.cameraNavigationTouched = true;
+
+    if (this.cameraDrag.mode === "orbit") {
+      this.cameraYaw -= event.movementX * CAMERA_ORBIT_SENSITIVITY;
+      this.cameraPitch = clamp(
+        this.cameraPitch - event.movementY * CAMERA_ORBIT_SENSITIVITY,
+        -CAMERA_PITCH_LIMIT,
+        CAMERA_PITCH_LIMIT,
+      );
+      const lookDirection = this.getCameraLookDirection();
+      this.camera.position
+        .copy(this.cameraDrag.target)
+        .addScaledVector(lookDirection, -this.cameraDrag.distance);
+      this.camera.lookAt(this.cameraDrag.target);
+      this.syncCameraAnglesFromCurrentView();
+      return;
+    }
+
+    if (this.cameraDrag.mode === "pan") {
+      const distanceScale = Math.max(1, this.getCameraOrbitTarget().distanceTo(this.camera.position));
+      const right = new Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion).normalize();
+      const up = new Vector3(0, 1, 0).applyQuaternion(this.camera.quaternion).normalize();
+      this.camera.position
+        .addScaledVector(right, -event.movementX * CAMERA_PAN_SENSITIVITY * distanceScale)
+        .addScaledVector(up, event.movementY * CAMERA_PAN_SENSITIVITY * distanceScale);
+      return;
+    }
+
+    this.dollyCamera(event.movementY * CAMERA_DOLLY_SENSITIVITY);
+  }
+
+  private endCameraDrag(event: PointerEvent): void {
+    this.cameraDrag = null;
+    this.syncCameraAnglesFromCurrentView();
+    try {
+      if (this.canvas.hasPointerCapture(event.pointerId)) {
+        this.canvas.releasePointerCapture(event.pointerId);
+      }
+    } catch {
+      // Pointer capture may already be gone.
+    }
+    this.canvas.style.cursor = "";
+  }
+
+  private handleWheel = (event: WheelEvent): void => {
+    event.preventDefault();
+    if (this.cameraNavigationActive) {
+      this.adjustCameraMoveSpeed(event.deltaY);
+      return;
+    }
+
+    this.cameraNavigationTouched = true;
+    this.dollyCamera(event.deltaY * CAMERA_DOLLY_SENSITIVITY);
+  };
+
   private updateCameraLook(movementX: number, movementY: number): void {
     this.cameraYaw -= movementX * CAMERA_LOOK_SENSITIVITY;
     this.cameraPitch = clamp(
@@ -1715,6 +1879,45 @@ export class SceneApp {
       CAMERA_PITCH_LIMIT,
     );
     this.applyCameraOrientation();
+  }
+
+  private getCameraLookDirection(): Vector3 {
+    return new Vector3(
+      -Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch),
+      Math.sin(this.cameraPitch),
+      -Math.cos(this.cameraYaw) * Math.cos(this.cameraPitch),
+    ).normalize();
+  }
+
+  private getCameraOrbitTarget(): Vector3 {
+    if (this.selection) {
+      const box = this.getSelectionWorldBox(this.selection);
+      if (box && !box.isEmpty()) return box.getCenter(new Vector3());
+    }
+
+    const direction = new Vector3();
+    this.camera.getWorldDirection(direction);
+    const floorHit = this.raycaster.ray
+      .set(this.camera.position, direction)
+      .intersectPlane(this.floorPlane, new Vector3());
+    return floorHit ?? this.camera.position.clone().addScaledVector(direction, 5);
+  }
+
+  private dollyCamera(amount: number): void {
+    const direction = new Vector3();
+    this.camera.getWorldDirection(direction);
+    if (direction.lengthSq() === 0) return;
+    this.camera.position.addScaledVector(direction.normalize(), -amount);
+  }
+
+  private adjustCameraMoveSpeed(deltaY: number): void {
+    const factor = deltaY < 0 ? 1.15 : 1 / 1.15;
+    this.cameraMoveSpeed = clamp(
+      this.cameraMoveSpeed * factor,
+      CAMERA_MIN_MOVE_SPEED,
+      CAMERA_MAX_MOVE_SPEED,
+    );
+    this.onStatus?.(`Camera speed ${this.cameraMoveSpeed.toFixed(1)}`, "info");
   }
 
   private updateCameraNavigation(deltaSeconds: number): void {
@@ -1731,7 +1934,7 @@ export class SceneApp {
     if (this.pressedKeys.has("KeyQ")) this.cameraMove.y -= 1;
 
     if (this.cameraMove.lengthSq() === 0) return;
-    this.cameraMove.normalize().multiplyScalar(CAMERA_MOVE_SPEED * deltaSeconds);
+    this.cameraMove.normalize().multiplyScalar(this.cameraMoveSpeed * deltaSeconds);
     this.camera.position.add(this.cameraMove);
   }
 
@@ -1763,6 +1966,7 @@ export class SceneApp {
   }
 
   private applyCameraOrientation(): void {
+    this.camera.up.set(0, 1, 0);
     const lookDirection = new Vector3(
       -Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch),
       Math.sin(this.cameraPitch),
@@ -2212,6 +2416,17 @@ export class SceneApp {
     } else if (this.activeTool === "scale") {
       this.addScaleGizmo();
     }
+    this.updateGizmoScreenScale();
+  }
+
+  private updateGizmoScreenScale(): void {
+    if (!this.gizmoGroup.visible) return;
+    const viewportHeight = this.renderer.domElement.clientHeight || window.innerHeight || 1;
+    const distance = Math.max(0.01, this.camera.position.distanceTo(this.gizmoGroup.position));
+    const viewHeight = 2 * Math.tan(degreesToRadians(this.camera.fov) / 2) * distance;
+    const worldUnitsPerPixel = viewHeight / viewportHeight;
+    const scale = clamp(worldUnitsPerPixel * GIZMO_SCREEN_SIZE_PX, 0.35, 4);
+    this.gizmoGroup.scale.setScalar(scale);
   }
 
   private clearGizmo(): void {
@@ -2226,6 +2441,7 @@ export class SceneApp {
       child.removeFromParent();
     }
     this.gizmoPickables.length = 0;
+    this.gizmoGroup.scale.setScalar(1);
     this.gizmoGroup.visible = false;
   }
 

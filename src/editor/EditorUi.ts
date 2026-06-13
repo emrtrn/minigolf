@@ -75,6 +75,7 @@ export class EditorUi {
     this.root = document.createElement("div");
     this.root.id = "editor-ui";
     this.root.className = "editor-shell";
+    this.root.addEventListener("contextmenu", (event) => event.preventDefault());
     this.root.innerHTML = `
       <header class="editor-topbar">
         <div class="editor-brand">
@@ -371,6 +372,15 @@ export class EditorUi {
     } else if (event.code === "KeyF") {
       event.preventDefault();
       this.app.focusSelected();
+    } else if (event.code === "Digit1") {
+      event.preventDefault();
+      this.app.setTechnicalView("top");
+    } else if (event.code === "Digit2") {
+      event.preventDefault();
+      this.app.setTechnicalView("front");
+    } else if (event.code === "Digit3") {
+      event.preventDefault();
+      this.app.setTechnicalView("side");
     } else if (event.code === "KeyH" && event.shiftKey) {
       event.preventDefault();
       this.app.showHiddenObjects();

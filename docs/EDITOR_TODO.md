@@ -51,10 +51,10 @@ Kaynak: `C:\Users\emret\Desktop\GPTEditorSohbeti.txt` icindeki web sohbet notlar
   - [x] Snap acik / kapali toggle'lari var.
   - [x] Move secenekleri 0.25 / 0.5 / 1 olacak sekilde editor is akisi icin iyilestirildi.
   - [x] Surface snap, wall snap ve floor drop var.
-- [ ] Kamera input modu.
+- [x] Kamera input modu.
   - [x] RMB basiliyken kamera kontrolu var.
-  - [ ] RMB + mouse wheel ile camera speed ayari yok.
-  - [ ] Alt + mouse orbit / pan / zoom yok.
+  - [x] RMB + mouse wheel ile camera speed ayari var.
+  - [x] Alt + mouse orbit / pan / zoom var.
 
 ## Oncelikli Siradaki Isler
 
@@ -109,14 +109,16 @@ Kaynak: `C:\Users\emret\Desktop\GPTEditorSohbeti.txt` icindeki web sohbet notlar
     objenin yonune cevirir; rotate (Y) ve uniform scale her iki modda ayni calisir.
 - [ ] Pivot duzenleme icin ilk altyapiyi planla.
   - Ozellikle kapi, pencere, dolap kapagi ve kose objelerinde gerekli olacak.
-- [ ] Viewport orbit / pan / zoom ekle.
-  - Alt + LMB: orbit.
-  - Alt + MMB: pan.
-  - Alt + RMB: zoom / dolly.
-- [ ] Camera Speed ayari ekle.
-  - RMB + mouse wheel ile hiz artip azalabilmeli.
-- [ ] Top / Front / Side View ekle.
-  - Hizalama isleri icin teknik gorunumler.
+- [x] Viewport orbit / pan / zoom ekle.
+  - [x] Alt + LMB: orbit.
+  - [x] Alt + MMB: pan.
+  - [x] Alt + RMB: zoom / dolly.
+  - [x] Mouse wheel: viewport dolly / zoom.
+- [x] Camera Speed ayari ekle.
+  - [x] RMB + mouse wheel ile hiz artip azalabilmeli.
+- [x] Top / Front / Side View ekle.
+  - [x] Hizalama isleri icin teknik gorunumler.
+  - [x] 1: Top, 2: Front, 3: Side.
 
 ### P3 - Selection ve organizasyon
 
