@@ -118,6 +118,7 @@ import type {
   EditorCommand,
   EditorHistoryState,
 } from "@editor/core/history";
+import { EditorHistory } from "@editor/core/history";
 import {
   compareCharacterDeletes,
   compareCharacterRestores,
@@ -348,8 +349,7 @@ export class SceneApp {
         pivot?: Vec3 | undefined;
       }
     | null = null;
-  private readonly undoStack: EditorCommand[] = [];
-  private readonly redoStack: EditorCommand[] = [];
+  private readonly history = new EditorHistory();
 
   /** Called every frame with the smoothed delta; used by the debug overlay. */
   onFrame: ((deltaMs: number) => void) | null = null;
@@ -586,28 +586,19 @@ export class SceneApp {
   }
 
   getHistoryState(): EditorHistoryState {
-    return {
-      canUndo: this.undoStack.length > 0,
-      canRedo: this.redoStack.length > 0,
-      undoLabel: this.undoStack.at(-1)?.label ?? null,
-      redoLabel: this.redoStack.at(-1)?.label ?? null,
-    };
+    return this.history.state();
   }
 
   undo(): void {
-    const command = this.undoStack.pop();
+    const command = this.history.undo();
     if (!command) return;
-    command.undo();
-    this.redoStack.push(command);
     this.emitHistoryChanged();
     this.onStatus?.(`Undo: ${command.label}`, "info");
   }
 
   redo(): void {
-    const command = this.redoStack.pop();
+    const command = this.history.redo();
     if (!command) return;
-    command.redo();
-    this.undoStack.push(command);
     this.emitHistoryChanged();
     this.onStatus?.(`Redo: ${command.label}`, "info");
   }
@@ -3989,9 +3980,7 @@ export class SceneApp {
   }
 
   private executeCommand(command: EditorCommand): void {
-    command.redo();
-    this.undoStack.push(command);
-    this.redoStack.length = 0;
+    this.history.execute(command);
     this.emitHistoryChanged();
     this.onStatus?.(command.label, "success");
   }

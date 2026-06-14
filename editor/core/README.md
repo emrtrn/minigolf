@@ -11,7 +11,7 @@ Current files:
   equality checks used by editor undo/redo snapshots.
 - `editableScene.ts`: editor-facing scene object, selection transform, and world
   settings contracts consumed by the editor UI.
-- `history.ts`: editor command and undo/redo history state contracts.
+- `history.ts`: editor command contracts plus undo/redo history stack behavior.
 - `layoutTransforms.ts`: pure layout rotation/scale write helpers used when
   committing editor transform changes.
 
