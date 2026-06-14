@@ -80,7 +80,6 @@ import {
 import type {
   LayoutCharacter,
   LayoutLightActor,
-  LayoutMetadata,
   LayoutPlacement,
   LayoutWorldSettings,
   MetadataValue,
@@ -104,6 +103,14 @@ import {
   transformsEqual,
 } from "@editor/core/layoutSnapshots";
 import {
+  selectionToTransform,
+  worldSettingsEqual,
+  type EditableSceneObject,
+  type EditableSelection,
+  type EditableTransform,
+  type EditorWorldSettings,
+} from "@editor/core/editableScene";
+import {
   compareCharacterDeletes,
   compareCharacterRestores,
   compareInstanceDeletes,
@@ -118,6 +125,13 @@ import {
   type LightSelection,
   type Selection,
 } from "@editor/core/selection";
+
+export type {
+  EditableSceneObject,
+  EditableSelection,
+  EditableTransform,
+  EditorWorldSettings,
+} from "@editor/core/editableScene";
 
 /** Perf budget: clamp DPR so 1080p+ phones don't render 3x fragments. */
 const MAX_PIXEL_RATIO = 2;
@@ -192,55 +206,6 @@ type CameraDrag =
       pointerId: number;
     };
 
-export interface EditableTransform {
-  position: Vec3;
-  /** Full Euler rotation (XYZ order) in degrees. */
-  rotation: Vec3;
-  /** Per-axis scale. */
-  scale: Vec3;
-}
-
-export interface EditableSelection {
-  id: string;
-  kind: Selection["kind"];
-  assetId: string;
-  /** Asset catalog/manifest category, resolved for display. Empty when unknown. */
-  category: string;
-  label: string;
-  position: Vec3;
-  rotation: Vec3;
-  scale: Vec3;
-  /** Local-space authoring pivot offset; `[0,0,0]` means the model origin. */
-  pivot: Vec3;
-  scaleLocked: boolean;
-  locked: boolean;
-  /** Resolved cast-shadow flag (absent in data means true). */
-  castShadow: boolean;
-  /** Resolved collision flag (absent in data means true). */
-  collision: boolean;
-  /** Project-defined gameplay metadata (schema-driven); empty when none set. */
-  metadata: LayoutMetadata;
-  lightType?: LayoutLightActor["type"];
-  color?: string;
-  intensity?: number;
-  distance?: number;
-  angle?: number;
-  penumbra?: number;
-  decay?: number;
-}
-
-export interface EditableSceneObject extends EditableSelection {
-  selected: boolean;
-  hidden: boolean;
-  locked: boolean;
-  /** Flat group id shared by grouped objects (move together). */
-  groupId?: string | undefined;
-  /** Stable id used to reference this object as a parent. */
-  nodeId?: string | undefined;
-  /** Parent reference (the parent's nodeId). */
-  parentId?: string | undefined;
-}
-
 export interface EditorHistoryState {
   canUndo: boolean;
   canRedo: boolean;
@@ -261,16 +226,6 @@ export interface EditorSnapSettings {
   moveEnabled: boolean;
   rotateEnabled: boolean;
   scaleEnabled: boolean;
-}
-
-export interface EditorWorldSettings {
-  lightingMode: "Dynamic";
-  shadowFilter: "PCF Soft";
-  staticObjectsCastShadow: boolean;
-  staticObjectsReceiveShadow: boolean;
-  backgroundColor: string;
-  ambientColor: string;
-  ambientIntensity: number;
 }
 
 interface EditorCommand {
@@ -4227,24 +4182,6 @@ function cloneSelection(selection: Selection): Selection {
   }
   if (selection.kind === "light") return { kind: "light", index: selection.index };
   return { kind: "character", index: selection.index };
-}
-
-function selectionToTransform(selection: EditableSelection): EditableTransform {
-  return {
-    position: [...selection.position],
-    rotation: [...selection.rotation],
-    scale: [...selection.scale],
-  };
-}
-
-function worldSettingsEqual(left: EditorWorldSettings, right: EditorWorldSettings): boolean {
-  return (
-    left.staticObjectsCastShadow === right.staticObjectsCastShadow &&
-    left.staticObjectsReceiveShadow === right.staticObjectsReceiveShadow &&
-    left.backgroundColor.toLowerCase() === right.backgroundColor.toLowerCase() &&
-    left.ambientColor.toLowerCase() === right.ambientColor.toLowerCase() &&
-    left.ambientIntensity === right.ambientIntensity
-  );
 }
 
 function clampIndex(index: number, length: number): number {
