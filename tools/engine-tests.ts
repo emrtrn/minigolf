@@ -34,6 +34,7 @@ import { ActionMap } from "../engine/input/actionMap";
 import { InputSubsystem } from "../engine/input/inputSubsystem";
 import { BehaviorSubsystem } from "../engine/behavior/behaviorSubsystem";
 import type { BehaviorRegistry } from "../engine/behavior/behaviorSubsystem";
+import { KeyboardInputSource } from "../src/input/keyboardInputSource";
 import type { Entity } from "../engine/scene/entity";
 import { selectionId } from "../editor/core/selection";
 import type { LayoutCharacter, LayoutLightActor, RoomLayout } from "../engine/scene/layout";
@@ -482,6 +483,57 @@ check("behavior subsystem ticks behaviors and mutates transforms deterministical
   assert.equal(synced.length, 4); // 2 behaviored entities x 2 ticks (inert excluded)
   assert.equal(synced.filter((s) => s.id === "character:0").at(-1)?.rotationY, 90);
   assert.equal(synced.filter((s) => s.id === "character:1").at(-1)?.x, 1);
+});
+
+// 6.1.5 The real KeyboardInputSource feeds raw DOM key codes into the action
+// map (the only runtime input link a browser would otherwise be needed to
+// exercise). Uses an injected fake window, so no DOM/jsdom is required.
+check("keyboard input source feeds raw codes into the action map", () => {
+  const listeners = new Map<string, (event: unknown) => void>();
+  const fakeWindow = {
+    addEventListener: (type: string, fn: (event: unknown) => void) => {
+      listeners.set(type, fn);
+    },
+    removeEventListener: (type: string) => {
+      listeners.delete(type);
+    },
+  } as unknown as Window;
+
+  const actions = new ActionMap({ KeyW: "move-forward" });
+  const source = new KeyboardInputSource(actions, fakeWindow);
+  source.attach();
+
+  const fire = (type: string, event: Record<string, unknown>): void => {
+    const handler = listeners.get(type);
+    assert.ok(handler, `expected a ${type} listener`);
+    handler?.(event);
+  };
+
+  // Real keydown -> action held after the next advance.
+  fire("keydown", { code: "KeyW", repeat: false });
+  actions.advance();
+  assert.equal(actions.held("move-forward"), true);
+
+  // Auto-repeat keydown must not re-fire as a fresh press.
+  actions.advance(); // consume the press edge
+  fire("keydown", { code: "KeyW", repeat: true });
+  actions.advance();
+  assert.equal(actions.pressed("move-forward"), false);
+  assert.equal(actions.held("move-forward"), true);
+
+  // keyup -> released for one tick.
+  fire("keyup", { code: "KeyW", repeat: false });
+  actions.advance();
+  assert.equal(actions.released("move-forward"), true);
+
+  // blur clears stuck physical state; detach removes all listeners.
+  fire("keydown", { code: "KeyW", repeat: false });
+  fire("blur", {});
+  actions.advance();
+  assert.equal(actions.held("move-forward"), false);
+
+  source.detach();
+  assert.equal(listeners.size, 0);
 });
 
 // 6.2 The scene model can represent a mesh entity, a light entity, metadata,

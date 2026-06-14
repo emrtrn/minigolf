@@ -96,6 +96,11 @@ inspection-only. This checklist makes the spine actually run.
 - [x] `npm run build:verify` reports only the known baseline warning(s)
   (`/__save-layout` in the game chunk; 22 engine checks pass).
 - [ ] Game Mode demonstrates one scripted entity reacting to an input action
-  (the smallest "the spine drives gameplay" proof). Authored: the
-  `customer-character-a` character carries the `input-move` behavior; pending a
-  live browser confirmation.
+  (the smallest "the spine drives gameplay" proof). Authored + pipeline-tested:
+  the `customer-character-a` character carries the `input-move` behavior, and the
+  full chain is covered by engine tests with the real components — real
+  `KeyboardInputSource` (injected fake window) -> `ActionMap` -> `InputSubsystem`
+  -> `BehaviorSubsystem` -> transform sink. Only the literal in-browser visual is
+  unobserved (no Playwright/Puppeteer in the repo; would need a dep install).
+  To confirm by hand: open Game Mode `/`, press W/A/S/D or the arrow keys, and
+  watch `customer-character-a` slide across the floor.
