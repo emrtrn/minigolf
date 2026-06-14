@@ -579,6 +579,35 @@ check("physics subsystem reports deterministic placeholder contacts", () => {
   ]);
 });
 
+await checkAsync("rapier physics backend reports contacts through the same contract", async () => {
+  const physics = new PhysicsSubsystem({ backend: "rapier" });
+  physics.setEntities([
+    {
+      id: "dynamic",
+      components: {
+        Transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+        Collider: { shape: "box", size: [1, 1, 1], isStatic: false, isSensor: false },
+      },
+    },
+    {
+      id: "wall",
+      components: {
+        Transform: { position: [0.25, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+        Collider: { shape: "box", size: [1, 1, 1], isStatic: true, isSensor: false },
+      },
+    },
+  ]);
+
+  const app = new EngineApp();
+  app.registerSubsystem(physics);
+  await app.init();
+  app.update(0.016);
+  assert.deepEqual(physics.contactsForEntity("dynamic"), [
+    { a: "dynamic", b: "wall", isSensor: false },
+  ]);
+  await app.dispose();
+});
+
 check("behavior can react to physics contacts from the engine tick", () => {
   const physics = new PhysicsSubsystem();
   const registry: BehaviorRegistry = {

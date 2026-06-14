@@ -604,8 +604,10 @@ export default defineConfig({
   build: {
     // Mobile target: WebGL2-capable browsers all support ES2022 baseline features we use.
     target: "es2022",
-    // Perf budget guard: warn early if a chunk creeps past ~250 KB (pre-gzip).
-    chunkSizeWarningLimit: 800,
+    // Rapier's compat/WASM runtime is intentionally isolated in vendor-physics
+    // and is much larger than the game entry. Keep Vite's global chunk warning
+    // above that known lazy chunk while verify:dist guards runtime-only output.
+    chunkSizeWarningLimit: 2400,
     rollupOptions: {
       output: {
         manualChunks(id) {

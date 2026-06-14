@@ -322,7 +322,7 @@ export class SceneApp {
   /** Raw-code -> named-action map; advanced each tick by the InputSubsystem. */
   private readonly inputActions = new ActionMap(DEFAULT_INPUT_BINDINGS);
   private readonly inputSubsystem = new InputSubsystem(this.inputActions);
-  private readonly physicsSubsystem = new PhysicsSubsystem();
+  private readonly physicsSubsystem = new PhysicsSubsystem({ backend: "rapier" });
   /** Browser keyboard -> action map bridge (observer only, both modes). */
   private readonly keyboardInput = new KeyboardInputSource(this.inputActions);
   /** Ticks scene behaviors against the derived entity set (assigned in ctor). */

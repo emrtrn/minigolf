@@ -9,6 +9,11 @@ import type { Entity, EntityId } from "../scene/entity";
 import type { PhysicsContact, PhysicsQuery } from "../behavior/behaviorSubsystem";
 
 export const PHYSICS_SUBSYSTEM_ID = "physics";
+export type PhysicsBackend = "placeholder" | "rapier";
+
+export interface PhysicsSubsystemOptions {
+  backend?: PhysicsBackend;
+}
 
 interface PhysicsBody {
   id: EntityId;
@@ -21,10 +26,38 @@ interface Aabb {
   max: [number, number, number];
 }
 
+type RapierModule = typeof import("@dimforge/rapier3d-compat");
+type RapierWorld = InstanceType<RapierModule["World"]>;
+type RapierRigidBody = ReturnType<RapierWorld["createRigidBody"]>;
+type RapierCollider = ReturnType<RapierWorld["createCollider"]>;
+
+interface RapierBodyRecord {
+  id: EntityId;
+  body: RapierRigidBody;
+  collider: RapierCollider;
+  isSensor: boolean;
+}
+
 export class PhysicsSubsystem implements Subsystem, PhysicsQuery {
   readonly id = PHYSICS_SUBSYSTEM_ID;
+  private readonly backend: PhysicsBackend;
   private bodies: PhysicsBody[] = [];
   private contacts: PhysicsContact[] = [];
+  private rapierModule: RapierModule | null = null;
+  private rapierWorld: RapierWorld | null = null;
+  private rapierBodies = new Map<EntityId, RapierBodyRecord>();
+  private rapierColliderToEntity = new Map<number, EntityId>();
+
+  constructor(options: PhysicsSubsystemOptions = {}) {
+    this.backend = options.backend ?? "placeholder";
+  }
+
+  async init(): Promise<void> {
+    if (this.backend !== "rapier") return;
+    this.rapierModule = await import("@dimforge/rapier3d-compat");
+    await this.rapierModule.init();
+    this.rebuildRapierWorld();
+  }
 
   setEntities(entities: readonly Entity[]): void {
     const bodies: PhysicsBody[] = [];
@@ -40,12 +73,21 @@ export class PhysicsSubsystem implements Subsystem, PhysicsQuery {
     }
     this.bodies = bodies;
     this.contacts = [];
+    if (this.rapierModule) this.rebuildRapierWorld();
   }
 
   setEntityTransform(entityId: EntityId, transform: TransformComponent): void {
     const body = this.bodies.find((candidate) => candidate.id === entityId);
     if (!body) return;
     body.transform = cloneTransform(transform);
+    const rapier = this.rapierBodies.get(entityId);
+    if (!rapier) return;
+    const translation = vectorFromTransform(transform);
+    if (rapier.body.isKinematic()) {
+      rapier.body.setNextKinematicTranslation(translation);
+    } else {
+      rapier.body.setTranslation(translation, true);
+    }
   }
 
   contactsForEntity(entityId: EntityId): readonly PhysicsContact[] {
@@ -53,6 +95,10 @@ export class PhysicsSubsystem implements Subsystem, PhysicsQuery {
   }
 
   update(_context: EngineUpdateContext): void {
+    if (this.rapierWorld) {
+      this.updateRapierContacts();
+      return;
+    }
     const contacts: PhysicsContact[] = [];
     for (let i = 0; i < this.bodies.length; i += 1) {
       for (let j = i + 1; j < this.bodies.length; j += 1) {
@@ -78,6 +124,79 @@ export class PhysicsSubsystem implements Subsystem, PhysicsQuery {
 
   dispose(): void {
     this.clear();
+    this.rapierWorld?.free();
+    this.rapierWorld = null;
+    this.rapierBodies.clear();
+    this.rapierColliderToEntity.clear();
+  }
+
+  private rebuildRapierWorld(): void {
+    const RAPIER = this.rapierModule;
+    if (!RAPIER) return;
+    this.rapierWorld?.free();
+    this.rapierWorld = new RAPIER.World({ x: 0, y: 0, z: 0 });
+    this.rapierBodies.clear();
+    this.rapierColliderToEntity.clear();
+
+    for (const body of this.bodies) {
+      const desc = body.collider.isStatic
+        ? RAPIER.RigidBodyDesc.fixed()
+        : RAPIER.RigidBodyDesc.kinematicPositionBased();
+      desc.setTranslation(
+        body.transform.position[0],
+        body.transform.position[1],
+        body.transform.position[2],
+      );
+      const rigidBody = this.rapierWorld.createRigidBody(desc);
+      const collider = this.rapierWorld.createCollider(
+        colliderDescForBody(RAPIER, body).setSensor(body.collider.isSensor),
+        rigidBody,
+      );
+      this.rapierBodies.set(body.id, {
+        id: body.id,
+        body: rigidBody,
+        collider,
+        isSensor: body.collider.isSensor,
+      });
+      this.rapierColliderToEntity.set(collider.handle, body.id);
+    }
+  }
+
+  private updateRapierContacts(): void {
+    if (!this.rapierWorld) return;
+    this.rapierWorld.step();
+    const contacts: PhysicsContact[] = [];
+    const seen = new Set<string>();
+    for (const record of this.rapierBodies.values()) {
+      this.rapierWorld.contactPairsWith(record.collider, (other) => {
+        this.addRapierContact(contacts, seen, record, other);
+      });
+      this.rapierWorld.intersectionPairsWith(record.collider, (other) => {
+        this.addRapierContact(contacts, seen, record, other);
+      });
+    }
+    this.contacts = contacts;
+  }
+
+  private addRapierContact(
+    contacts: PhysicsContact[],
+    seen: Set<string>,
+    a: RapierBodyRecord,
+    bCollider: RapierCollider,
+  ): void {
+    const bId = this.rapierColliderToEntity.get(bCollider.handle);
+    if (!bId || bId === a.id) return;
+    const b = this.rapierBodies.get(bId);
+    if (!b) return;
+    const [left, right] = a.id < b.id ? [a, b] : [b, a];
+    const key = `${left.id}\n${right.id}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    contacts.push({
+      a: left.id,
+      b: right.id,
+      isSensor: left.isSensor || right.isSensor,
+    });
   }
 }
 
@@ -125,5 +244,33 @@ function cloneCollider(collider: ColliderComponent): ColliderComponent {
     size: [...collider.size],
     isStatic: collider.isStatic,
     isSensor: collider.isSensor,
+  };
+}
+
+function colliderDescForBody(RAPIER: RapierModule, body: PhysicsBody) {
+  const size = body.collider.size.map((value, axis) => {
+    const scale = Math.abs(body.transform.scale[axis] ?? 1);
+    return value * scale;
+  });
+  if (body.collider.shape === "sphere") {
+    return RAPIER.ColliderDesc.ball(Math.max(size[0] ?? 1, size[1] ?? 1, size[2] ?? 1) / 2);
+  }
+  if (body.collider.shape === "capsule") {
+    const radius = Math.max(size[0] ?? 1, size[2] ?? 1) / 2;
+    const halfHeight = Math.max(0, ((size[1] ?? 1) / 2) - radius);
+    return RAPIER.ColliderDesc.capsule(halfHeight, radius);
+  }
+  return RAPIER.ColliderDesc.cuboid(
+    (size[0] ?? 1) / 2,
+    (size[1] ?? 1) / 2,
+    (size[2] ?? 1) / 2,
+  );
+}
+
+function vectorFromTransform(transform: TransformComponent): { x: number; y: number; z: number } {
+  return {
+    x: transform.position[0],
+    y: transform.position[1],
+    z: transform.position[2],
   };
 }

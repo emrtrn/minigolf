@@ -88,7 +88,7 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
   private readonly animationSubsystem = new AnimationSubsystem();
   private readonly inputActions = new ActionMap(DEFAULT_INPUT_BINDINGS);
   private readonly inputSubsystem = new InputSubsystem(this.inputActions);
-  private readonly physicsSubsystem = new PhysicsSubsystem();
+  private readonly physicsSubsystem = new PhysicsSubsystem({ backend: "rapier" });
   private readonly keyboardInput = new KeyboardInputSource(this.inputActions);
   private readonly behaviorSubsystem: BehaviorSubsystem;
   private frameHandle = 0;
