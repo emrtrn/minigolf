@@ -35,10 +35,10 @@ state, the command/undo stack, gizmo interaction, and editor input binding.
 
 ## 2. History / Command Store
 
-- [ ] Move the undo/redo stack instance and `executeCommand` orchestration
+- [x] Move the undo/redo stack instance and `executeCommand` orchestration
   (~25 call sites in `SceneApp`) into `editor/core` (contracts already in
   `editor/core/history.ts`); `SceneApp` calls into the store.
-- [ ] Verify undo/redo, command labels, and history-changed events are unchanged.
+- [x] Verify undo/redo, command labels, and history-changed events are unchanged.
 
 ## 3. Gizmo Interaction
 
