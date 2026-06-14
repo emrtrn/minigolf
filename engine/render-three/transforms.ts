@@ -3,13 +3,19 @@ import { Euler, Matrix4, Object3D, Quaternion, Vector3 } from "three";
 import type { LayoutCharacter, LayoutPlacement, Vec3 } from "@engine/scene/layout";
 import { degreesToRadians, readRotation, readScale } from "@engine/scene/transform";
 
+/** Composes a TRS matrix from a position, an XYZ-degrees rotation, and a scale. */
+export function composeTransformMatrix(position: Vec3, rotationDeg: Vec3, scale: Vec3): Matrix4 {
+  return new Matrix4().compose(
+    new Vector3(...position),
+    new Quaternion().setFromEuler(eulerDegrees(rotationDeg)),
+    new Vector3(...scale),
+  );
+}
+
 export function composePlacementMatrix(
   placement: LayoutPlacement | LayoutCharacter,
 ): Matrix4 {
-  const position = new Vector3(...placement.position);
-  const rotation = new Quaternion().setFromEuler(eulerDegrees(readRotation(placement)));
-  const scale = new Vector3(...readScale(placement));
-  return new Matrix4().compose(position, rotation, scale);
+  return composeTransformMatrix(placement.position, readRotation(placement), readScale(placement));
 }
 
 /** Builds an XYZ-order Euler from a degrees vector. */

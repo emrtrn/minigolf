@@ -73,6 +73,27 @@ export function lightEntityId(index: number): string {
   return `light:${index}`;
 }
 
+/**
+ * Derives the instance entities for a single asset's placements, in placement
+ * order. Used by the render adapter to drive static mesh instances from the
+ * entity/component model. Parent hierarchy is not resolved here because
+ * instanced static meshes bake each placement's own world transform (they do
+ * not apply parent transforms).
+ */
+export function instanceEntitiesForAsset(
+  assetId: string,
+  placements: LayoutPlacement[],
+): Entity[] {
+  return placements.map((placement, index) =>
+    buildEntity(
+      instanceEntityId(assetId, index),
+      placement.name,
+      instanceComponents(assetId, placement),
+      flagTags(placement),
+    ),
+  );
+}
+
 export function roomLayoutToSceneDocument(layout: RoomLayout): SceneDocument {
   const pending: PendingEntity[] = [];
   const nodeIdToEntityId = new Map<string, string>();

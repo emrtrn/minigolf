@@ -11,11 +11,14 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   characterEntityId,
+  instanceEntitiesForAsset,
   instanceEntityId,
   lightEntityId,
   roomLayoutToSceneDocument,
 } from "../engine/scene/legacyRoomLayoutAdapter";
 import { validateSceneDocument } from "../engine/scene/sceneSerialization";
+import { readTransformComponent } from "../engine/scene/components";
+import { readRotation, readScale } from "../engine/scene/transform";
 import { selectionId } from "../editor/core/selection";
 import type { RoomLayout } from "../engine/scene/layout";
 
@@ -106,6 +109,25 @@ check("hidden/locked become entity tags", () => {
     (candidate) => candidate.id === "instance:a:0",
   );
   assert.deepEqual(entity?.tags, ["hidden", "locked"]);
+});
+
+// 5. Render parity: instance entities carry the exact transform inputs the
+// legacy placement render path uses, so entity-driven instanced rendering
+// produces identical matrices (both compose via composeTransformMatrix).
+check("instance entities carry placement transform + hidden for render parity", () => {
+  for (const instance of layout.instances) {
+    const entities = instanceEntitiesForAsset(instance.assetId, instance.placements);
+    assert.equal(entities.length, instance.placements.length);
+    instance.placements.forEach((placement, index) => {
+      const entity = entities[index];
+      const transform = readTransformComponent(entity);
+      assert.ok(transform, `transform present for ${instance.assetId}[${index}]`);
+      assert.deepEqual(transform.position, placement.position);
+      assert.deepEqual(transform.rotation, readRotation(placement));
+      assert.deepEqual(transform.scale, readScale(placement));
+      assert.equal(entity.tags?.includes("hidden") ?? false, placement.hidden ?? false);
+    });
+  }
 });
 
 console.log(`[engine-tests] ${checks} checks passed`);

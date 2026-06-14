@@ -53,6 +53,7 @@ import {
 import {
   createCharacterSceneObject,
   createInstancedModelGroup,
+  entityInstanceItems,
 } from "@engine/render-three/models";
 import {
   createLightObject as createThreeLightObject,
@@ -92,7 +93,10 @@ import type {
   RoomLayout,
   Vec3,
 } from "@engine/scene/layout";
-import { roomLayoutToSceneDocument } from "@engine/scene/legacyRoomLayoutAdapter";
+import {
+  instanceEntitiesForAsset,
+  roomLayoutToSceneDocument,
+} from "@engine/scene/legacyRoomLayoutAdapter";
 import type { SceneDocument } from "@engine/scene/sceneDocument";
 import {
   metadataValuesEqual,
@@ -1764,10 +1768,14 @@ export class SceneApp {
     const gltf = this.models.get(assetId);
     if (!gltf) throw new Error(`Render test asset missing: ${assetId}`);
 
+    // Static mesh instances now flow through the entity/component model: the
+    // layout placements are derived into instance entities, then into render
+    // items. Matrices match the legacy placement path (same composeTransformMatrix).
+    const items = entityInstanceItems(instanceEntitiesForAsset(assetId, placements));
     const { group, meshes } = createInstancedModelGroup({
       assetId,
       gltf,
-      placements,
+      items,
       castShadow: this.staticObjectsCastShadow(),
       receiveShadow: this.staticObjectsReceiveShadow(),
     });
