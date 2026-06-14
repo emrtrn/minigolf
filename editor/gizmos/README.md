@@ -6,6 +6,8 @@ Current files:
 
 - `axes.ts`: transform gizmo axis contracts and axis-index helpers.
 - `handles.ts`: transform gizmo handle contracts, materials, and pickable registration.
+- `interaction.ts`: active/hovered handle state, handle picking, screen-scale,
+  and plane/screen-basis interaction helpers.
 
 Rules:
 

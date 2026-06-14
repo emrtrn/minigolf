@@ -193,10 +193,16 @@ import {
 } from "@editor/gizmos/axes";
 import {
   createGizmoHandleMaterial,
-  gizmoHandlesEqual,
   registerGizmoHandlePickables,
   type GizmoHandle,
 } from "@editor/gizmos/handles";
+import {
+  calculateGizmoScreenScale,
+  GizmoInteractionStore,
+  pickGizmoHandle as pickGizmoHandleFromObjects,
+  planeAxisNormalWorld,
+  screenSpaceMoveBasis,
+} from "@editor/gizmos/interaction";
 import {
   isCameraNavigationKey,
   isEditableTarget,
@@ -229,7 +235,6 @@ const CAMERA_PITCH_LIMIT = Math.PI * 0.47;
 const CAMERA_ORBIT_SENSITIVITY = 0.006;
 const CAMERA_PAN_SENSITIVITY = 0.0025;
 const CAMERA_DOLLY_SENSITIVITY = 0.018;
-const GIZMO_SCREEN_SIZE_PX = 118;
 const DEFAULT_STATIC_OBJECTS_CAST_SHADOWS = false;
 const DEFAULT_STATIC_OBJECTS_RECEIVE_SHADOWS = true;
 const DEFAULT_LIGHT_COLOR = "#ffffff";
@@ -362,9 +367,8 @@ export class SceneApp {
   private readonly selectionBoxes: Box3Helper[] = [];
   private readonly gizmoGroup = new Group();
   private readonly gizmoPickables: Object3D[] = [];
-  private activeGizmoHandle: GizmoHandle | null = null;
-  /** Handle currently under the cursor (idle hover highlight, not dragging). */
-  private hoveredGizmoHandle: GizmoHandle | null = null;
+  /** Owns active/hovered gizmo handle state (editor-only interaction state). */
+  private readonly gizmoInteraction = new GizmoInteractionStore();
   /** When on, the move gizmo drags the selection's pivot instead of the object. */
   private pivotEditMode = false;
   private activeTool: EditorTool = "move";
@@ -2800,7 +2804,7 @@ export class SceneApp {
       if (this.pointerDrag?.pointerId === event.pointerId) {
         const drag = this.pointerDrag;
         this.pointerDrag = null;
-        this.activeGizmoHandle = null;
+        this.gizmoInteraction.endDrag();
         this.canvas.releasePointerCapture(event.pointerId);
         if (drag.mode === "move" && drag.pivotEdit) {
           this.commitPivotChange(
@@ -3086,8 +3090,7 @@ export class SceneApp {
     const selected = this.getSelected();
     if (!selected) return;
 
-    this.activeGizmoHandle = { ...handle };
-    this.hoveredGizmoHandle = null;
+    this.gizmoInteraction.beginDrag(handle);
     this.updateGizmo();
 
     if (handle.tool === "move") {
@@ -3390,46 +3393,38 @@ export class SceneApp {
   private pickGizmoHandle(clientX: number, clientY: number): GizmoHandle | null {
     if (!this.gizmoGroup.visible || this.gizmoPickables.length === 0) return null;
     this.setPointerNdc(clientX, clientY);
-    this.raycaster.setFromCamera(this.pointerNdc, this.camera);
-    const hits = this.raycaster.intersectObjects(this.gizmoPickables, true);
-    const handle = hits[0]?.object.userData.gizmoHandle as GizmoHandle | undefined;
-    return handle ?? null;
+    return pickGizmoHandleFromObjects(
+      this.raycaster,
+      this.camera,
+      this.pointerNdc,
+      this.gizmoGroup.visible,
+      this.gizmoPickables,
+    );
   }
 
   /** Highlights the handle under the cursor (idle, not dragging) so it's clear what a click will grab. */
   private updateGizmoHover(clientX: number, clientY: number): void {
     if (this.cameraDrag || this.cameraNavigationActive) return;
     const handle = this.gizmoGroup.visible ? this.pickGizmoHandle(clientX, clientY) : null;
-    const changed = !gizmoHandlesEqual(handle, this.hoveredGizmoHandle);
+    const changed = this.gizmoInteraction.setHover(handle);
     if (!changed) return;
-    this.hoveredGizmoHandle = handle ? { ...handle } : null;
     this.canvas.style.cursor = handle ? "pointer" : "";
     this.updateGizmo();
   }
 
   private clearGizmoHover(): void {
-    if (!this.hoveredGizmoHandle) return;
-    this.hoveredGizmoHandle = null;
+    if (!this.gizmoInteraction.clearHover()) return;
     if (this.canvas.style.cursor === "pointer") this.canvas.style.cursor = "";
     this.updateGizmo();
   }
 
   private getScreenSpaceMoveBasis(): { right: Vector3; up: Vector3 } {
-    return {
-      right: new Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion).normalize(),
-      up: new Vector3(0, 1, 0).applyQuaternion(this.camera.quaternion).normalize(),
-    };
+    return screenSpaceMoveBasis(this.camera.quaternion);
   }
 
   /** World-space normal of a plane handle, matching the gizmo's orientation. */
   private planeNormalWorld(axis: GizmoPlaneAxis): Vector3 {
-    const local =
-      axis === "xy"
-        ? new Vector3(0, 0, 1)
-        : axis === "yz"
-          ? new Vector3(1, 0, 0)
-          : new Vector3(0, 1, 0);
-    return local.applyQuaternion(this.gizmoGroup.quaternion).normalize();
+    return planeAxisNormalWorld(axis, this.gizmoGroup.quaternion);
   }
 
   private clientToPlane(clientX: number, clientY: number, plane: Plane): Vector3 | null {
@@ -3787,10 +3782,11 @@ export class SceneApp {
   private updateGizmoScreenScale(): void {
     if (!this.gizmoGroup.visible) return;
     const viewportHeight = this.renderer.domElement.clientHeight || window.innerHeight || 1;
-    const distance = Math.max(0.01, this.camera.position.distanceTo(this.gizmoGroup.position));
-    const viewHeight = 2 * Math.tan(degreesToRadians(this.camera.fov) / 2) * distance;
-    const worldUnitsPerPixel = viewHeight / viewportHeight;
-    const scale = clamp(worldUnitsPerPixel * GIZMO_SCREEN_SIZE_PX, 0.35, 4);
+    const scale = calculateGizmoScreenScale(
+      this.camera.fov,
+      this.camera.position.distanceTo(this.gizmoGroup.position),
+      viewportHeight,
+    );
     this.gizmoGroup.scale.setScalar(scale);
   }
 
@@ -3926,8 +3922,8 @@ export class SceneApp {
     return createGizmoHandleMaterial(
       { tool, axis },
       color,
-      this.activeGizmoHandle,
-      this.hoveredGizmoHandle,
+      this.gizmoInteraction.activeHandle,
+      this.gizmoInteraction.hoveredHandle,
     );
   }
 
