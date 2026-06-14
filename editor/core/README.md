@@ -5,8 +5,8 @@ Editor-owned state helpers live here as they are extracted from `SceneApp` and
 
 Current files:
 
-- `selection.ts`: editor selection cloning, identity, parsing, equality, and
-  deterministic delete/restore ordering helpers.
+- `selection.ts`: editor selection cloning, identity, parsing, equality,
+  selected-map state helpers, and deterministic delete/restore ordering helpers.
 - `layoutSnapshots.ts`: layout actor/metadata deep-copy helpers and transform
   equality checks used by editor undo/redo snapshots.
 - `editableScene.ts`: editor-facing project info, snap settings, scene object,

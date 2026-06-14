@@ -142,8 +142,12 @@ import {
   compareLightRestores,
   cloneSelection,
   parseSelectionId,
+  replaceSelectedGroup,
+  replaceSelectedMany,
   selectionId,
+  selectedSelectionList,
   selectionsEqual,
+  toggleSelectedGroup,
   type CharacterSelection,
   type InstanceSelection,
   type LightSelection,
@@ -3328,61 +3332,34 @@ export class SceneApp {
   }
 
   private select(selection: Selection | null): void {
-    this.selectedSelections.clear();
-    if (selection) {
-      const groupSelections = this.getGroupedSelections(selection);
-      for (const groupSelection of groupSelections) {
-        const current = cloneSelection(groupSelection);
-        this.selectedSelections.set(selectionId(current), current);
-      }
-      this.selection = cloneSelection(selection);
-    } else {
-      this.selection = null;
-    }
+    this.selection = replaceSelectedGroup(
+      this.selectedSelections,
+      selection,
+      selection ? this.getGroupedSelections(selection) : [],
+    );
     this.updateSelectionBox();
     this.updateGizmo();
     this.emitSelectionChanged();
   }
 
   private selectMany(selections: Selection[], active: Selection | null): void {
-    this.selectedSelections.clear();
-    for (const selection of selections) {
-      if (!this.hasSelection(selection)) continue;
-      const current = cloneSelection(selection);
-      this.selectedSelections.set(selectionId(current), current);
-    }
-
-    if (active && this.selectedSelections.has(selectionId(active))) {
-      this.selection = cloneSelection(active);
-    } else {
-      this.selection = this.selectedSelections.values().next().value ?? null;
-    }
-
+    this.selection = replaceSelectedMany(
+      this.selectedSelections,
+      selections.filter((selection) => this.hasSelection(selection)),
+      active,
+    );
     this.updateSelectionBox();
     this.updateGizmo();
     this.emitSelectionChanged();
   }
 
   private toggleSelection(selection: Selection): void {
-    const groupSelections = this.getGroupedSelections(selection);
-    const allSelected = groupSelections.every((entry) =>
-      this.selectedSelections.has(selectionId(entry)),
+    this.selection = toggleSelectedGroup(
+      this.selectedSelections,
+      this.selection,
+      selection,
+      this.getGroupedSelections(selection),
     );
-
-    if (allSelected) {
-      for (const entry of groupSelections) this.selectedSelections.delete(selectionId(entry));
-      if (this.selection && groupSelections.some((entry) => selectionsEqual(this.selection, entry))) {
-        const remaining = [...this.selectedSelections.values()];
-        this.selection = remaining.at(-1) ? cloneSelection(remaining.at(-1)!) : null;
-      }
-    } else {
-      for (const entry of groupSelections) {
-        const current = cloneSelection(entry);
-        this.selectedSelections.set(selectionId(current), current);
-      }
-      this.selection = cloneSelection(selection);
-    }
-
     this.updateSelectionBox();
     this.updateGizmo();
     this.emitSelectionChanged();
@@ -3498,7 +3475,7 @@ export class SceneApp {
   }
 
   private getSelectedSelections(): Selection[] {
-    return [...this.selectedSelections.values()].filter((selection) => this.hasSelection(selection));
+    return selectedSelectionList(this.selectedSelections, (selection) => this.hasSelection(selection));
   }
 
   private getAllSelections(options: { includeHidden: boolean }): Selection[] {

@@ -60,6 +60,68 @@ export function selectionsEqual(
   return left.assetId === right.assetId && left.placementIndex === right.placementIndex;
 }
 
+export function replaceSelectedGroup(
+  selected: Map<string, Selection>,
+  selection: Selection | null,
+  groupSelections: Selection[],
+): Selection | null {
+  selected.clear();
+  if (!selection) return null;
+  for (const groupSelection of groupSelections) {
+    const current = cloneSelection(groupSelection);
+    selected.set(selectionId(current), current);
+  }
+  return cloneSelection(selection);
+}
+
+export function replaceSelectedMany(
+  selected: Map<string, Selection>,
+  selections: Selection[],
+  active: Selection | null,
+): Selection | null {
+  selected.clear();
+  for (const selection of selections) {
+    const current = cloneSelection(selection);
+    selected.set(selectionId(current), current);
+  }
+
+  if (active && selected.has(selectionId(active))) {
+    return cloneSelection(active);
+  }
+  return selected.values().next().value ?? null;
+}
+
+export function toggleSelectedGroup(
+  selected: Map<string, Selection>,
+  active: Selection | null,
+  selection: Selection,
+  groupSelections: Selection[],
+): Selection | null {
+  const allSelected = groupSelections.every((entry) => selected.has(selectionId(entry)));
+
+  if (allSelected) {
+    for (const entry of groupSelections) selected.delete(selectionId(entry));
+    if (active && groupSelections.some((entry) => selectionsEqual(active, entry))) {
+      const remaining = [...selected.values()];
+      return remaining.at(-1) ? cloneSelection(remaining.at(-1)!) : null;
+    }
+    return active ? cloneSelection(active) : null;
+  }
+
+  for (const entry of groupSelections) {
+    const current = cloneSelection(entry);
+    selected.set(selectionId(current), current);
+  }
+  return cloneSelection(selection);
+}
+
+export function selectedSelectionList(
+  selected: Map<string, Selection>,
+  isValid: (selection: Selection) => boolean,
+): Selection[] {
+  return [...selected.values()].filter(isValid).map(cloneSelection);
+}
+
 export function compareInstanceDeletes(
   left: { selection: Selection },
   right: { selection: Selection },
