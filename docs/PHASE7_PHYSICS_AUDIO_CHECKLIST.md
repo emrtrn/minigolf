@@ -49,12 +49,12 @@ adapter intentionally leaves unmapped, and no audio component or manifest.
 
 ## 3. Rapier-Backed Implementation (After Placeholder)
 
-- [ ] Add the Rapier dependency (`@dimforge/rapier3d-compat`) and back the same
+- [x] Add the Rapier dependency (`@dimforge/rapier3d-compat`) and back the same
   `PhysicsSubsystem` contract with Rapier bodies built from
   `ColliderComponent` + `TransformComponent`.
-- [ ] Use `Subsystem.init()` for Rapier's async WASM init; keep the placeholder
+- [x] Use `Subsystem.init()` for Rapier's async WASM init; keep the placeholder
   path behind the same interface for headless tests.
-- [ ] Coordinate bundle impact with `RUNTIME_ONLY_BUNDLE_CHECKLIST.md`
+- [x] Coordinate bundle impact with `RUNTIME_ONLY_BUNDLE_CHECKLIST.md`
   (Rapier WASM is large — must be a separate chunk / lazy-loaded).
 
 ## 4. Audio Data + Subsystem
