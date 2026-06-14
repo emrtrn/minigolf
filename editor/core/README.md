@@ -9,8 +9,8 @@ Current files:
   deterministic delete/restore ordering helpers.
 - `layoutSnapshots.ts`: layout actor/metadata deep-copy helpers and transform
   equality checks used by editor undo/redo snapshots.
-- `editableScene.ts`: editor-facing scene object, selection transform, and world
-  settings contracts consumed by the editor UI.
+- `editableScene.ts`: editor-facing project info, snap settings, scene object,
+  selection transform, and world settings contracts consumed by the editor UI.
 - `history.ts`: editor command contracts plus undo/redo history stack behavior.
 - `layoutTransforms.ts`: pure layout rotation/scale write helpers used when
   committing editor transform changes.

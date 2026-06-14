@@ -254,8 +254,9 @@ Completed:
   parsing, equality, and deterministic delete/restore ordering helpers.
 - Added `editor/core/layoutSnapshots.ts` for layout actor/metadata deep-copy
   helpers and transform equality checks used by undo/redo snapshots.
-- Added `editor/core/editableScene.ts` for editor-facing scene object,
-  selection transform, and world settings contracts consumed by the editor UI.
+- Added `editor/core/editableScene.ts` for editor-facing project info, snap
+  settings, scene object, selection transform, and world settings contracts
+  consumed by the editor UI.
 - Added `editor/core/history.ts` for editor command contracts plus undo/redo
   history stack behavior.
 - Added `editor/core/layoutTransforms.ts` for pure layout rotation/scale write

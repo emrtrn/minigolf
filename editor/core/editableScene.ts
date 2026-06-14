@@ -60,6 +60,27 @@ export interface EditorWorldSettings {
   ambientIntensity: number;
 }
 
+export interface EditorProjectInfo {
+  manifest: {
+    publicDir: string;
+    editor: {
+      assetManifest: string;
+      previewUrl?: string;
+    };
+  };
+  rootName: string;
+  assetRoot: string;
+}
+
+export interface EditorSnapSettings {
+  move: number;
+  rotate: number;
+  scale: number;
+  moveEnabled: boolean;
+  rotateEnabled: boolean;
+  scaleEnabled: boolean;
+}
+
 export function selectionToTransform(selection: EditableSelection): EditableTransform {
   return {
     position: [...selection.position],

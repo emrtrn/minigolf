@@ -119,6 +119,8 @@ import {
   type EditableSceneObject,
   type EditableSelection,
   type EditableTransform,
+  type EditorProjectInfo,
+  type EditorSnapSettings,
   type EditorWorldSettings,
 } from "@editor/core/editableScene";
 import type {
@@ -147,6 +149,8 @@ export type {
   EditableSceneObject,
   EditableSelection,
   EditableTransform,
+  EditorProjectInfo,
+  EditorSnapSettings,
   EditorWorldSettings,
 } from "@editor/core/editableScene";
 export type {
@@ -225,21 +229,6 @@ type CameraDrag =
       mode: "dolly";
       pointerId: number;
     };
-
-export interface EditorProjectInfo {
-  manifest: ActiveProject["manifest"];
-  rootName: string;
-  assetRoot: string;
-}
-
-export interface EditorSnapSettings {
-  move: number;
-  rotate: number;
-  scale: number;
-  moveEnabled: boolean;
-  rotateEnabled: boolean;
-  scaleEnabled: boolean;
-}
 
 interface EditorOptions {
   enabled: boolean;
