@@ -59,18 +59,27 @@ check("derived document validates", () => {
   const result = validateSceneDocument(doc);
   assert.ok(result.valid, `errors: ${result.errors.join("; ")}`);
 });
-check("derived entity ids match real layout", () => {
-  assert.deepEqual(
-    doc.entities.map((entity) => entity.id).sort(),
-    ["character:0", "instance:floor-full:0", "light:0"],
-  );
+check("derived entity ids cover every placement/character/light", () => {
+  const expectedIds: string[] = [];
+  layout.instances.forEach((instance) => {
+    instance.placements.forEach((_placement, index) => {
+      expectedIds.push(instanceEntityId(instance.assetId, index));
+    });
+  });
+  layout.characters.forEach((_character, index) => expectedIds.push(characterEntityId(index)));
+  (layout.lights ?? []).forEach((_light, index) => expectedIds.push(lightEntityId(index)));
+  assert.deepEqual(doc.entities.map((entity) => entity.id).sort(), [...expectedIds].sort());
 });
 check("world settings preserved", () => {
-  assert.equal(doc.worldSettings?.ambientIntensity, 1);
+  assert.equal(doc.worldSettings?.ambientIntensity, layout.worldSettings?.ambientIntensity);
 });
-check("instances with empty placements produce no entities", () => {
+check("instance entity count equals total placements (empty instances add none)", () => {
+  const totalPlacements = layout.instances.reduce(
+    (count, instance) => count + instance.placements.length,
+    0,
+  );
   const instanceEntities = doc.entities.filter((entity) => entity.id.startsWith("instance:"));
-  assert.equal(instanceEntities.length, 1);
+  assert.equal(instanceEntities.length, totalPlacements);
 });
 
 // 3. Hierarchy: legacy nodeId/parentId collapses into the entity id space.
