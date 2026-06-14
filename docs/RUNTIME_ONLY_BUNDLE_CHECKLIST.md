@@ -35,9 +35,9 @@ Today `npm run build` emits a single ~826 kB JS chunk (800 kB warning), and
 
 ## 2. Editor Code-Split Audit
 
-- [ ] Confirm `EditorUi` and gizmo/authoring-only code are reachable only via the
+- [x] Confirm `EditorUi` and gizmo/authoring-only code are reachable only via the
   dynamic `?editor` import and never pulled into the game entry chunk.
-- [ ] Extend `verify-dist` checks if any editor-only string is found in `dist/`.
+- [x] Extend `verify-dist` checks if any editor-only string is found in `dist/`.
 
 ## 3. Chunking
 
