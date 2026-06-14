@@ -167,6 +167,10 @@ import {
   registerGizmoHandlePickables,
   type GizmoHandle,
 } from "@editor/gizmos/handles";
+import {
+  isCameraNavigationKey,
+  isEditableTarget,
+} from "@editor/input/keyboard";
 
 export type {
   EditableSceneObject,
@@ -4066,24 +4070,4 @@ function dirnameProjectPath(path: string): string {
   const normalized = path.replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
   const slash = normalized.lastIndexOf("/");
   return slash >= 0 ? normalized.slice(0, slash) : "";
-}
-
-function isCameraNavigationKey(code: string): boolean {
-  return (
-    code === "KeyW" ||
-    code === "KeyA" ||
-    code === "KeyS" ||
-    code === "KeyD" ||
-    code === "KeyQ" ||
-    code === "KeyE"
-  );
-}
-
-function isEditableTarget(target: EventTarget | null): boolean {
-  return (
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLTextAreaElement ||
-    target instanceof HTMLSelectElement ||
-    (target instanceof HTMLElement && target.isContentEditable)
-  );
 }

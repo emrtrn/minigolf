@@ -259,6 +259,8 @@ Completed:
   axis-index helpers.
 - Added `editor/gizmos/handles.ts` for transform gizmo handle contracts,
   material/highlight creation, and pickable registration.
+- Added `editor/input/keyboard.ts` for editor keyboard filters and
+  editable-target guards.
 - Added `editor/core/layoutSnapshots.ts` for layout actor/metadata deep-copy
   helpers and transform equality checks used by undo/redo snapshots.
 - Added `editor/core/editableScene.ts` for editor-facing project info, snap
