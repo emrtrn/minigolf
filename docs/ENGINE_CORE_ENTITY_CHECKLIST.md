@@ -44,7 +44,7 @@ keeping the current `RoomLayout` runtime/editor path working.
   `MetadataComponent`.
 - [x] Add `engine/scene/sceneDocument.ts` with a versioned `SceneDocument`
   contract containing entities and optional world settings.
-- [ ] Add serialization helpers that clone/validate the minimal scene document
+- [x] Add serialization helpers that clone/validate the minimal scene document
   without importing render/editor/runtime objects.
 
 ## 3. Legacy Layout Adapter
