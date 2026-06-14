@@ -220,6 +220,9 @@ Completed:
   `applyEulerDegrees`) into `engine/render-three/transforms.ts`.
 - Moved material helpers (`isRenderableMesh`, `collectMaterialStats`,
   `convertUnlitModelMaterialsToLit`) into `engine/render-three/materials.ts`.
+- Moved pure light naming/default helpers into `engine/scene/lights.ts`.
+- Moved Three.js light shadow and gizmo helpers into
+  `engine/render-three/lights.ts`.
 
 Tasks:
 
