@@ -227,6 +227,8 @@ Completed:
   `engine/render-three/renderer.ts`.
 - Moved scene camera creation and responsive viewport/FOV application into
   `engine/render-three/camera.ts`.
+- Moved GLTF-to-scene binding for instanced static meshes and character objects
+  into `engine/render-three/models.ts`.
 
 Tasks:
 

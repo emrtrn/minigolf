@@ -17,6 +17,8 @@ Current files:
   render statistics helpers.
 - `camera.ts`: perspective scene camera creation and responsive viewport/FOV
   application helpers.
+- `models.ts`: GLTF scene binding for instanced static meshes and character
+  scene objects.
 
 Rules:
 

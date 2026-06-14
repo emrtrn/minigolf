@@ -52,6 +52,10 @@ import {
   isRenderableMesh,
 } from "@engine/render-three/materials";
 import {
+  createCharacterSceneObject,
+  createInstancedModelGroup,
+} from "@engine/render-three/models";
+import {
   buildLightGizmo,
   configureShadowCastingLight,
   disposeLightGizmo,
@@ -1784,43 +1788,15 @@ export class SceneApp {
     const gltf = this.models.get(assetId);
     if (!gltf) throw new Error(`Render test asset missing: ${assetId}`);
 
-    const group = new Group();
-    group.name = `instanced-${assetId}`;
-    this.instanceGroups.set(assetId, group);
-    this.instanceMeshes.set(assetId, []);
-
-    gltf.scene.updateMatrixWorld(true);
-    const placementMatrices = placements.map((placement) => composePlacementMatrix(placement));
-
-    gltf.scene.traverse((object) => {
-      if (!isRenderableMesh(object)) return;
-
-      const instanced = new InstancedMesh(
-        object.geometry,
-        object.material,
-        placementMatrices.length,
-      );
-      instanced.name = `${assetId}-${object.name || "mesh"}`;
-      instanced.frustumCulled = false;
-      instanced.castShadow = this.staticObjectsCastShadow();
-      instanced.receiveShadow = this.staticObjectsReceiveShadow();
-      instanced.userData.assetId = assetId;
-
-      for (let index = 0; index < placementMatrices.length; index += 1) {
-        const placementMatrix = placementMatrices[index];
-        if (!placementMatrix) continue;
-        if (placements[index]?.hidden) {
-          instanced.setMatrixAt(index, HIDDEN_INSTANCE_MATRIX);
-          continue;
-        }
-        const matrix = placementMatrix.clone().multiply(object.matrixWorld);
-        instanced.setMatrixAt(index, matrix);
-      }
-      instanced.instanceMatrix.needsUpdate = true;
-      group.add(instanced);
-      this.instanceMeshes.get(assetId)?.push(instanced);
+    const { group, meshes } = createInstancedModelGroup({
+      assetId,
+      gltf,
+      placements,
+      castShadow: this.staticObjectsCastShadow(),
+      receiveShadow: this.staticObjectsReceiveShadow(),
     });
-
+    this.instanceGroups.set(assetId, group);
+    this.instanceMeshes.set(assetId, meshes);
     return group;
   }
 
@@ -2682,21 +2658,7 @@ export class SceneApp {
   }
 
   private createCharacterObject(gltf: GLTF, placement: LayoutCharacter): Object3D {
-    const character = gltf.scene.clone();
-    character.name = placement.name ?? placement.assetId;
-    character.position.set(...placement.position);
-    applyEulerDegrees(character, readRotation(placement));
-    character.scale.set(...readScale(placement));
-    character.visible = !(placement.hidden ?? false);
-    // Characters are individual objects, so the per-object castShadow flag
-    // (absent = true) can be honoured live, unlike batched instanced meshes.
-    const castShadow = placement.castShadow ?? true;
-    character.traverse((object) => {
-      if (!isRenderableMesh(object)) return;
-      object.castShadow = castShadow;
-      object.receiveShadow = true;
-    });
-    return character;
+    return createCharacterSceneObject(gltf, placement);
   }
 
   private playCharacterAnimation(
@@ -4233,8 +4195,6 @@ export class SceneApp {
     this.renderer.setSize(width, height, false);
   };
 }
-
-const HIDDEN_INSTANCE_MATRIX = new Matrix4().makeScale(0, 0, 0);
 
 const RAD_TO_DEG = 180 / Math.PI;
 
