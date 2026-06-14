@@ -28,8 +28,10 @@ import {
 import { readRotation, readScale } from "../engine/scene/transform";
 import { EngineApp } from "../engine/core/EngineApp";
 import type { Subsystem } from "../engine/core/Subsystem";
+import { AnimationSubsystem } from "../engine/render-three/animationSubsystem";
 import { selectionId } from "../editor/core/selection";
 import type { LayoutCharacter, LayoutLightActor, RoomLayout } from "../engine/scene/layout";
+import type { AnimationMixer } from "three";
 
 let checks = 0;
 const check = (label: string, fn: () => void): void => {
@@ -296,6 +298,32 @@ await checkAsync("engine core initializes and ticks deterministic subsystems", a
   assert.equal(tick1.elapsedSeconds, 0.5);
   assert.equal(tick2.frame, 2);
   assert.equal(tick2.elapsedSeconds, 0.75);
+});
+
+// 6.1.1 The AnimationSubsystem advances its mixers through the engine tick with
+// the per-tick deltaSeconds. This is the work that moved out of the SceneApp rAF
+// loop: a registered AnimationSubsystem ticked by EngineApp.update must step its
+// mixers by the same delta the loop previously passed inline.
+check("animation subsystem ticks mixers with engine deltaSeconds", () => {
+  const deltas: number[] = [];
+  // Structural stand-in for a Three AnimationMixer (type-only dependency): the
+  // subsystem only ever calls mixer.update(deltaSeconds), so no real Three
+  // runtime is needed to prove the wiring.
+  const fakeMixer = { update: (delta: number) => deltas.push(delta) } as unknown as AnimationMixer;
+
+  const animation = new AnimationSubsystem();
+  animation.add(fakeMixer);
+
+  const app = new EngineApp();
+  app.registerSubsystem(animation);
+  app.update(0.5);
+  app.update(0.25);
+  assert.deepEqual(deltas, [0.5, 0.25]);
+
+  // clear() detaches mixers so later ticks no longer advance them.
+  animation.clear();
+  app.update(0.1);
+  assert.deepEqual(deltas, [0.5, 0.25]);
 });
 
 // 6.2 The scene model can represent a mesh entity, a light entity, metadata,

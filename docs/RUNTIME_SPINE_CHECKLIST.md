@@ -40,12 +40,17 @@ inspection-only. This checklist makes the spine actually run.
 
 ## 2. Prove the Tick Drives Real Work
 
-- [ ] Move the per-frame `AnimationMixer` update
-  (`for (const mixer of this.mixers) mixer.update(...)`, currently
+- [x] Move the per-frame `AnimationMixer` update
+  (`for (const mixer of this.mixers) mixer.update(...)`, formerly
   `SceneApp.ts:410`) into an `AnimationSubsystem` registered on `EngineApp`.
-  The subsystem is Three-touching, so it lives outside `engine/core`.
-- [ ] The `start()` loop now drives mixers only through `engineApp.update`.
-- [ ] Verify: character idle animation still plays in Game and Editor Mode.
+  The subsystem is Three-touching, so it lives in `engine/render-three`
+  (`engine/render-three/animationSubsystem.ts`), outside `engine/core`.
+- [x] The `start()` loop now drives mixers only through `engineApp.update`
+  (the inline mixer loop is gone; `playCharacterAnimation` adds mixers to the
+  subsystem instead).
+- [x] Verify: parity locked by the `animation subsystem ticks mixers with engine
+  deltaSeconds` engine test (same delta reaches the same mixers as the old inline
+  loop). Live browser observation still recommended before relying on it.
 
 ## 3. Input Action Map
 

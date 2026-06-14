@@ -35,6 +35,7 @@ import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { AssetLoader } from "./assetLoader";
 import { EngineApp } from "@engine/core/EngineApp";
 import type { Subsystem } from "@engine/core/Subsystem";
+import { AnimationSubsystem } from "@engine/render-three/animationSubsystem";
 import type { AssetManifest, EditableAsset } from "@engine/assets/manifest";
 import {
   dirnameProjectPath,
@@ -277,7 +278,8 @@ export class SceneApp {
   private assetLoader: AssetLoader | null = null;
   private activeProject: ActiveProject | null = null;
   private readonly projectReady: Promise<void>;
-  private readonly mixers: AnimationMixer[] = [];
+  /** Drives Three.js AnimationMixers through the engine-core tick. */
+  private readonly animationSubsystem = new AnimationSubsystem();
   private readonly canvas: HTMLCanvasElement;
   private readonly editorEnabled: boolean;
   private readonly raycaster = new Raycaster();
@@ -400,6 +402,11 @@ export class SceneApp {
     this.gizmoGroup.visible = false;
     this.scene.add(this.gizmoGroup);
 
+    // Register subsystems before scene load adds work to them (e.g. character
+    // animations push mixers during loadActiveProjectScene) and before the
+    // engine init()/start() that load triggers.
+    this.engineApp.registerSubsystem(this.animationSubsystem);
+
     this.projectReady = this.loadActiveProjectScene();
 
     if (this.editorEnabled) this.bindEditorPointerEvents();
@@ -416,12 +423,11 @@ export class SceneApp {
       this.lastTime = now;
       const deltaSeconds = deltaMs / 1000;
 
-      // Engine-core tick. No registered subsystems yet, so this only advances
-      // the engine's frame/time counters today — the per-frame work below is
-      // unchanged. Later sections move that work into subsystems.
+      // Engine-core tick: fans out to registered subsystems. The
+      // AnimationSubsystem advances character mixers here — that work no longer
+      // runs inline in this loop. Camera/gizmo work stays inline for now.
       this.engineApp.update(deltaSeconds);
 
-      for (const mixer of this.mixers) mixer.update(deltaSeconds);
       this.updateCameraNavigation(deltaSeconds);
       this.updateGizmoScreenScale();
 
@@ -2630,7 +2636,7 @@ export class SceneApp {
     if (idle) {
       const mixer = new AnimationMixer(character);
       mixer.clipAction(idle).play();
-      this.mixers.push(mixer);
+      this.animationSubsystem.add(mixer);
     }
   }
 
