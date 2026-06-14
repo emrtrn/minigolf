@@ -59,11 +59,11 @@ adapter intentionally leaves unmapped, and no audio component or manifest.
 
 ## 4. Audio Data + Subsystem
 
-- [ ] Add an `AudioComponent` (clip id, volume, loop, optional spatial) + a
+- [x] Add an `AudioComponent` (clip id, volume, loop, optional spatial) + a
   clip/manifest lookup in `engine/assets`.
-- [ ] Add an `AudioSubsystem` (Web Audio) that plays one-shots on a triggered
+- [x] Add an `AudioSubsystem` (Web Audio) that plays one-shots on a triggered
   action/behavior event; a no-op placeholder path for headless runs.
-- [ ] Verify a one-shot fires from a behavior/collision event in Game Mode.
+- [x] Verify a one-shot fires from a behavior/collision event in Game Mode.
 
 ## 5. Readiness Gate
 
