@@ -42,7 +42,7 @@ keeping the current `RoomLayout` runtime/editor path working.
 - [x] Add `engine/scene/components.ts` with the first component contracts:
   `TransformComponent`, `MeshRendererComponent`, `LightComponent`, and
   `MetadataComponent`.
-- [ ] Add `engine/scene/sceneDocument.ts` with a versioned `SceneDocument`
+- [x] Add `engine/scene/sceneDocument.ts` with a versioned `SceneDocument`
   contract containing entities and optional world settings.
 - [ ] Add serialization helpers that clone/validate the minimal scene document
   without importing render/editor/runtime objects.
