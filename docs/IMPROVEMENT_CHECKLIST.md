@@ -22,7 +22,7 @@ future session (Claude/Codex) can resume without re-deriving context.
 | 1 | Editor CSS leaks into production bundle | High (contract violation) | Low | `[x]` |
 | 2 | Rapier physics always loaded at runtime | Medium (2.18 MB) | Low–Med | `[x]` |
 | 3 | Extract editor-only logic out of `SceneApp` | Medium (maintainability) | High | `[ ]` |
-| 4 | Smoke tests for load/save + game/editor split | Medium (safety net) | Medium | `[ ]` |
+| 4 | Smoke tests for load/save + game/editor split | Medium (safety net) | Medium | `[~]` |
 
 Always-true gate before marking any item `[x]`:
 
@@ -260,7 +260,7 @@ npx tsc --noEmit && npm run test:engine && npm run build
 
 ---
 
-## Item 4 — Smoke tests for load/save + game/editor split  `[ ]`
+## Item 4 — Smoke tests for load/save + game/editor split  `[~]`
 
 **Severity:** Medium — safety net. CLAUDE.md "Near-Term Order #2".
 
@@ -314,6 +314,21 @@ npm run build:verify     # build + engine tests + verify-dist --strict
 
 Append newest entries at the top. Record: date, item #, what changed, where it
 stopped, and any decision made (so the next session does not re-litigate it).
+
+- *2026-06-15* — **Item 4 started — save validator extracted + load/save tests.**
+  (New branch `test/item4-smoke-tests` off the Item 3 tip / PR #1. Started Item 4
+  per the agreed sequence: merge PR #1 → Item 4 safety net → resume `<2500`.)
+  Extracted the entire `/__save-layout` payload validator out of `vite.config.ts`
+  into a dependency-free `tools/saveValidator.ts` (`validateSavePayload`,
+  `validateLayout`, `validateLightActor`, `validatePlacement`,
+  `applyTransformFields`, `EditorSettingsPatch`); `vite.config.ts` imports it.
+  Behavior-identical (the saved layout validates to itself). Added **3 engine
+  tests** (41 → 44): load/save round-trip idempotency on the real
+  `render-test-room.json`, plus two allowlist-footgun guards proving unknown
+  placement/light fields are dropped while known ones survive. This directly
+  guards the CLAUDE.md "save-validator allowlist gotcha". Gate green (tsc, 44
+  tests, build). Next Item 4 sub-pieces: (2) dist editor-leak static guard in
+  `builder/web/verify-dist.mjs`; then resume Item 3 `<2500`.
 
 - *2026-06-15* — **Item 3 Piece 7 done — pivot-corrected position extracted + tested.**
   Moved the pure `pivotCorrectedPosition` (origin that keeps a pivot world point

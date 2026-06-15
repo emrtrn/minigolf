@@ -54,6 +54,11 @@ import {
 import type { GizmoPointerDrag } from "../editor/gizmos/interaction";
 import { computeWallSnap } from "../editor/render-three/wallSnap";
 import { pivotCorrectedPosition } from "../editor/render-three/transformMatrices";
+import {
+  validateLayout,
+  validateLightActor,
+  validatePlacement,
+} from "./saveValidator";
 import type { LayoutCharacter, LayoutLightActor, RoomLayout } from "../engine/scene/layout";
 import { Box3, Vector3 } from "three";
 import type { AnimationMixer } from "three";
@@ -1079,6 +1084,60 @@ check("pivot-corrected position keeps the pivot world point fixed", () => {
   assert.deepEqual(pivotCorrectedPosition(new Vector3(5, 0, 5), [0, 90, 0], [1, 1, 1], [1, 0, 0]), [
     5, 0, 6,
   ]);
+});
+
+// ===========================================================================
+// Section 9 - Save-payload validator (extracted from vite.config.ts)
+// ===========================================================================
+// The /__save-layout validator is an allowlist: anything not copied explicitly
+// is dropped on save (documented footgun). These tests run the real validator
+// against the saved layout + crafted inputs.
+
+check("save validator round-trips the saved layout (idempotent, ids/counts stable)", () => {
+  const once = validateLayout(layout) as RoomLayout;
+  // The committed layout is already canonical, so validating is a no-op.
+  assert.deepEqual(once, layout);
+  // ...and validating the result again changes nothing (idempotent).
+  assert.deepEqual(validateLayout(once), once);
+  // Structure preserved: same instance/placement/character/light counts.
+  assert.equal(once.instances.length, layout.instances.length);
+  assert.equal(once.characters.length, layout.characters.length);
+  assert.equal((once.lights ?? []).length, (layout.lights ?? []).length);
+});
+
+check("save validator allowlist keeps known placement fields, drops unknown ones", () => {
+  const placement = validatePlacement({
+    position: [1, 2, 3],
+    name: "crate",
+    collision: false,
+    metadata: { hp: 5 },
+    bogusField: 123,
+    nested: { evil: true },
+  });
+  assert.deepEqual(placement.position, [1, 2, 3]);
+  assert.equal(placement.name, "crate");
+  assert.equal(placement.collision, false);
+  assert.deepEqual(placement.metadata, { hp: 5 });
+  // Fields not on the allowlist must be stripped (this is the save footgun).
+  assert.equal("bogusField" in placement, false);
+  assert.equal("nested" in placement, false);
+});
+
+check("save validator allowlist keeps known light fields, drops unknown ones", () => {
+  const light = validateLightActor({
+    id: "lamp",
+    type: "point",
+    position: [0, 1, 0],
+    intensity: 2,
+    distance: 8,
+    bogusField: "x",
+  });
+  assert.equal(light.id, "lamp");
+  assert.equal(light.type, "point");
+  assert.deepEqual(light.position, [0, 1, 0]);
+  assert.equal(light.intensity, 2);
+  assert.equal(light.distance, 8);
+  assert.equal("bogusField" in light, false);
 });
 
 console.log(`[engine-tests] ${checks} checks passed`);
