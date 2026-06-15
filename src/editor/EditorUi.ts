@@ -1,3 +1,6 @@
+// Editor-only styles. Importing here (rather than statically in index.html)
+// keeps them in the dev-only editor chunk, out of the production game build.
+import "./editorUi.css";
 import type { EditableAsset } from "@engine/assets/manifest";
 import type {
   EditableSceneObject,

@@ -1,0 +1,319 @@
+# Forge Improvement Checklist
+
+> Created: 2026-06-15
+> Scope: post-migration cleanup + hardening, ordered by value/effort.
+> Source: project analysis on 2026-06-15 (tsc clean, 31/31 engine tests pass).
+
+This file is a **cross-session work contract**. Each item is self-contained:
+problem, evidence, root cause, plan, acceptance criteria, and verification
+commands. Update the status box and the Progress Log as work lands so any
+future session (Claude/Codex) can resume without re-deriving context.
+
+## Status Legend
+
+- `[ ]` not started
+- `[~]` in progress (see Progress Log for where it stopped)
+- `[x]` done and verified
+
+## Overview
+
+| # | Item | Severity | Effort | Status |
+|---|------|----------|--------|--------|
+| 1 | Editor CSS leaks into production bundle | High (contract violation) | Low | `[x]` |
+| 2 | Rapier physics always loaded at runtime | Medium (2.18 MB) | Low–Med | `[x]` |
+| 3 | Extract editor-only logic out of `SceneApp` | Medium (maintainability) | High | `[ ]` |
+| 4 | Smoke tests for load/save + game/editor split | Medium (safety net) | Medium | `[ ]` |
+
+Always-true gate before marking any item `[x]`:
+
+```bash
+npx tsc --noEmit        # must be clean
+npm run test:engine     # 31/31 (or more) must pass
+npm run build           # must succeed
+```
+
+---
+
+## Item 1 — Editor CSS leaks into the production bundle  `[x]`
+
+> Done 2026-06-15. Editor styles moved to `src/editor/editorUi.css` (imported
+> by `EditorUi.ts:3`); `src/style.css` keeps only runtime/canvas/overlay rules.
+> Verified: production `dist/assets/index-*.css` is 0.72 kB with **0** editor
+> selectors; no `editor-shell` anywhere in `dist`. tsc + 31 engine tests +
+> build all green.
+
+**Severity:** High — violates the architecture contract.
+
+### Problem
+
+`docs/ARCHITECTURE.md` states production output *"must not contain editor UI"*.
+The editor **JS** is correctly dead-code-eliminated (dynamic import + `import.meta.env.DEV`
+gate in `src/main.ts:29`), but the editor **CSS** is not: it ships in the
+production game bundle.
+
+### Evidence
+
+- `index.html:15` statically links the single stylesheet: `<link rel="stylesheet" href="/src/style.css" />`.
+- `src/style.css` is 1026 lines and contains **87** editor selectors
+  (`.editor-*`, `.outliner-*`, gizmo/details/content-browser styles).
+- Editor styles begin at `src/style.css:65` (`body.editor-mode #debug-stats { ... }`)
+  and run to the end of the file. Lines 1–64 are game/runtime only
+  (canvas, `#ui-overlay`, `#debug-stats`).
+- Confirmed leak: `dist/assets/index-*.css` contains `.editor-shell`,
+  `.editor-outliner`, etc. (28 `outliner` occurrences in the built CSS).
+- `EditorUi` currently imports **no** CSS; it only toggles a body class
+  (`document.body.classList.add("editor-mode")` at `src/editor/EditorUi.ts:94`).
+
+### Root cause
+
+All CSS lives in one statically-linked stylesheet, so Vite has no way to scope
+the editor portion to the (dynamically imported, dev-gated) editor chunk.
+
+### Plan
+
+1. Create `src/editor/editorUi.css` and move the editor-only rules
+   (`src/style.css:65` → EOF) into it. Keep lines 1–64 (canvas, overlay,
+   debug-stats) in `src/style.css`.
+   - Watch for shared/runtime selectors that happen to live below line 64 —
+     re-audit with `grep -nE "^[.#]" src/style.css` before cutting; only move
+     rules that are editor/outliner/gizmo/details/content-browser scoped.
+2. Add a side-effect import at the **top** of `src/editor/EditorUi.ts`:
+   `import "./editorUi.css";`. Because `EditorUi` is only reached through the
+   dynamic, DEV-gated import in `src/main.ts`, Vite emits this CSS into the
+   editor chunk and excludes it from the production build.
+3. Rebuild and confirm the production CSS no longer contains editor selectors.
+
+### Acceptance criteria
+
+- `npm run build` then: production `dist/assets/index-*.css` contains **0**
+  `.editor`/`.outliner`/gizmo selectors.
+- `/?editor` in dev still renders fully styled (no visual regression).
+- `/` (game mode) is visually unchanged.
+- tsc / engine tests / build all green.
+
+### Verification
+
+```bash
+npm run build
+grep -cE "\.editor|\.outliner" dist/assets/index-*.css   # expect 0
+# manual: open /?editor and / in dev, eyeball both
+```
+
+---
+
+## Item 2 — Rapier physics always loaded at runtime  `[x]`
+
+> Done 2026-06-15. `PhysicsSubsystem.init()` now derives the Rapier load from
+> scene content: with `backend: "rapier"` it loads Rapier only when
+> `this.bodies.length > 0` (i.e. the scene yielded collider components),
+> otherwise it stays on the placeholder backend (`update()` already falls back
+> to AABB overlap). Added `usesRapier()` accessor + an engine test proving a
+> collider-free scene never loads Rapier. `vendor-physics` stays a separate
+> lazy chunk. **Nuance:** the bundled demo scene (`render-test-room.json`) has
+> 15 placements with no explicit `collision` field, and the legacy adapter
+> defaults collision **on**, so the demo still (correctly) loads Rapier. A
+> copied game that authors a collider-free scene (or sets `collision: false`)
+> now skips the 2 MB. tsc + 32 engine tests + build all green.
+
+**Severity:** Medium — `vendor-physics` is 2.18 MB and currently loads for
+every game on startup, even with no physics in the scene.
+
+### Problem
+
+The Rapier runtime ships as its own chunk and is dynamically imported (good),
+but the runtime app unconditionally selects the `rapier` backend, so the
+dynamic import always fires during `init()`.
+
+### Evidence
+
+- Production bundle sizes: `vendor-physics` **2184.9 KB**, `vendor-three`
+  597.9 KB, `vendor-meshoptimizer` 111.0 KB, `index` (game) 32.4 KB.
+- Already code-split: `vite.config.ts:645` routes `@dimforge/*` to
+  `vendor-physics`; `engine/physics/physicsSubsystem.ts:57` does
+  `await import("@dimforge/rapier3d-compat")` (the line-29 `typeof import` is
+  type-only and erased).
+- The cost is unconditional: `src/scene/RuntimeSceneApp.ts:92` constructs
+  `new PhysicsSubsystem({ backend: "rapier" })` always.
+- A `placeholder` backend already exists (`PhysicsBackend = "placeholder" | "rapier"`),
+  and engine tests cover both backends.
+
+### Root cause
+
+Backend is hard-coded to `rapier` regardless of whether the loaded scene
+actually needs physics.
+
+### Plan (decide approach first — see Open Questions)
+
+1. Make the physics backend conditional. Candidate signal sources, cheapest first:
+   - project manifest flag (e.g. `editor`/runtime config in
+     `public/project.3dgame.json`), or
+   - derived from the scene document: only use `rapier` when the layout yields
+     entities with collider components (`readColliderComponent`), else
+     `placeholder` (or skip physics entirely).
+2. Ensure the `rapier` dynamic import is reached **only** when the chosen
+   backend is `rapier`, so `vendor-physics` is fetched lazily/on demand.
+3. Mirror the same decision in `SceneApp` (editor) if it also instantiates
+   physics, so editor and runtime stay consistent.
+
+### Acceptance criteria
+
+- A physics-free scene loads without fetching `vendor-physics` (verify via
+  network panel or build-time reasoning).
+- A scene with colliders still gets working Rapier physics (engine tests stay
+  green; manual check of the collision/audio demo cue).
+- No change to deterministic test expectations.
+
+### Open questions (RESOLVED 2026-06-15)
+
+- ~~Should "no physics needed" mean `placeholder` backend or **no** physics
+  subsystem registered at all?~~ → **Keep the placeholder backend.** The
+  subsystem stays registered with `backend: "rapier"` as a preference but does
+  not load Rapier; physics queries stay deterministic.
+- ~~Where should the physics-needed signal live — manifest flag vs. derived
+  from scene colliders?~~ → **Derive from scene colliders** (automatic; zero
+  config). Implemented as a `bodies.length` gate inside `init()`.
+
+### Verification
+
+```bash
+npm run build            # vendor-physics still a separate chunk
+npm run test:engine      # both backends still pass
+# manual: load a collider-free scene, confirm vendor-physics is not requested
+```
+
+---
+
+## Item 3 — Extract editor-only logic out of `SceneApp`  `[ ]`
+
+**Severity:** Medium — maintainability. This is CLAUDE.md "Near-Term Order #1".
+
+### Problem
+
+`src/scene/SceneApp.ts` is **3999 lines** and mixes the shared render path with
+editor-only authoring concerns (gizmos, picking, selection plumbing, transform
+handles). The runtime path already has a slimmer `RuntimeSceneApp` (374 lines),
+but `SceneApp` remains a monolith.
+
+### Evidence
+
+- `src/scene/SceneApp.ts` — 3999 lines (largest file in the repo).
+- `src/scene/RuntimeSceneApp.ts` — 374 lines (game-only shell already exists).
+- Editor module boundaries already exist and hold extracted code:
+  `editor/gizmos/*`, `editor/core/*`, `editor/input/*`, `editor/render-three/*`.
+
+### Root cause
+
+The architecture-v2 migration extracted many helpers into `engine/*` and
+`editor/*`, but `SceneApp` still owns a large amount of editor-authoring code
+inline.
+
+### Plan (incremental — keep every step build-passing)
+
+1. Map `SceneApp`'s responsibilities into buckets: shared render (keep) vs.
+   editor authoring (move). Produce the inventory in the Progress Log first.
+2. Move editor-only concerns into `editor/*` (or a new editor scene controller)
+   in small, individually building+testing commits. Likely candidates: gizmo
+   interaction wiring, selection/pick handling, transform-handle math,
+   authoring overlays.
+3. Prefer composition: have the editor controller drive a shared scene API that
+   both `SceneApp` and `RuntimeSceneApp` expose, reducing duplication between
+   the two app shells (see Item 3b risk note).
+4. Stop when `SceneApp` no longer carries editor authoring logic that the game
+   bundle would otherwise need to tree-shake around.
+
+### Item 3b note — `SceneApp` / `RuntimeSceneApp` duplication
+
+Two scene shells now exist and share large amounts of logic (asset loading,
+camera, render stats, layout→scene building). They are guarded by engine
+"render parity" tests but can still drift. While doing Item 3, consolidate
+shared logic into one place rather than copying it.
+
+### Acceptance criteria
+
+- `SceneApp.ts` line count materially reduced (target: under ~2500 as a first
+  milestone; refine later).
+- No editor symbols imported by the game/runtime path
+  (`grep` of `RuntimeSceneApp` + `main` game branch shows no `@/editor` /
+  `editor/*` imports).
+- Editor still fully functional at `/?editor`; tsc/tests/build green at every
+  intermediate commit.
+
+### Verification
+
+```bash
+npx tsc --noEmit && npm run test:engine && npm run build
+# editor smoke: open /?editor, exercise select/move/rotate/scale, save
+```
+
+---
+
+## Item 4 — Smoke tests for load/save + game/editor split  `[ ]`
+
+**Severity:** Medium — safety net. CLAUDE.md "Near-Term Order #2".
+
+### Problem
+
+Current automated coverage (`tools/engine-tests.ts`, 31 checks) exercises the
+engine core (entities, layout serialization, render parity, subsystems) but not
+the **application shells**: layout load→save round-trip and the
+game-vs-editor mode split.
+
+### Evidence
+
+- Test harness is a dependency-free node runner: `tools/run-engine-tests.mjs`
+  bundles `tools/engine-tests.ts` with esbuild and runs `check("name", fn)`
+  assertions. New suites can follow the same pattern (no framework needed).
+- Save path: `/__save-layout` dev middleware in `vite.config.ts` (with the save
+  validator allowlist), `src/editor/layoutSaver.ts`.
+- Mode split: `src/main.ts` (DEV + `?editor` gate) and `RuntimeSceneApp` vs
+  `SceneApp`.
+
+### Plan
+
+1. **Load/save round-trip:** load `public/layouts/render-test-room.json`,
+   serialize back, assert stable IDs/transforms and that the save validator
+   does not silently drop allowlisted fields (`applyTransformFields` /
+   `validateLightActor` in `vite.config.ts`). Guard against the documented
+   "allowlist gotcha".
+2. **Mode split (static guard):** assert the production/runtime import graph
+   never reaches `src/editor/*`. Cheapest form: a build-time check (extend
+   `builder/web/verify-dist.mjs`) that `dist` contains no editor JS/CSS
+   selectors — this also locks in Item 1's fix.
+3. Wire new checks into `npm run test:engine` (or a sibling script) so they run
+   in `npm run build:verify`.
+
+### Acceptance criteria
+
+- New checks run in the existing harness and pass.
+- A deliberately broken save field (not allowlisted) is caught by the test.
+- The dist editor-leak guard fails if editor CSS/JS reappears in `dist`.
+
+### Verification
+
+```bash
+npm run test:engine
+npm run build:verify     # build + engine tests + verify-dist --strict
+```
+
+---
+
+## Progress Log
+
+Append newest entries at the top. Record: date, item #, what changed, where it
+stopped, and any decision made (so the next session does not re-litigate it).
+
+- *2026-06-15* — **Item 2 done.** Decisions: derive physics from scene
+  colliders; keep placeholder backend when none. Gated Rapier's dynamic import
+  in `PhysicsSubsystem.init()` behind `this.bodies.length > 0`; added
+  `usesRapier()` + engine test for the collider-free path (now 32 checks).
+  `vendor-physics` remains a lazy chunk. Gate green (tsc / 32 tests / build).
+  Next action: Item 3 (extract editor logic from `SceneApp`) — produce the
+  responsibility inventory in this log first; it is large, so split across
+  commits/sessions.
+- *2026-06-15* — **Item 1 done.** Split `src/style.css` (runtime, lines 1–63)
+  from new `src/editor/editorUi.css` (editor, former lines 65–1026); added
+  `import "./editorUi.css"` at top of `EditorUi.ts`. Verified the production CSS
+  no longer contains editor selectors (0 matches; CSS is now 0.72 kB). Gate
+  green (tsc / 31 tests / build).
+- *2026-06-15* — Checklist created from project analysis. No code changes yet.
+  Next action: begin Item 1 (editor CSS split).

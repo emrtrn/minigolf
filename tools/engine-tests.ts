@@ -652,6 +652,7 @@ await checkAsync("rapier physics backend reports contacts through the same contr
   };
   try {
     await app.init();
+    assert.equal(physics.usesRapier(), true); // colliders present -> Rapier loaded
     app.update(0.016);
     assert.deepEqual(physics.contactsForEntity("dynamic"), [
       { a: "dynamic", b: "wall", isSensor: false },
@@ -660,6 +661,30 @@ await checkAsync("rapier physics backend reports contacts through the same contr
   } finally {
     console.warn = warn;
   }
+});
+
+// 6.1.6b The rapier backend is a preference, not an unconditional load. A scene
+// with no colliders must NOT pull the heavy Rapier runtime: the subsystem stays
+// on the placeholder path so a physics-free game never fetches vendor-physics.
+await checkAsync("rapier backend stays on placeholder when the scene has no colliders", async () => {
+  const physics = new PhysicsSubsystem({ backend: "rapier" });
+  // Transforms but no Collider components -> zero physics bodies.
+  physics.setEntities([
+    {
+      id: "decor",
+      components: {
+        Transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+      },
+    },
+  ]);
+
+  const app = new EngineApp();
+  app.registerSubsystem(physics);
+  await app.init();
+  assert.equal(physics.usesRapier(), false); // no colliders -> Rapier never loaded
+  app.update(0.016);
+  assert.deepEqual(physics.contactsForEntity("decor"), []);
+  await app.dispose();
 });
 
 check("behavior can react to physics contacts from the engine tick", () => {

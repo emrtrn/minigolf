@@ -52,11 +52,28 @@ export class PhysicsSubsystem implements Subsystem, PhysicsQuery {
     this.backend = options.backend ?? "placeholder";
   }
 
+  /**
+   * Loads the Rapier runtime only when the scene actually needs it. The heavy
+   * Rapier WASM/compat module (the `vendor-physics` chunk, ~2 MB) is pulled in
+   * here via dynamic import, so a physics-free game never fetches it.
+   *
+   * Backend `"rapier"` is a *preference*: the real load is derived from scene
+   * content. If the entities passed to `setEntities()` yielded no collider
+   * bodies we stay on the placeholder backend — `update()` falls back to AABB
+   * overlap when there is no `rapierWorld` — so only scenes with colliders pay
+   * the cost. Relies on `setEntities()` running before `init()`, which is the
+   * SceneApp / RuntimeSceneApp load order.
+   */
   async init(): Promise<void> {
-    if (this.backend !== "rapier") return;
+    if (this.backend !== "rapier" || this.bodies.length === 0) return;
     this.rapierModule = await import("@dimforge/rapier3d-compat");
     await this.rapierModule.init();
     this.rebuildRapierWorld();
+  }
+
+  /** True once the Rapier runtime has been loaded (i.e. the scene had colliders). */
+  usesRapier(): boolean {
+    return this.rapierModule !== null;
   }
 
   setEntities(entities: readonly Entity[]): void {
