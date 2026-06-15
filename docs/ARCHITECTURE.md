@@ -1,7 +1,9 @@
 # 3DGameDev Architecture Contract
 
-> Created: 2026-06-13 | Updated: 2026-06-14
+> Created: 2026-06-13 | Updated: 2026-06-15
 > Scope: architecture-v2 migration workspace for the single-codebase template.
+> Migration status: complete (phases 0-7 done); this file is the steady-state
+> contract going forward.
 
 This document is the working contract for future Codex/Claude tasks. If a task
 conflicts with this file, update the contract first or call out the conflict
@@ -22,7 +24,7 @@ is no separate runtime to drift from the editor.
 - The editor travels with each game during development, but is gated behind the
   dev-only `?editor` dynamic import and is excluded from production builds.
 - The stable reference repo is `C:\Users\emret\Desktop\3DGameDev`; use it to
-  compare behavior while this clone moves toward the architecture plan.
+  compare behavior if the migrated boundaries ever drift from it.
 - `docs/ARCHITECTURE_PLAN_SOURCE.md` is the imported source plan.
 
 Removed architecture:
@@ -87,8 +89,8 @@ Top-level migration dependency rules:
 - `builder/*` may read project/engine metadata and built output, but should not
   become runtime code.
 - `project/*` is data/config ownership, not runtime implementation.
-- Existing `src/*` files remain the active implementation until code is moved in
-  small build-passing steps.
+- `src/*` remains the active implementation; the `engine/*`, `editor/*`,
+  `builder/*`, and `game/*` boundaries hold the extracted modules.
 
 ## Project Manifest
 
@@ -297,11 +299,11 @@ Initial command candidates:
   dist/          production build output
 ```
 
-Future package boundaries such as `engine/core`, `engine/scene`,
+Package boundaries such as `engine/core`, `engine/scene`,
 `engine/render-three`, `engine/assets`, `editor/core`, `editor/gizmos`,
-`editor/inspector`, `builder/web`, `project`, and `game` are allowed only as
-the migration roadmap moves real code into them. Do not introduce empty
-architecture for its own sake beyond the documented Phase 1 skeleton.
+`editor/inspector`, `builder/web`, `project`, and `game` now hold real
+extracted code. Keep new code inside the boundary that owns it; do not
+introduce empty architecture for its own sake.
 
 ## Not In Scope Yet
 
