@@ -187,6 +187,19 @@ npm run test:engine      # both backends still pass
 
 **Severity:** Medium — maintainability. This is CLAUDE.md "Near-Term Order #1".
 
+### Working agreement (decided 2026-06-15)
+
+- **Branch:** all Item 3 work happens on `refactor/sceneapp-split` (off `main`).
+  Open a PR when the milestone below is reached. Keep `main` clean.
+- **Auto-commit, do not ask:** this is a large refactor done in many small,
+  build-passing pieces. After **each** small piece that passes the gate
+  (`npx tsc --noEmit` + `npm run test:engine` + `npm run build`), commit with a
+  semantic message and `git push` — **without pausing to ask the user** whether
+  to continue or whether to commit. The user has authorized this explicitly.
+  First push uses `git push -u origin refactor/sceneapp-split`.
+- Never commit a broken intermediate state: only commit after the gate is green.
+- Update the Progress Log below after each piece so a fresh session can resume.
+
 ### Problem
 
 `src/scene/SceneApp.ts` is **3999 lines** and mixes the shared render path with
@@ -302,6 +315,172 @@ npm run build:verify     # build + engine tests + verify-dist --strict
 Append newest entries at the top. Record: date, item #, what changed, where it
 stopped, and any decision made (so the next session does not re-litigate it).
 
+- *2026-06-15* — **Item 3 Piece 7 done — pivot-corrected position extracted + tested.**
+  Moved the pure `pivotCorrectedPosition` (origin that keeps a pivot world point
+  fixed under rotation+scale: p' = pivotWorld − R·S·pivotLocal) into
+  `editor/render-three/transformMatrices.ts` next to `transformToMatrix`/
+  `matrixToTransform`. `updateRotateDrag`/`updateScaleDrag` import it; dropped the
+  now-unused `Quaternion` + `eulerDegrees` imports. Added 1 engine test
+  (41 checks). `SceneApp.ts` 3203 → 3179 lines. Gate green (tsc, 41 tests,
+  build).
+
+  **Milestone status / handoff.** Session total: `SceneApp.ts` **3999 → 3179
+  (−820, ~20.5%)** across 7 green, pushed, editor-only pieces (gizmo builders,
+  camera controller, scene picker, scene-object builders, drag math, wall snap,
+  pivot math) + **9 new engine tests** (32 → 41). The <2500 first-milestone
+  target is **not yet reached**: per the 2026-06-15 user decision (safe + tests),
+  the remaining ~680 lines are deeply-coupled *interactive command orchestration*
+  (gizmo drag apply/commit, duplicate/delete, group/parent, metadata/flags,
+  world-settings, light CRUD). Their *pure cores were already extracted in prior
+  migrations* (commandLabels, hierarchy, selection comparators, layoutSnapshots
+  clones) and in these 7 pieces; what remains in `SceneApp` is orchestration glue
+  that mutates `this.layout` + the live scene + the command stack. Cutting it
+  further means an `EditorSceneController` that owns that state and is driven by a
+  shared scene API — a larger structural change to do deliberately (ideally after
+  Item 4's load/save smoke tests give the command paths a net). Opening a PR for
+  this safe milestone; `<2500` continues next.
+
+- *2026-06-15* — **Item 3 Piece 6 done — wall-snap geometry extracted + unit-tested.**
+  Moved the pure `computeWallSnap` (nearest-wall slide + interior-facing
+  orientation) into `editor/render-three/wallSnap.ts`, taking the asset/room
+  AABBs as parameters (caller now guards `localBounds`/`getRoomBounds`). Both
+  callers (`performWallSnap`, `addAssetAt`) delegate; behavior identical (the
+  old null-return path == the new bounds/room guard). Added 1 engine test
+  (40 checks) pinning the +Z-wall snap (180° + flush slide to 4.9).
+  `SceneApp.ts` 3272 → 3203 lines. Gate green (tsc, 40 tests, build). Running
+  total: 3999 → 3203 (−796, ~20%) across 6 green, pushed, editor-only pieces.
+  Next: continue pure extractions (selection helpers, duplicate/clone logic).
+
+- *2026-06-15* — **Item 3 Piece 5 done — pointer-drag transform MATH extracted + unit-tested.**
+  Per the agreed approach (safe + tests; user decision 2026-06-15): extracted the
+  *pure* drag arithmetic into `editor/gizmos/transformDrag.ts`
+  (`freeMoveDragPosition`, `planeMoveDragPosition`, `axisYMoveDragPosition`,
+  `localAxisMoveDragPosition`, `worldAxisMoveDragPosition`, `rotateDragRotation`,
+  `scaleDragScale` + `DragSnapSettings`). The interactive *orchestration*
+  (raycasts via the picker, applying transforms, pivot correction, cascade,
+  emits) stays in `SceneApp.updateMove/Rotate/ScaleDrag` — only the verbose,
+  error-prone math moved. Added **7 headless engine tests** pinning the
+  arithmetic (32 → 39 checks): free/world/vertical/plane/local move, rotate
+  degrees+snap, and scale uniform/axis/planar/0.05-floor. Dropped now-unused
+  `axisToIndex`/`planeAxisIndices`/`degreesToRadians` imports. `SceneApp.ts`
+  3360 → 3272 lines. Gate green (tsc, 39 tests, build). This is the
+  no-test-coverage-risk mitigation: the drag math now has a safety net the
+  inline version never had. Next: wall/surface snapping geometry (also pure).
+
+- *2026-06-15* — **Item 3 Piece 4 done — scene-object view-model builders extracted.**
+  New `editor/core/sceneObjects.ts`: `buildSceneObjects(layout, deps)` (Outliner
+  rows, empty metadata) and `buildEditableSelection(layout, selection, deps)`
+  (Details payload, real cloned metadata). Pure layout→view-model transforms;
+  deps are `assetCategory` (manifest lookup, stays in SceneApp), `isSelected`
+  (selection store), and the resolved `staticObjectsCastShadow` flag.
+  `SceneApp.getSceneObjects`/`getSelected` now delegate. Dropped the now-unused
+  `cloneMetadata` import (`noUnusedLocals` confirmed it). Logic byte-identical.
+  `SceneApp.ts` 3514 → 3360 lines. Gate green (tsc, 32 tests, build). These
+  builders are deterministic and a good Item 4 unit-test target later. Next:
+  pointer-drag transform math.
+
+- *2026-06-15* — **Item 3 Piece 3 done — viewport raycasting extracted (ScenePicker).**
+  (Re-scoped: did picking before drag math, since the drag methods reuse
+  `clientToFloor`/`clientToPlane`.) New `editor/render-three/scenePicker.ts`
+  (`ScenePicker`) owns the scratch raycaster + NDC vector + floor plane and the
+  pointer→scene resolution: `pickSelection`, `pickGizmoHandle`, `clientToFloor`,
+  `clientToSurface`, `clientToPlane`, `raycastSurfaceBelow`, `isSelfHit`,
+  `setPointerNdc`. It reads the live scene through supplier callbacks
+  (`pickables`/`surfacePickables`/`gizmo`) so it stays correct as the scene
+  mutates. SceneApp keeps its own `raycaster`+`floorPlane` only for the
+  selection-aware orbit target (`getCameraOrbitTarget`); the `pointerNdc`+
+  `floorHit` fields and the moved imports (`findParent*`, `Intersection`,
+  `Vector2`, `pickGizmoHandle`) were dropped. Call sites delegate to
+  `this.picker.*`. Logic byte-identical. `SceneApp.ts` 3615 → 3514 lines. Gate
+  green (tsc, 32 tests, build; editor-only). Next: drag-math controller (reuses
+  the picker), then wall/surface snapping.
+
+- *2026-06-15* — **Item 3 Piece 2 done — editor camera controller extracted.**
+  New `editor/input/editorCameraController.ts` (`EditorCameraController`) owns
+  all viewport-camera navigation state (fly/orbit/pan/dolly, yaw/pitch, move
+  speed, pressed keys, scratch vectors) and methods (begin/end navigation,
+  alt-drag, updateDrag, look, wheel, per-frame `update`, angle sync). It takes
+  the shared `SceneApp` camera + canvas plus callbacks: `getOrbitTarget`
+  (selection-aware, stays in SceneApp), `onInteractionStart` (clears pending
+  gizmo drag / asset placement), and `onStatus`. SceneApp now holds one
+  `cameraController` field; the rAF loop, `bindEditorInput` wiring,
+  `isCameraNavigating`, `updateGizmoHover`, `handleResize`, `focusSelected`,
+  and `setTechnicalView` delegate to it. Removed the 8 camera-tuning constants
+  and the `CameraDrag` type (moved into the controller). Behavior preserved
+  exactly (incl. the redundant orbit-branch angle sync). `SceneApp.ts`
+  3841 → 3615 lines. Gate green (tsc, 32 tests, build; game `index` chunk
+  byte-identical at 33.27 kB → controller is editor-only). Next: Piece 3
+  (pointer-drag transform math).
+
+- *2026-06-15* — **Item 3 Piece 1 done — gizmo visual builders extracted.**
+  Moved `clearGizmo` + all `add*Gizmo`/`add*Handle`/`addRotateRing` +
+  `gizmoMaterialFor` + `registerGizmoHandle` out of `SceneApp` into a new
+  `editor/gizmos/builder.ts` (`buildGizmoHandles`, `clearGizmoGroup`,
+  `GizmoHighlight`). `SceneApp.updateGizmo` now delegates, passing the
+  `GizmoInteractionStore` directly as the highlight source (its
+  `activeHandle`/`hoveredHandle` getters satisfy `GizmoHighlight`). Dropped the
+  now-unused Three.js geometry/material imports and the gizmo axis/handle
+  imports that moved with the code. `SceneApp.ts` 3999 → 3841 lines. Gate green
+  (tsc clean, 32 engine tests, build; game `index` chunk 33.27 kB, editor code
+  stays out of it). Next: Piece 2 (editor camera controller).
+
+- *2026-06-15* — **Item 3 inventory (no code yet).** Mapped all of
+  `SceneApp.ts` (3999 lines) into KEEP (shared render) vs MOVE (editor
+  authoring). Baseline gate green (tsc clean, 32 engine tests). Acceptance
+  criterion "runtime path imports no editor" is **already satisfied**:
+  `main.ts` game branch uses `RuntimeSceneApp`, which imports only `@engine/*`
+  and `@/*` — no `@editor/*`. So Item 3 is purely (a) shrink `SceneApp` toward
+  <2500 lines and (b) relocate editor authoring code into `editor/*`.
+
+  **KEEP in SceneApp (shared render — mirrors `RuntimeSceneApp`):** renderer/
+  scene/camera/sun/ambient fields; engine spine + subsystems (animation, input,
+  physics, audio, behavior) and their ctor wiring; `syncEntityTransform`;
+  `start()` rAF loop; `dispose()`; `registerSubsystem`; `getRenderStats`;
+  `loadActiveProjectScene` (asset/model/light build); `createInstancedModel`,
+  `addCharacter`, `createCharacterObject`, `playCharacterAnimation`, `addLight`,
+  `createLightObject`, `ensureDefaultLights`/`createDefaultLightActor`/
+  `createLightId`/`defaultActorPosition`; `fitSunShadowToScene`/`getRoomBounds`;
+  `applyBackgroundAndAmbient` + `staticObjects*`/`backgroundColor`/`ambient*`;
+  `handleResize`. (These duplicate `RuntimeSceneApp`; Item 3b consolidation is a
+  later step, tracked separately — not blocking the line-count milestone.)
+
+  **MOVE out of SceneApp (editor authoring), grouped by cohesion:**
+  - *Gizmo visuals* — `clearGizmo`, `addMoveGizmo`/`addRotateGizmo`/
+    `addRotateRing`/`addScaleGizmo`/`addPlaneHandle`/`addArrowHandle`/
+    `addScaleHandle`, `gizmoMaterialFor`, `registerGizmoHandle`. Pure Three.js
+    construction → `editor/gizmos/builder.ts`. **(Piece 1)**
+  - *Editor camera* — all `camera*Navigation*`/`cameraDrag`/`beginAltCameraDrag`/
+    `updateCameraDrag`/`endCameraDrag`/`updateCameraLook`/`getCameraLook*`/
+    `getCameraOrbitTarget`/`dollyCamera`/`adjustCameraMoveSpeed`/
+    `updateCameraNavigation`/`getCameraBasis`/`syncCameraAnglesFromCurrentView`/
+    `applyCameraOrientation`/`handleWheel`. Self-contained interactive camera →
+    `editor/camera/editorCameraController.ts`. **(Piece 2)**
+  - *Pointer-drag transform math* — `startGizmoDrag`, `updateMoveDrag`,
+    `updateMoveDragPosition`, `updateRotateDrag`, `updateScaleDrag`,
+    `commitPointerDrag`, `cascadeActiveDragToLinks`, `applyCascadeToLinks`,
+    `captureLinkedMoveStarts`, `captureDescendantStarts` → `editor/gizmos/*`.
+    **(Piece 3)**
+  - *Picking + snapping geometry* — `pickSelection`, `pickGizmoHandle`,
+    `raycastSurfaceBelow`, `isSelfHit`, `clientToFloor`/`clientToSurface`/
+    `clientToPlane`/`setPointerNdc`, wall/surface snap (`computeWallSnap`,
+    `performWallSnap`, `wallSnapSelected`, `snapSelectedToWall`,
+    `surfaceSnapSelected`, `isWallAsset`, `isRoomAsset`). **(Piece 4)**
+  - *Remaining editor API surface* (selection store + public commands EditorUi
+    calls: select/delete/duplicate/group/parent/pivot/metadata/world-settings/
+    tools/history/save) — large; stays in `SceneApp` for now and is the
+    candidate for a later `EditorSceneController` extraction once Pieces 1–4
+    land. Not required to reach the first <2500 milestone.
+
+  **Strategy:** peel cohesive, low-coupling modules first (Pieces 1→4), each its
+  own green commit. Each piece: extract to `editor/*`, delegate from `SceneApp`,
+  run gate, commit+push. Next action: Piece 1 (gizmo builders).
+
+- *2026-06-15* — **Item 3 setup.** Decided workflow (see Item 3 "Working
+  agreement"): branch `refactor/sceneapp-split` off `main`, auto-commit + push
+  each green sub-step without asking, PR at the end. An auto-commit Stop hook was
+  considered but the harness safety classifier blocked installing a
+  self-executing push-to-main hook — so the agent performs the commits itself
+  instead. Created the branch; Item 3 work starts next session.
 - *2026-06-15* — **Item 2 done.** Decisions: derive physics from scene
   colliders; keep placeholder backend when none. Gated Rapier's dynamic import
   in `PhysicsSubsystem.init()` behind `this.bodies.length > 0`; added

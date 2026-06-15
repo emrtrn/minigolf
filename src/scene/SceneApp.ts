@@ -10,26 +10,17 @@ import {
   AnimationMixer,
   Box3,
   Box3Helper,
-  BoxGeometry,
   Color,
-  ConeGeometry,
-  CylinderGeometry,
   DirectionalLight,
   Group,
   Matrix4,
-  Mesh,
-  MeshBasicMaterial,
   Object3D,
   Plane,
-  PlaneGeometry,
-  Quaternion,
   Raycaster,
   Scene,
-  TorusGeometry,
-  Vector2,
   Vector3,
 } from "three";
-import type { InstancedMesh, Intersection, PerspectiveCamera, WebGLRenderer } from "three";
+import type { InstancedMesh, PerspectiveCamera, WebGLRenderer } from "three";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import { AssetLoader } from "./assetLoader";
@@ -53,7 +44,6 @@ import { loadRoomLayout } from "./roomLayout";
 import {
   applyEulerDegrees,
   composePlacementMatrix,
-  eulerDegrees,
 } from "@engine/render-three/transforms";
 import {
   collectMaterialStats,
@@ -73,11 +63,6 @@ import {
   type LightObjectRecord,
 } from "@engine/render-three/lights";
 import {
-  findParentCharacter,
-  findParentInstancedMesh,
-  findParentLight,
-} from "@engine/render-three/picking";
-import {
   applyResponsiveCameraViewport,
   createSceneCamera,
 } from "@engine/render-three/camera";
@@ -91,7 +76,6 @@ import {
   uniqueActorName,
 } from "@engine/scene/lights";
 import {
-  degreesToRadians,
   readPivot,
   readRotation,
   readScale,
@@ -120,7 +104,6 @@ import {
 import {
   cloneCharacter,
   cloneLightActor,
-  cloneMetadata,
   cloneMetadataValue,
   clonePlacement,
   cloneUngroupedCharacter,
@@ -146,6 +129,7 @@ import {
   type EditorDefaultTrueFlagCommand,
   type EditorFlagCommand,
 } from "@editor/core/commandLabels";
+import { buildEditableSelection, buildSceneObjects } from "@editor/core/sceneObjects";
 import type { EditorTool, TransformSpace } from "@editor/core/tools";
 import {
   worldSettingsEqual,
@@ -184,33 +168,35 @@ import {
   type Selection,
 } from "@editor/core/selection";
 import { SelectionStore } from "@editor/core/selectionStore";
+import { isPlaneAxis } from "@editor/gizmos/axes";
+import { type GizmoHandle } from "@editor/gizmos/handles";
+import { buildGizmoHandles, clearGizmoGroup } from "@editor/gizmos/builder";
 import {
-  axisToIndex,
-  isPlaneAxis,
-  planeAxisIndices,
-  type GizmoAxis,
-  type GizmoPlaneAxis,
-  type GizmoVectorAxis,
-} from "@editor/gizmos/axes";
-import {
-  createGizmoHandleMaterial,
-  registerGizmoHandlePickables,
-  type GizmoHandle,
-} from "@editor/gizmos/handles";
+  axisYMoveDragPosition,
+  freeMoveDragPosition,
+  localAxisMoveDragPosition,
+  planeMoveDragPosition,
+  rotateDragRotation,
+  scaleDragScale,
+  worldAxisMoveDragPosition,
+} from "@editor/gizmos/transformDrag";
 import {
   calculateGizmoScreenScale,
   createGizmoMovePlane,
   createGizmoPointerDrag,
   gizmoDragBaseWorld,
   GizmoInteractionStore,
-  pickGizmoHandle as pickGizmoHandleFromObjects,
   screenSpaceMoveBasis,
   type GizmoPointerDrag,
   type LinkedMoveStart,
 } from "@editor/gizmos/interaction";
 import { bindEditorInputEvents } from "@editor/input/bindings";
+import { EditorCameraController } from "@editor/input/editorCameraController";
+import { ScenePicker } from "@editor/render-three/scenePicker";
+import { computeWallSnap } from "@editor/render-three/wallSnap";
 import {
   matrixToTransform,
+  pivotCorrectedPosition,
   transformToMatrix,
 } from "@editor/render-three/transformMatrices";
 
@@ -229,14 +215,6 @@ export type {
 /** Perf budget: clamp DPR so 1080p+ phones don't render 3x fragments. */
 const MAX_PIXEL_RATIO = 2;
 const CAMERA_TARGET = new Vector3(0, 0.65, -0.2);
-const CAMERA_MOVE_SPEED = 5.5;
-const CAMERA_MIN_MOVE_SPEED = 0.8;
-const CAMERA_MAX_MOVE_SPEED = 28;
-const CAMERA_LOOK_SENSITIVITY = 0.003;
-const CAMERA_PITCH_LIMIT = Math.PI * 0.47;
-const CAMERA_ORBIT_SENSITIVITY = 0.006;
-const CAMERA_PAN_SENSITIVITY = 0.0025;
-const CAMERA_DOLLY_SENSITIVITY = 0.018;
 const DEFAULT_STATIC_OBJECTS_CAST_SHADOWS = false;
 const DEFAULT_STATIC_OBJECTS_RECEIVE_SHADOWS = true;
 const DEFAULT_LIGHT_COLOR = "#ffffff";
@@ -261,22 +239,6 @@ const DEFAULT_INPUT_BINDINGS: ActionBindings = {
   ArrowRight: "move-right",
   Space: "jump",
 };
-
-type CameraDrag =
-  | {
-      mode: "orbit";
-      pointerId: number;
-      target: Vector3;
-      distance: number;
-    }
-  | {
-      mode: "pan";
-      pointerId: number;
-    }
-  | {
-      mode: "dolly";
-      pointerId: number;
-    };
 
 interface EditorOptions {
   enabled: boolean;
@@ -347,21 +309,13 @@ export class SceneApp {
   };
   private readonly canvas: HTMLCanvasElement;
   private readonly editorEnabled: boolean;
+  /** Scratch raycaster + floor plane for the selection-aware orbit target. */
   private readonly raycaster = new Raycaster();
-  private readonly pointerNdc = new Vector2();
   private readonly floorPlane = new Plane(new Vector3(0, 1, 0), 0);
-  private readonly floorHit = new Vector3();
-  private readonly pressedKeys = new Set<string>();
-  private readonly cameraForward = new Vector3();
-  private readonly cameraRight = new Vector3();
-  private readonly cameraMove = new Vector3();
-  private cameraNavigationActive = false;
-  private cameraNavigationTouched = false;
-  private cameraNavigationPointerId: number | null = null;
-  private cameraYaw = 0;
-  private cameraPitch = 0;
-  private cameraMoveSpeed = CAMERA_MOVE_SPEED;
-  private cameraDrag: CameraDrag | null = null;
+  /** Editor viewport camera (fly / orbit / pan / dolly). Editor-only. */
+  private readonly cameraController: EditorCameraController;
+  /** Editor viewport raycasting (selection / gizmo / surface picks). */
+  private readonly picker: ScenePicker;
 
   private manifest: AssetManifest | null = null;
   private metadataSchema: MetadataSchema | null = null;
@@ -422,6 +376,34 @@ export class SceneApp {
     this.renderer = createSceneRenderer(canvas, MAX_PIXEL_RATIO);
     this.scene.background = new Color(0xd7d7c7);
     this.camera = createSceneCamera();
+    this.cameraController = new EditorCameraController({
+      camera: this.camera,
+      canvas: this.canvas,
+      getOrbitTarget: () => this.getCameraOrbitTarget(),
+      onInteractionStart: () => {
+        this.pointerDrag = null;
+        this.pendingAssetId = null;
+      },
+      onStatus: (message, tone) => this.onStatus?.(message, tone),
+    });
+    this.picker = new ScenePicker({
+      camera: this.camera,
+      canvas: this.canvas,
+      pickables: () => {
+        const objects: Object3D[] = [];
+        for (const meshes of this.instanceMeshes.values()) objects.push(...meshes);
+        objects.push(...this.characterObjects);
+        for (const record of this.lightObjects) objects.push(record.root);
+        return objects;
+      },
+      surfacePickables: () => {
+        const objects: Object3D[] = [];
+        for (const meshes of this.instanceMeshes.values()) objects.push(...meshes);
+        objects.push(...this.characterObjects);
+        return objects;
+      },
+      gizmo: () => ({ visible: this.gizmoGroup.visible, pickables: this.gizmoPickables }),
+    });
 
     this.gizmoGroup.name = "editor-transform-gizmo";
     this.gizmoGroup.visible = false;
@@ -471,7 +453,7 @@ export class SceneApp {
       // runs inline in this loop. Camera/gizmo work stays inline for now.
       this.engineApp.update(deltaSeconds);
 
-      this.updateCameraNavigation(deltaSeconds);
+      this.cameraController.update(deltaSeconds);
       this.updateGizmoScreenScale();
 
       this.renderer.render(this.scene, this.camera);
@@ -550,98 +532,11 @@ export class SceneApp {
 
   getSceneObjects(): EditableSceneObject[] {
     if (!this.layout) return [];
-
-    const objects: EditableSceneObject[] = [];
-    for (const instance of this.layout.instances) {
-      instance.placements.forEach((placement, placementIndex) => {
-        const selection: Selection = {
-          kind: "instance",
-          assetId: instance.assetId,
-          placementIndex,
-        };
-        objects.push({
-          id: selectionId(selection),
-          kind: "instance",
-          assetId: instance.assetId,
-          category: this.assetCategory(instance.assetId),
-          label: placement.name ?? `${instance.assetId} #${placementIndex + 1}`,
-          position: [...placement.position],
-          rotation: readRotation(placement),
-          scale: readScale(placement),
-          pivot: readPivot(placement),
-          scaleLocked: placement.scaleLocked ?? false,
-          selected: this.isSelectionSelected(selection),
-          hidden: placement.hidden ?? false,
-          locked: placement.locked ?? false,
-          castShadow: this.staticObjectsCastShadow(),
-          collision: placement.collision ?? true,
-          metadata: {},
-          groupId: placement.groupId,
-          nodeId: placement.nodeId,
-          parentId: placement.parentId,
-        });
-      });
-    }
-
-    this.layout.characters.forEach((character, index) => {
-      const selection: Selection = { kind: "character", index };
-      objects.push({
-        id: selectionId(selection),
-        kind: "character",
-        assetId: character.assetId,
-        category: this.assetCategory(character.assetId),
-        label: character.name ?? `${character.assetId} #${index + 1}`,
-        position: [...character.position],
-        rotation: readRotation(character),
-        scale: readScale(character),
-        pivot: readPivot(character),
-        scaleLocked: character.scaleLocked ?? false,
-        selected: this.isSelectionSelected(selection),
-        hidden: character.hidden ?? false,
-        locked: character.locked ?? false,
-        castShadow: character.castShadow ?? true,
-        collision: character.collision ?? true,
-        metadata: {},
-        groupId: character.groupId,
-        nodeId: character.nodeId,
-        parentId: character.parentId,
-      });
+    return buildSceneObjects(this.layout, {
+      assetCategory: (assetId) => this.assetCategory(assetId),
+      isSelected: (selection) => this.isSelectionSelected(selection),
+      staticObjectsCastShadow: this.staticObjectsCastShadow(),
     });
-
-    this.layout.lights?.forEach((light, index) => {
-      const selection: Selection = { kind: "light", index };
-      const sceneObject: EditableSceneObject = {
-        id: selectionId(selection),
-        kind: "light",
-        assetId: light.type,
-        category: "light",
-        label: light.name ?? light.id,
-        position: [...light.position],
-        rotation: readRotation(light),
-        scale: [1, 1, 1],
-        pivot: [0, 0, 0],
-        scaleLocked: true,
-        selected: this.isSelectionSelected(selection),
-        hidden: light.hidden ?? false,
-        locked: light.locked ?? false,
-        castShadow: light.castShadow ?? light.type === "directional",
-        collision: false,
-        metadata: {},
-        groupId: light.groupId,
-        nodeId: light.nodeId,
-        parentId: light.parentId,
-        lightType: light.type,
-        color: light.color ?? DEFAULT_LIGHT_COLOR,
-        intensity: light.intensity ?? defaultLightIntensity(light.type),
-      };
-      if (light.distance !== undefined) sceneObject.distance = light.distance;
-      if (light.angle !== undefined) sceneObject.angle = light.angle;
-      if (light.penumbra !== undefined) sceneObject.penumbra = light.penumbra;
-      if (light.decay !== undefined) sceneObject.decay = light.decay;
-      objects.push(sceneObject);
-    });
-
-    return objects;
   }
 
   selectSceneObject(id: string, options: { additive?: boolean } = {}): void {
@@ -734,7 +629,7 @@ export class SceneApp {
   }
 
   isCameraNavigating(): boolean {
-    return this.cameraNavigationActive || this.cameraDrag !== null;
+    return this.cameraController.isInteracting;
   }
 
   setSnapSettings(values: Partial<typeof this.snapSettings>): void {
@@ -823,15 +718,15 @@ export class SceneApp {
     this.camera.position.copy(target).addScaledVector(viewDirection, -distance);
     this.camera.up.set(0, 1, 0);
     this.camera.lookAt(target);
-    this.cameraNavigationTouched = true;
-    this.syncCameraAnglesFromCurrentView();
+    this.cameraController.markViewChanged();
+    this.cameraController.syncAnglesFromCurrentView();
     this.onStatus?.(`Focused ${selected.label}.`, "info");
   }
 
   setTechnicalView(view: "top" | "front" | "side"): void {
     const target = this.getCameraOrbitTarget();
     const distance = clamp(this.camera.position.distanceTo(target), 3, 10);
-    this.cameraNavigationTouched = true;
+    this.cameraController.markViewChanged();
 
     if (view === "top") {
       this.camera.up.set(0, 0, -1);
@@ -845,7 +740,7 @@ export class SceneApp {
     }
 
     this.camera.lookAt(target);
-    this.syncCameraAnglesFromCurrentView();
+    this.cameraController.syncAnglesFromCurrentView();
     this.onStatus?.(`${view[0]!.toUpperCase()}${view.slice(1)} view`, "info");
   }
 
@@ -870,7 +765,7 @@ export class SceneApp {
     const centerZ = (box.min.z + box.max.z) / 2;
     // Start a hair above the bottom so a surface flush with it still registers.
     const origin = new Vector3(centerX, box.min.y + 0.02, centerZ);
-    const surfaceY = this.raycastSurfaceBelow(origin, this.selection);
+    const surfaceY = this.picker.raycastSurfaceBelow(origin, this.selection);
     // Fall back to the floor plane (y = 0) when nothing solid is underneath.
     const restY = surfaceY ?? 0;
     const deltaY = restY - box.min.y;
@@ -891,35 +786,6 @@ export class SceneApp {
       before,
       surfaceY === null ? "Surface snap (floor)" : "Surface snap",
     );
-  }
-
-  private raycastSurfaceBelow(origin: Vector3, exclude: Selection): number | null {
-    const ray = new Raycaster(origin, new Vector3(0, -1, 0), 0, 1000);
-
-    const pickables: Object3D[] = [];
-    for (const meshes of this.instanceMeshes.values()) pickables.push(...meshes);
-    pickables.push(...this.characterObjects);
-    pickables.push(...this.lightObjects.map((entry) => entry.root));
-
-    const hits = ray.intersectObjects(pickables, true);
-    for (const hit of hits) {
-      if (this.isSelfHit(hit, exclude)) continue;
-      return hit.point.y;
-    }
-    return null;
-  }
-
-  private isSelfHit(hit: Intersection, selection: Selection): boolean {
-    if (selection.kind === "instance") {
-      const mesh = findParentInstancedMesh(hit.object);
-      return Boolean(
-        mesh &&
-          String(mesh.userData.assetId ?? "") === selection.assetId &&
-          hit.instanceId === selection.placementIndex,
-      );
-    }
-    const character = findParentCharacter(hit.object);
-    return character ? Number(character.userData.characterIndex) === selection.index : false;
   }
 
   /** End / "Snap" button entry: wall-snaps wall assets, otherwise surface-snaps. */
@@ -965,91 +831,19 @@ export class SceneApp {
 
     const before = this.captureTransform(selection);
     if (!before) return;
-    const snap = this.computeWallSnap(
-      selection.assetId,
-      before.position,
-      before.rotation[1],
-      before.scale,
-    );
-    if (!snap) {
+    const bounds = this.localBounds.get(selection.assetId);
+    const room = this.getRoomBounds();
+    if (!bounds || !room) {
       this.onStatus?.("No room walls found to snap to.", "warning");
       return;
     }
+    const snap = computeWallSnap(bounds, room, before.position, before.rotation[1], before.scale);
 
     this.updateSelectedTransform({
       position: snap.position,
       rotation: [before.rotation[0], snap.rotationYDeg, before.rotation[2]],
     });
     this.commitTransformChange(selection, before, "Wall snap");
-  }
-
-  /**
-   * Snaps a wall asset flush against the nearest of the room's four bounding
-   * walls (derived from the room-shell world AABB) and orients it to face the
-   * room interior. Returns the target transform, or null if no room is loaded.
-   */
-  private computeWallSnap(
-    assetId: string,
-    position: [number, number, number],
-    currentRotationYDeg: number,
-    scale: number | Vec3,
-  ): { position: [number, number, number]; rotationYDeg: number } | null {
-    const bounds = this.localBounds.get(assetId);
-    const room = this.getRoomBounds();
-    if (!bounds || !room) return null;
-
-    const center = bounds
-      .clone()
-      .applyMatrix4(
-        composePlacementMatrix({ position, rotationYDeg: currentRotationYDeg, scale }),
-      )
-      .getCenter(new Vector3());
-
-    const toMinX = center.x - room.min.x;
-    const toMaxX = room.max.x - center.x;
-    const toMinZ = center.z - room.min.z;
-    const toMaxZ = room.max.z - center.z;
-    const nearest = Math.min(toMinX, toMaxX, toMinZ, toMaxZ);
-
-    // Asset front assumed to face +Z; rotate so it faces the room interior.
-    let rotationYDeg: number;
-    let axis: "x" | "z";
-    let wallCoord: number;
-    let side: "min" | "max";
-    if (nearest === toMinX) {
-      rotationYDeg = 90;
-      axis = "x";
-      wallCoord = room.min.x;
-      side = "min";
-    } else if (nearest === toMaxX) {
-      rotationYDeg = 270;
-      axis = "x";
-      wallCoord = room.max.x;
-      side = "max";
-    } else if (nearest === toMinZ) {
-      rotationYDeg = 0;
-      axis = "z";
-      wallCoord = room.min.z;
-      side = "min";
-    } else {
-      rotationYDeg = 180;
-      axis = "z";
-      wallCoord = room.max.z;
-      side = "max";
-    }
-
-    // World box at the snapped rotation tells us how far to slide so the
-    // back face sits flush against the wall (origin-agnostic).
-    const probe = bounds
-      .clone()
-      .applyMatrix4(composePlacementMatrix({ position, rotationYDeg, scale }));
-    const next: [number, number, number] = [...position];
-    if (axis === "x") {
-      next[0] = round(position[0] + (side === "min" ? wallCoord - probe.min.x : wallCoord - probe.max.x));
-    } else {
-      next[2] = round(position[2] + (side === "min" ? wallCoord - probe.min.z : wallCoord - probe.max.z));
-    }
-    return { position: next, rotationYDeg };
   }
 
   /** Fits the sun's shadow frustum to the room AABB so shadows stay crisp. */
@@ -1105,78 +899,10 @@ export class SceneApp {
 
   getSelected(): EditableSelection | null {
     if (!this.layout || !this.selection) return null;
-    const selection = this.selection;
-    if (selection.kind === "instance") {
-      const instance = this.layout.instances.find(
-        (entry) => entry.assetId === selection.assetId,
-      );
-      const placement = instance?.placements[selection.placementIndex];
-      if (!placement) return null;
-      return {
-        id: selectionId(selection),
-        kind: "instance",
-        assetId: selection.assetId,
-        category: this.assetCategory(selection.assetId),
-        label: placement.name ?? `${selection.assetId} #${selection.placementIndex + 1}`,
-        position: [...placement.position],
-        rotation: readRotation(placement),
-        scale: readScale(placement),
-        pivot: readPivot(placement),
-        scaleLocked: placement.scaleLocked ?? false,
-        locked: placement.locked ?? false,
-        castShadow: this.staticObjectsCastShadow(),
-        collision: placement.collision ?? true,
-        metadata: cloneMetadata(placement.metadata),
-      };
-    }
-
-    if (selection.kind === "light") {
-      const light = this.layout.lights?.[selection.index];
-      if (!light) return null;
-      const editable: EditableSelection = {
-        id: selectionId(selection),
-        kind: "light",
-        assetId: light.type,
-        category: "light",
-        label: light.name ?? light.id,
-        position: [...light.position],
-        rotation: readRotation(light),
-        scale: [1, 1, 1],
-        pivot: [0, 0, 0],
-        scaleLocked: true,
-        locked: light.locked ?? false,
-        castShadow: light.castShadow ?? light.type === "directional",
-        collision: false,
-        metadata: {},
-        lightType: light.type,
-        color: light.color ?? DEFAULT_LIGHT_COLOR,
-        intensity: light.intensity ?? defaultLightIntensity(light.type),
-      };
-      if (light.distance !== undefined) editable.distance = light.distance;
-      if (light.angle !== undefined) editable.angle = light.angle;
-      if (light.penumbra !== undefined) editable.penumbra = light.penumbra;
-      if (light.decay !== undefined) editable.decay = light.decay;
-      return editable;
-    }
-
-    const character = this.layout.characters[selection.index];
-    if (!character) return null;
-    return {
-      id: selectionId(selection),
-      kind: "character",
-      assetId: character.assetId,
-      category: this.assetCategory(character.assetId),
-      label: character.name ?? character.assetId,
-      position: [...character.position],
-      rotation: readRotation(character),
-      scale: readScale(character),
-      pivot: readPivot(character),
-      scaleLocked: character.scaleLocked ?? false,
-      locked: character.locked ?? false,
-      castShadow: character.castShadow ?? true,
-      collision: character.collision ?? true,
-      metadata: cloneMetadata(character.metadata),
-    };
+    return buildEditableSelection(this.layout, this.selection, {
+      assetCategory: (assetId) => this.assetCategory(assetId),
+      staticObjectsCastShadow: this.staticObjectsCastShadow(),
+    });
   }
 
   /** Resolves an asset's manifest category for Details display. */
@@ -1677,7 +1403,7 @@ export class SceneApp {
 
   addAssetAt(assetId: string, clientX: number, clientY: number): void {
     if (!this.layout || !this.models.has(assetId)) return;
-    const hit = this.clientToSurface(clientX, clientY);
+    const hit = this.picker.clientToSurface(clientX, clientY);
     if (!hit) return;
 
     const x = snapValue(hit.x, this.snapSettings.move, this.snapSettings.moveEnabled);
@@ -1723,8 +1449,10 @@ export class SceneApp {
 
     // Wall assets dropped near a wall mount flush against it, facing the room.
     if (this.isWallAsset(assetId)) {
-      const snap = this.computeWallSnap(assetId, placement.position, placement.rotationYDeg ?? 0, 1);
-      if (snap) {
+      const bounds = this.localBounds.get(assetId);
+      const room = this.getRoomBounds();
+      if (bounds && room) {
+        const snap = computeWallSnap(bounds, room, placement.position, placement.rotationYDeg ?? 0, 1);
         placement.position = snap.position;
         placement.rotationYDeg = snap.rotationYDeg;
       }
@@ -2701,20 +2429,20 @@ export class SceneApp {
         this.pendingAssetId = null;
         return true;
       },
-      pickGizmoHandle: (clientX, clientY) => this.pickGizmoHandle(clientX, clientY),
+      pickGizmoHandle: (clientX, clientY) => this.picker.pickGizmoHandle(clientX, clientY),
       startGizmoDrag: (handle, event) => this.startGizmoDrag(handle, event),
-      beginAltCameraDrag: (event) => this.beginAltCameraDrag(event),
-      beginCameraNavigation: (event) => this.beginCameraNavigation(event),
-      pickSelection: (clientX, clientY) => this.pickSelection(clientX, clientY),
+      beginAltCameraDrag: (event) => this.cameraController.beginAltDrag(event),
+      beginCameraNavigation: (event) => this.cameraController.beginNavigation(event),
+      pickSelection: (clientX, clientY) => this.picker.pickSelection(clientX, clientY),
       toggleSelection: (selection) => this.toggleSelection(selection),
       select: (selection) => this.select(selection),
-      isCameraNavigationActive: () => this.cameraNavigationActive,
-      cameraNavigationPointerId: () => this.cameraNavigationPointerId,
-      updateCameraLook: (movementX, movementY) => this.updateCameraLook(movementX, movementY),
-      endCameraNavigation: (event) => this.endCameraNavigation(event),
-      cameraDragPointerId: () => this.cameraDrag?.pointerId ?? null,
-      updateCameraDrag: (event) => this.updateCameraDrag(event),
-      endCameraDrag: (event) => this.endCameraDrag(event),
+      isCameraNavigationActive: () => this.cameraController.isNavigating,
+      cameraNavigationPointerId: () => this.cameraController.navigationPointerId,
+      updateCameraLook: (movementX, movementY) => this.cameraController.updateLook(movementX, movementY),
+      endCameraNavigation: (event) => this.cameraController.endNavigation(event),
+      cameraDragPointerId: () => this.cameraController.dragPointerId,
+      updateCameraDrag: (event) => this.cameraController.updateDrag(event),
+      endCameraDrag: (event) => this.cameraController.endDrag(event),
       pointerDrag: () => this.pointerDrag,
       clearPointerDrag: () => {
         const drag = this.pointerDrag;
@@ -2731,154 +2459,10 @@ export class SceneApp {
       commitPointerDrag: (drag) => this.commitPointerDrag(drag),
       updateGizmo: () => this.updateGizmo(),
       onAssetDrop: (assetId, clientX, clientY) => this.addAssetAt(assetId, clientX, clientY),
-      onWheel: (event) => this.handleWheel(event),
-      addPressedKey: (code) => this.pressedKeys.add(code),
-      deletePressedKey: (code) => this.pressedKeys.delete(code),
+      onWheel: (event) => this.cameraController.handleWheel(event),
+      addPressedKey: (code) => this.cameraController.addPressedKey(code),
+      deletePressedKey: (code) => this.cameraController.deletePressedKey(code),
     });
-  }
-
-  private beginCameraNavigation(event: PointerEvent): void {
-    event.preventDefault();
-    this.cameraNavigationActive = true;
-    this.cameraNavigationTouched = true;
-    this.cameraNavigationPointerId = event.pointerId;
-    this.camera.up.set(0, 1, 0);
-    this.pointerDrag = null;
-    this.pendingAssetId = null;
-    this.canvas.style.cursor = "none";
-    this.onStatus?.("Camera navigation");
-    try {
-      this.canvas.setPointerCapture(event.pointerId);
-    } catch {
-      // Synthetic tests and a few browser edge cases can reject capture.
-    }
-  }
-
-  private endCameraNavigation(event: PointerEvent): void {
-    this.cameraNavigationActive = false;
-    this.cameraNavigationPointerId = null;
-    this.pressedKeys.clear();
-    try {
-      if (this.canvas.hasPointerCapture(event.pointerId)) {
-        this.canvas.releasePointerCapture(event.pointerId);
-      }
-    } catch {
-      // Matching beginCameraNavigation: capture may not exist for synthetic events.
-    }
-    this.canvas.style.cursor = "";
-  }
-
-  private beginAltCameraDrag(event: PointerEvent): boolean {
-    if (event.button !== 0 && event.button !== 1 && event.button !== 2) return false;
-    event.preventDefault();
-    this.cameraNavigationTouched = true;
-    this.pointerDrag = null;
-    this.pendingAssetId = null;
-
-    if (event.button === 0) {
-      this.camera.up.set(0, 1, 0);
-      const target = this.getCameraOrbitTarget();
-      this.cameraDrag = {
-        mode: "orbit",
-        pointerId: event.pointerId,
-        target,
-        distance: Math.max(0.3, this.camera.position.distanceTo(target)),
-      };
-      this.canvas.style.cursor = "grabbing";
-      this.onStatus?.("Camera orbit");
-    } else if (event.button === 1) {
-      this.cameraDrag = { mode: "pan", pointerId: event.pointerId };
-      this.canvas.style.cursor = "move";
-      this.onStatus?.("Camera pan");
-    } else {
-      this.camera.up.set(0, 1, 0);
-      this.cameraDrag = { mode: "dolly", pointerId: event.pointerId };
-      this.canvas.style.cursor = "ns-resize";
-      this.onStatus?.("Camera dolly");
-    }
-
-    try {
-      this.canvas.setPointerCapture(event.pointerId);
-    } catch {
-      // Pointer capture can be unavailable in synthetic events.
-    }
-    return true;
-  }
-
-  private updateCameraDrag(event: PointerEvent): void {
-    if (!this.cameraDrag) return;
-    event.preventDefault();
-    this.cameraNavigationTouched = true;
-
-    if (this.cameraDrag.mode === "orbit") {
-      this.cameraYaw -= event.movementX * CAMERA_ORBIT_SENSITIVITY;
-      this.cameraPitch = clamp(
-        this.cameraPitch - event.movementY * CAMERA_ORBIT_SENSITIVITY,
-        -CAMERA_PITCH_LIMIT,
-        CAMERA_PITCH_LIMIT,
-      );
-      const lookDirection = this.getCameraLookDirection();
-      this.camera.position
-        .copy(this.cameraDrag.target)
-        .addScaledVector(lookDirection, -this.cameraDrag.distance);
-      this.camera.lookAt(this.cameraDrag.target);
-      this.syncCameraAnglesFromCurrentView();
-      return;
-    }
-
-    if (this.cameraDrag.mode === "pan") {
-      const distanceScale = Math.max(1, this.getCameraOrbitTarget().distanceTo(this.camera.position));
-      const right = new Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion).normalize();
-      const up = new Vector3(0, 1, 0).applyQuaternion(this.camera.quaternion).normalize();
-      this.camera.position
-        .addScaledVector(right, -event.movementX * CAMERA_PAN_SENSITIVITY * distanceScale)
-        .addScaledVector(up, event.movementY * CAMERA_PAN_SENSITIVITY * distanceScale);
-      return;
-    }
-
-    this.dollyCamera(event.movementY * CAMERA_DOLLY_SENSITIVITY);
-  }
-
-  private endCameraDrag(event: PointerEvent): void {
-    this.cameraDrag = null;
-    this.syncCameraAnglesFromCurrentView();
-    try {
-      if (this.canvas.hasPointerCapture(event.pointerId)) {
-        this.canvas.releasePointerCapture(event.pointerId);
-      }
-    } catch {
-      // Pointer capture may already be gone.
-    }
-    this.canvas.style.cursor = "";
-  }
-
-  private handleWheel = (event: WheelEvent): void => {
-    event.preventDefault();
-    if (this.cameraNavigationActive) {
-      this.adjustCameraMoveSpeed(event.deltaY);
-      return;
-    }
-
-    this.cameraNavigationTouched = true;
-    this.dollyCamera(event.deltaY * CAMERA_DOLLY_SENSITIVITY);
-  };
-
-  private updateCameraLook(movementX: number, movementY: number): void {
-    this.cameraYaw -= movementX * CAMERA_LOOK_SENSITIVITY;
-    this.cameraPitch = clamp(
-      this.cameraPitch - movementY * CAMERA_LOOK_SENSITIVITY,
-      -CAMERA_PITCH_LIMIT,
-      CAMERA_PITCH_LIMIT,
-    );
-    this.applyCameraOrientation();
-  }
-
-  private getCameraLookDirection(): Vector3 {
-    return new Vector3(
-      -Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch),
-      Math.sin(this.cameraPitch),
-      -Math.cos(this.cameraYaw) * Math.cos(this.cameraPitch),
-    ).normalize();
   }
 
   private getCameraOrbitTarget(): Vector3 {
@@ -2893,41 +2477,6 @@ export class SceneApp {
       .set(this.camera.position, direction)
       .intersectPlane(this.floorPlane, new Vector3());
     return floorHit ?? this.camera.position.clone().addScaledVector(direction, 5);
-  }
-
-  private dollyCamera(amount: number): void {
-    const direction = new Vector3();
-    this.camera.getWorldDirection(direction);
-    if (direction.lengthSq() === 0) return;
-    this.camera.position.addScaledVector(direction.normalize(), -amount);
-  }
-
-  private adjustCameraMoveSpeed(deltaY: number): void {
-    const factor = deltaY < 0 ? 1.15 : 1 / 1.15;
-    this.cameraMoveSpeed = clamp(
-      this.cameraMoveSpeed * factor,
-      CAMERA_MIN_MOVE_SPEED,
-      CAMERA_MAX_MOVE_SPEED,
-    );
-    this.onStatus?.(`Camera speed ${this.cameraMoveSpeed.toFixed(1)}`, "info");
-  }
-
-  private updateCameraNavigation(deltaSeconds: number): void {
-    if (!this.cameraNavigationActive || this.pressedKeys.size === 0) return;
-
-    this.getCameraBasis();
-    this.cameraMove.set(0, 0, 0);
-
-    if (this.pressedKeys.has("KeyW")) this.cameraMove.add(this.cameraForward);
-    if (this.pressedKeys.has("KeyS")) this.cameraMove.sub(this.cameraForward);
-    if (this.pressedKeys.has("KeyD")) this.cameraMove.add(this.cameraRight);
-    if (this.pressedKeys.has("KeyA")) this.cameraMove.sub(this.cameraRight);
-    if (this.pressedKeys.has("KeyE")) this.cameraMove.y += 1;
-    if (this.pressedKeys.has("KeyQ")) this.cameraMove.y -= 1;
-
-    if (this.cameraMove.lengthSq() === 0) return;
-    this.cameraMove.normalize().multiplyScalar(this.cameraMoveSpeed * deltaSeconds);
-    this.camera.position.add(this.cameraMove);
   }
 
   private commitPointerDrag(drag: GizmoPointerDrag): void {
@@ -2945,31 +2494,6 @@ export class SceneApp {
       return;
     }
     this.commitTransformChange(drag.selection, drag.startTransform);
-  }
-
-  private getCameraBasis(): void {
-    this.camera.getWorldDirection(this.cameraForward);
-    this.cameraForward.y = 0;
-    if (this.cameraForward.lengthSq() === 0) this.cameraForward.set(0, 0, -1);
-    this.cameraForward.normalize();
-    this.cameraRight.crossVectors(this.cameraForward, this.camera.up).normalize();
-  }
-
-  private syncCameraAnglesFromCurrentView(): void {
-    const direction = new Vector3();
-    this.camera.getWorldDirection(direction);
-    this.cameraYaw = Math.atan2(-direction.x, -direction.z);
-    this.cameraPitch = Math.asin(clamp(direction.y, -1, 1));
-  }
-
-  private applyCameraOrientation(): void {
-    this.camera.up.set(0, 1, 0);
-    const lookDirection = new Vector3(
-      -Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch),
-      Math.sin(this.cameraPitch),
-      -Math.cos(this.cameraYaw) * Math.cos(this.cameraPitch),
-    );
-    this.camera.lookAt(this.camera.position.clone().add(lookDirection));
   }
 
   private startGizmoDrag(handle: GizmoHandle, event: PointerEvent): void {
@@ -2997,7 +2521,7 @@ export class SceneApp {
     const base = gizmoDragBaseWorld(selected, pivotWorld, pivotEditing);
     const movePlane = createGizmoMovePlane(handle, base, this.gizmoGroup.quaternion);
     const planeStartHit = movePlane
-      ? this.clientToPlane(event.clientX, event.clientY, movePlane) ?? base.clone()
+      ? this.picker.clientToPlane(event.clientX, event.clientY, movePlane) ?? base.clone()
       : undefined;
     this.pointerDrag = createGizmoPointerDrag({
       handle,
@@ -3006,7 +2530,7 @@ export class SceneApp {
       pointerId: event.pointerId,
       clientX: event.clientX,
       clientY: event.clientY,
-      floorHit: handle.tool === "move" ? this.clientToFloor(event.clientX, event.clientY) : null,
+      floorHit: handle.tool === "move" ? this.picker.clientToFloor(event.clientX, event.clientY) : null,
       freeMoveBasis: this.getScreenSpaceMoveBasis(),
       linkedTransforms,
       descendantTransforms:
@@ -3024,111 +2548,47 @@ export class SceneApp {
   }
 
   private updateMoveDrag(event: PointerEvent, selected: EditableSelection): void {
-    if (!this.pointerDrag || this.pointerDrag.mode !== "move") return;
+    const drag = this.pointerDrag;
+    if (!drag || drag.mode !== "move") return;
 
     // When editing the pivot the object stays put, so the unchanged components
     // come from the pivot's start point (startPosition), not the object origin.
-    const position: [number, number, number] = this.pointerDrag.pivotEdit
-      ? [...this.pointerDrag.startPosition]
-      : [...selected.position];
-    if (this.pointerDrag.axis === "xyz") {
-      const deltaX = event.clientX - this.pointerDrag.startClientX;
-      const deltaY = event.clientY - this.pointerDrag.startClientY;
-      const right = this.pointerDrag.freeMoveRight ?? new Vector3(1, 0, 0);
-      const up = this.pointerDrag.freeMoveUp ?? new Vector3(0, 1, 0);
-      const offset = right
-        .clone()
-        .multiplyScalar(deltaX * 0.01)
-        .add(up.clone().multiplyScalar(-deltaY * 0.01));
-      position[0] = snapValue(
-        this.pointerDrag.startPosition[0] + offset.x,
-        this.snapSettings.move,
-        this.snapSettings.moveEnabled,
-      );
-      position[1] = snapValue(
-        this.pointerDrag.startPosition[1] + offset.y,
-        this.snapSettings.move,
-        this.snapSettings.moveEnabled,
-      );
-      position[2] = snapValue(
-        this.pointerDrag.startPosition[2] + offset.z,
-        this.snapSettings.move,
-        this.snapSettings.moveEnabled,
+    const base: Vec3 = drag.pivotEdit ? [...drag.startPosition] : [...selected.position];
+
+    if (drag.axis === "xyz") {
+      const position = freeMoveDragPosition(
+        drag,
+        event.clientX - drag.startClientX,
+        event.clientY - drag.startClientY,
+        this.snapSettings,
       );
       this.updateMoveDragPosition(position);
       return;
     }
 
-    if (isPlaneAxis(this.pointerDrag.axis) && this.pointerDrag.movePlane && this.pointerDrag.planeStartHit) {
-      const hit = this.clientToPlane(event.clientX, event.clientY, this.pointerDrag.movePlane);
+    if (isPlaneAxis(drag.axis) && drag.movePlane && drag.planeStartHit) {
+      const hit = this.picker.clientToPlane(event.clientX, event.clientY, drag.movePlane);
       if (!hit) return;
-      const delta = hit.sub(this.pointerDrag.planeStartHit);
-      const start = this.pointerDrag.startPosition;
-      for (let i = 0; i < 3; i += 1) {
-        position[i] = snapValue(
-          (start[i] ?? 0) + delta.getComponent(i),
-          this.snapSettings.move,
-          this.snapSettings.moveEnabled,
-        );
-      }
-      this.updateMoveDragPosition(position);
+      this.updateMoveDragPosition(planeMoveDragPosition(drag, hit, this.snapSettings));
       return;
     }
 
-    if (this.pointerDrag.axis === "y") {
-      const deltaY = event.clientY - this.pointerDrag.startClientY;
-      position[1] = snapValue(
-        this.pointerDrag.startPosition[1] - deltaY * 0.01,
-        this.snapSettings.move,
-        this.snapSettings.moveEnabled,
+    if (drag.axis === "y") {
+      this.updateMoveDragPosition(
+        axisYMoveDragPosition(base, drag, event.clientY - drag.startClientY, this.snapSettings),
       );
-      this.updateMoveDragPosition(position);
       return;
     }
 
-    const hit = this.clientToFloor(event.clientX, event.clientY);
+    const hit = this.picker.clientToFloor(event.clientX, event.clientY);
     if (!hit) return;
 
-    if (
-      this.transformSpace === "local" &&
-      (this.pointerDrag.axis === "x" || this.pointerDrag.axis === "z")
-    ) {
-      // Move along the object's local axis. Y rotation drives the floor-plane
-      // heading; X/Z tilt is ignored here since local move stays on the floor.
-      const theta = degreesToRadians(this.pointerDrag.startTransform.rotation[1]);
-      const cos = Math.cos(theta);
-      const sin = Math.sin(theta);
-      const dirX = this.pointerDrag.axis === "x" ? cos : sin;
-      const dirZ = this.pointerDrag.axis === "x" ? -sin : cos;
-      const startHitX = this.pointerDrag.startPosition[0] - this.pointerDrag.offset.x;
-      const startHitZ = this.pointerDrag.startPosition[2] - this.pointerDrag.offset.z;
-      const distance = snapValue(
-        (hit.x - startHitX) * dirX + (hit.z - startHitZ) * dirZ,
-        this.snapSettings.move,
-        this.snapSettings.moveEnabled,
-      );
-      position[0] = round(this.pointerDrag.startPosition[0] + dirX * distance);
-      position[2] = round(this.pointerDrag.startPosition[2] + dirZ * distance);
-      this.updateMoveDragPosition(position);
+    if (this.transformSpace === "local" && (drag.axis === "x" || drag.axis === "z")) {
+      this.updateMoveDragPosition(localAxisMoveDragPosition(base, drag, hit, this.snapSettings));
       return;
     }
 
-    if (this.pointerDrag.axis === "x") {
-      position[0] = snapValue(
-        hit.x + this.pointerDrag.offset.x,
-        this.snapSettings.move,
-        this.snapSettings.moveEnabled,
-      );
-    }
-    if (this.pointerDrag.axis === "z") {
-      position[2] = snapValue(
-        hit.z + this.pointerDrag.offset.z,
-        this.snapSettings.move,
-        this.snapSettings.moveEnabled,
-      );
-    }
-
-    this.updateMoveDragPosition(position);
+    this.updateMoveDragPosition(worldAxisMoveDragPosition(base, drag, hit, this.snapSettings));
   }
 
   private updateMoveDragPosition(position: Vec3): void {
@@ -3175,23 +2635,17 @@ export class SceneApp {
   }
 
   private updateRotateDrag(event: PointerEvent): void {
-    if (!this.pointerDrag || this.pointerDrag.mode !== "rotate") return;
-    const axisIndex = axisToIndex(this.pointerDrag.axis);
-    const deltaDeg = (event.clientX - this.pointerDrag.startClientX) * 0.5;
-    const rotation: Vec3 = [...this.pointerDrag.startRotation];
-    rotation[axisIndex] = snapValue(
-      this.pointerDrag.startRotation[axisIndex] + deltaDeg,
-      this.snapSettings.rotate,
-      this.snapSettings.rotateEnabled,
-    );
+    const drag = this.pointerDrag;
+    if (!drag || drag.mode !== "rotate") return;
+    const rotation = rotateDragRotation(drag, event.clientX - drag.startClientX, this.snapSettings);
     const values: { rotation: Vec3; position?: Vec3 } = { rotation };
-    if (this.pointerDrag.pivotWorld && this.pointerDrag.pivot) {
+    if (drag.pivotWorld && drag.pivot) {
       // Pivot around the offset point: keep it fixed by shifting the origin.
-      values.position = this.pivotCorrectedPosition(
-        this.pointerDrag.pivotWorld,
+      values.position = pivotCorrectedPosition(
+        drag.pivotWorld,
         rotation,
-        this.pointerDrag.startTransform.scale,
-        this.pointerDrag.pivot,
+        drag.startTransform.scale,
+        drag.pivot,
       );
     }
     this.updateSelectedTransform(values, { notifySelection: false });
@@ -3200,42 +2654,21 @@ export class SceneApp {
   }
 
   private updateScaleDrag(event: PointerEvent): void {
-    if (!this.pointerDrag || this.pointerDrag.mode !== "scale") return;
-    const delta =
-      event.clientX -
-      this.pointerDrag.startClientX -
-      (event.clientY - this.pointerDrag.startClientY);
-    const factor = delta * 0.005;
-    const start = this.pointerDrag.startScale;
-    const locked = this.pointerDrag.axis === "uniform";
-
-    const apply = (value: number): number =>
-      Math.max(
-        0.05,
-        snapValue(value + factor, this.snapSettings.scale, this.snapSettings.scaleEnabled),
-      );
-
-    let scale: Vec3;
-    if (locked) {
-      // Grow every axis by the same amount so a locked object keeps its profile.
-      scale = [apply(start[0]), apply(start[1]), apply(start[2])];
-    } else if (isPlaneAxis(this.pointerDrag.axis)) {
-      const [i, j] = planeAxisIndices(this.pointerDrag.axis);
-      scale = [...start];
-      scale[i] = apply(start[i]);
-      scale[j] = apply(start[j]);
-    } else {
-      const axisIndex = axisToIndex(this.pointerDrag.axis);
-      scale = [...start];
-      scale[axisIndex] = apply(start[axisIndex]);
-    }
+    const drag = this.pointerDrag;
+    if (!drag || drag.mode !== "scale") return;
+    const scale = scaleDragScale(
+      drag,
+      event.clientX - drag.startClientX,
+      event.clientY - drag.startClientY,
+      this.snapSettings,
+    );
     const values: { scale: Vec3; position?: Vec3 } = { scale };
-    if (this.pointerDrag.pivotWorld && this.pointerDrag.pivot) {
-      values.position = this.pivotCorrectedPosition(
-        this.pointerDrag.pivotWorld,
-        this.pointerDrag.startTransform.rotation,
+    if (drag.pivotWorld && drag.pivot) {
+      values.position = pivotCorrectedPosition(
+        drag.pivotWorld,
+        drag.startTransform.rotation,
         scale,
-        this.pointerDrag.pivot,
+        drag.pivot,
       );
     }
     this.updateSelectedTransform(values, { notifySelection: false });
@@ -3243,22 +2676,10 @@ export class SceneApp {
     this.emitSelectionChanged();
   }
 
-  private pickGizmoHandle(clientX: number, clientY: number): GizmoHandle | null {
-    if (!this.gizmoGroup.visible || this.gizmoPickables.length === 0) return null;
-    this.setPointerNdc(clientX, clientY);
-    return pickGizmoHandleFromObjects(
-      this.raycaster,
-      this.camera,
-      this.pointerNdc,
-      this.gizmoGroup.visible,
-      this.gizmoPickables,
-    );
-  }
-
   /** Highlights the handle under the cursor (idle, not dragging) so it's clear what a click will grab. */
   private updateGizmoHover(clientX: number, clientY: number): void {
-    if (this.cameraDrag || this.cameraNavigationActive) return;
-    const handle = this.gizmoGroup.visible ? this.pickGizmoHandle(clientX, clientY) : null;
+    if (this.cameraController.isInteracting) return;
+    const handle = this.gizmoGroup.visible ? this.picker.pickGizmoHandle(clientX, clientY) : null;
     const changed = this.gizmoInteraction.setHover(handle);
     if (!changed) return;
     this.canvas.style.cursor = handle ? "pointer" : "";
@@ -3273,46 +2694,6 @@ export class SceneApp {
 
   private getScreenSpaceMoveBasis(): { right: Vector3; up: Vector3 } {
     return screenSpaceMoveBasis(this.camera.quaternion);
-  }
-
-  private clientToPlane(clientX: number, clientY: number, plane: Plane): Vector3 | null {
-    this.setPointerNdc(clientX, clientY);
-    this.raycaster.setFromCamera(this.pointerNdc, this.camera);
-    const target = new Vector3();
-    return this.raycaster.ray.intersectPlane(plane, target) ? target : null;
-  }
-
-  private pickSelection(clientX: number, clientY: number): Selection | null {
-    this.setPointerNdc(clientX, clientY);
-    this.raycaster.setFromCamera(this.pointerNdc, this.camera);
-
-    const pickables: Object3D[] = [];
-    for (const meshes of this.instanceMeshes.values()) pickables.push(...meshes);
-    pickables.push(...this.characterObjects);
-    for (const record of this.lightObjects) pickables.push(record.root);
-
-    const hits = this.raycaster.intersectObjects(pickables, true);
-    for (const hit of hits) {
-      const mesh = findParentInstancedMesh(hit.object);
-      if (mesh) {
-        const assetId = String(mesh.userData.assetId ?? "");
-        if (!assetId || hit.instanceId == null) continue;
-        return { kind: "instance", assetId, placementIndex: hit.instanceId };
-      }
-
-      const character = findParentCharacter(hit.object);
-      if (character) {
-        const index = Number(character.userData.characterIndex);
-        if (Number.isInteger(index)) return { kind: "character", index };
-      }
-
-      const light = findParentLight(hit.object);
-      if (light) {
-        const index = Number(light.userData.lightIndex);
-        if (Number.isInteger(index)) return { kind: "light", index };
-      }
-    }
-    return null;
   }
 
   private select(selection: Selection | null): void {
@@ -3509,29 +2890,6 @@ export class SceneApp {
     return new Vector3(...pivot).applyMatrix4(transformToMatrix(editable));
   }
 
-  /**
-   * Origin position that keeps `pivotWorld` fixed for a given rotation+scale:
-   * p' = pivotWorld − R·S·pivotLocal.
-   */
-  private pivotCorrectedPosition(
-    pivotWorld: Vector3,
-    rotation: Vec3,
-    scale: Vec3,
-    pivot: Vec3,
-  ): Vec3 {
-    const rotScale = new Matrix4().compose(
-      new Vector3(0, 0, 0),
-      new Quaternion().setFromEuler(eulerDegrees(rotation)),
-      new Vector3(...scale),
-    );
-    const offset = new Vector3(...pivot).applyMatrix4(rotScale);
-    return [
-      round(pivotWorld.x - offset.x),
-      round(pivotWorld.y - offset.y),
-      round(pivotWorld.z - offset.z),
-    ];
-  }
-
   /** Model-space AABB for pivot presets (instances only for now). */
   private getLocalBounds(selection: Selection): Box3 | null {
     if (selection.kind === "instance") return this.localBounds.get(selection.assetId) ?? null;
@@ -3597,7 +2955,7 @@ export class SceneApp {
   }
 
   private updateGizmo(): void {
-    this.clearGizmo();
+    clearGizmoGroup(this.gizmoGroup, this.gizmoPickables);
     if (!this.selection) return;
 
     const selected = this.getSelected();
@@ -3617,12 +2975,8 @@ export class SceneApp {
     }
 
     const tool = pivotEditing ? "move" : this.activeTool;
-    if (tool === "move") {
-      this.addMoveGizmo();
-    } else if (tool === "rotate") {
-      this.addRotateGizmo();
-    } else if (tool === "scale") {
-      this.addScaleGizmo();
+    if (tool === "move" || tool === "rotate" || tool === "scale") {
+      buildGizmoHandles(tool, this.gizmoGroup, this.gizmoPickables, this.gizmoInteraction);
     }
     this.updateGizmoScreenScale();
   }
@@ -3636,147 +2990,6 @@ export class SceneApp {
       viewportHeight,
     );
     this.gizmoGroup.scale.setScalar(scale);
-  }
-
-  private clearGizmo(): void {
-    for (const child of [...this.gizmoGroup.children]) {
-      child.traverse((object) => {
-        if (object instanceof Mesh) {
-          object.geometry.dispose();
-          const materials = Array.isArray(object.material) ? object.material : [object.material];
-          for (const material of materials) material.dispose();
-        }
-      });
-      child.removeFromParent();
-    }
-    this.gizmoPickables.length = 0;
-    this.gizmoGroup.scale.setScalar(1);
-    this.gizmoGroup.visible = false;
-  }
-
-  private addMoveGizmo(): void {
-    this.addArrowHandle("x", 0xe15b5b);
-    this.addArrowHandle("y", 0x69d282);
-    this.addArrowHandle("z", 0x5b8fe1);
-
-    // Two-axis plane handles, colored by the axis they are perpendicular to.
-    this.addPlaneHandle("move", "xy", 0x5b8fe1);
-    this.addPlaneHandle("move", "xz", 0x69d282);
-    this.addPlaneHandle("move", "yz", 0xe15b5b);
-
-    const center = new Mesh(
-      new BoxGeometry(0.18, 0.18, 0.18),
-      this.gizmoMaterialFor("move", "xyz", 0xf3cc5c),
-    );
-    center.name = "move-xyz-free";
-    this.registerGizmoHandle(center, { tool: "move", axis: "xyz" });
-    this.gizmoGroup.add(center);
-  }
-
-  private addRotateGizmo(): void {
-    this.addRotateRing("x", 0xe15b5b);
-    this.addRotateRing("y", 0x69d282);
-    this.addRotateRing("z", 0x5b8fe1);
-  }
-
-  private addRotateRing(axis: GizmoVectorAxis, color: number): void {
-    const ring = new Mesh(
-      new TorusGeometry(0.72, 0.01, 10, 96),
-      this.gizmoMaterialFor("rotate", axis, color),
-    );
-    ring.name = `rotate-${axis}-ring`;
-    // A torus lies in its local XY plane (normal +Z); orient each ring so its
-    // normal points down the axis it rotates about.
-    if (axis === "x") ring.rotation.y = Math.PI / 2;
-    else if (axis === "y") ring.rotation.x = Math.PI / 2;
-    this.registerGizmoHandle(ring, { tool: "rotate", axis });
-    this.gizmoGroup.add(ring);
-  }
-
-  private addScaleGizmo(): void {
-    const center = new Mesh(
-      new BoxGeometry(0.16, 0.16, 0.16),
-      this.gizmoMaterialFor("scale", "uniform", 0xf3cc5c),
-    );
-    center.name = "scale-uniform";
-    this.registerGizmoHandle(center, { tool: "scale", axis: "uniform" });
-    this.gizmoGroup.add(center);
-
-    this.addScaleHandle("x", 0xe15b5b);
-    this.addScaleHandle("y", 0x69d282);
-    this.addScaleHandle("z", 0x5b8fe1);
-
-    this.addPlaneHandle("scale", "xy", 0x5b8fe1);
-    this.addPlaneHandle("scale", "xz", 0x69d282);
-    this.addPlaneHandle("scale", "yz", 0xe15b5b);
-  }
-
-  /** Small square handle for two-axis (planar) move/scale, like Unreal's gizmo. */
-  private addPlaneHandle(tool: "move" | "scale", axis: GizmoPlaneAxis, color: number): void {
-    const size = 0.2;
-    const reach = 0.34;
-    const material = this.gizmoMaterialFor(tool, axis, color);
-    const quad = new Mesh(new PlaneGeometry(size, size), material);
-    quad.name = `${tool}-${axis}-plane`;
-    if (axis === "xy") {
-      quad.position.set(reach, reach, 0);
-    } else if (axis === "xz") {
-      quad.position.set(reach, 0, reach);
-      quad.rotation.x = -Math.PI / 2;
-    } else {
-      quad.position.set(0, reach, reach);
-      quad.rotation.y = Math.PI / 2;
-    }
-    this.registerGizmoHandle(quad, { tool, axis });
-    this.gizmoGroup.add(quad);
-  }
-
-  private addArrowHandle(axis: GizmoVectorAxis, color: number): void {
-    const group = new Group();
-    group.name = `move-${axis}-axis`;
-
-    const material = this.gizmoMaterialFor("move", axis, color);
-    const shaft = new Mesh(new CylinderGeometry(0.012, 0.012, 0.62, 8), material.clone());
-    const head = new Mesh(new ConeGeometry(0.055, 0.14, 14), material.clone());
-    shaft.position.y = 0.31;
-    head.position.y = 0.69;
-    group.add(shaft, head);
-
-    if (axis === "x") group.rotation.z = -Math.PI / 2;
-    if (axis === "z") group.rotation.x = Math.PI / 2;
-
-    this.registerGizmoHandle(group, { tool: "move", axis });
-    this.gizmoGroup.add(group);
-  }
-
-  private addScaleHandle(axis: GizmoVectorAxis, color: number): void {
-    const group = new Group();
-    group.name = `scale-${axis}-axis`;
-
-    const material = this.gizmoMaterialFor("scale", axis, color);
-    const shaft = new Mesh(new CylinderGeometry(0.01, 0.01, 0.52, 8), material.clone());
-    const handle = new Mesh(new BoxGeometry(0.11, 0.11, 0.11), material.clone());
-    shaft.position.y = 0.26;
-    handle.position.y = 0.58;
-    group.add(shaft, handle);
-
-    if (axis === "x") group.rotation.z = -Math.PI / 2;
-    if (axis === "z") group.rotation.x = Math.PI / 2;
-    this.registerGizmoHandle(group, { tool: "scale", axis });
-    this.gizmoGroup.add(group);
-  }
-
-  private gizmoMaterialFor(tool: EditorTool, axis: GizmoAxis, color: number): MeshBasicMaterial {
-    return createGizmoHandleMaterial(
-      { tool, axis },
-      color,
-      this.gizmoInteraction.activeHandle,
-      this.gizmoInteraction.hoveredHandle,
-    );
-  }
-
-  private registerGizmoHandle(object: Object3D, handle: GizmoHandle): void {
-    registerGizmoHandlePickables(object, handle, this.gizmoPickables);
   }
 
   private getMutableTransform(
@@ -3949,39 +3162,6 @@ export class SceneApp {
     return Boolean(this.layout.characters[selection.index]);
   }
 
-  private clientToFloor(clientX: number, clientY: number): Vector3 | null {
-    this.setPointerNdc(clientX, clientY);
-    this.raycaster.setFromCamera(this.pointerNdc, this.camera);
-    const hit = this.raycaster.ray.intersectPlane(this.floorPlane, this.floorHit);
-    return hit ? this.floorHit.clone() : null;
-  }
-
-  /**
-   * Resolves the cursor to a placement point: the nearest scene surface under
-   * the cursor (so assets land on table/shelf tops), falling back to the floor
-   * plane (y = 0) when no geometry is hit.
-   */
-  private clientToSurface(clientX: number, clientY: number): Vector3 | null {
-    this.setPointerNdc(clientX, clientY);
-    this.raycaster.setFromCamera(this.pointerNdc, this.camera);
-
-    const pickables: Object3D[] = [];
-    for (const meshes of this.instanceMeshes.values()) pickables.push(...meshes);
-    pickables.push(...this.characterObjects);
-
-    const hits = this.raycaster.intersectObjects(pickables, true);
-    if (hits[0]) return hits[0].point.clone();
-
-    const floor = this.raycaster.ray.intersectPlane(this.floorPlane, this.floorHit);
-    return floor ? this.floorHit.clone() : null;
-  }
-
-  private setPointerNdc(clientX: number, clientY: number): void {
-    const rect = this.canvas.getBoundingClientRect();
-    this.pointerNdc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
-    this.pointerNdc.y = -(((clientY - rect.top) / rect.height) * 2 - 1);
-  }
-
   private handleResize = (): void => {
     const width = window.innerWidth;
     const height = window.innerHeight;
@@ -3989,10 +3169,10 @@ export class SceneApp {
       width,
       height,
       target: CAMERA_TARGET,
-      viewTouched: this.cameraNavigationTouched,
+      viewTouched: this.cameraController.hasTouched,
     });
     if (resetView) {
-      this.syncCameraAnglesFromCurrentView();
+      this.cameraController.syncAnglesFromCurrentView();
     }
     this.renderer.setSize(width, height, false);
   };

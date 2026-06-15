@@ -42,7 +42,20 @@ import { DEFAULT_AUDIO_CLIP_MANIFEST, audioClipById } from "../engine/assets/aud
 import { KeyboardInputSource } from "../src/input/keyboardInputSource";
 import type { Entity } from "../engine/scene/entity";
 import { selectionId } from "../editor/core/selection";
+import {
+  axisYMoveDragPosition,
+  freeMoveDragPosition,
+  localAxisMoveDragPosition,
+  planeMoveDragPosition,
+  rotateDragRotation,
+  scaleDragScale,
+  worldAxisMoveDragPosition,
+} from "../editor/gizmos/transformDrag";
+import type { GizmoPointerDrag } from "../editor/gizmos/interaction";
+import { computeWallSnap } from "../editor/render-three/wallSnap";
+import { pivotCorrectedPosition } from "../editor/render-three/transformMatrices";
 import type { LayoutCharacter, LayoutLightActor, RoomLayout } from "../engine/scene/layout";
+import { Box3, Vector3 } from "three";
 import type { AnimationMixer } from "three";
 
 let checks = 0;
@@ -933,6 +946,139 @@ check("saved layout carries the collision audio demo cue", () => {
     audioComponents.some((audio) => audio?.clipId === "collision-chime"),
     "expected a collision-chime audio cue in the saved layout",
   );
+});
+
+// ===========================================================================
+// Section 7 - Gizmo transform-drag math (pure, extracted from SceneApp)
+// ===========================================================================
+// These functions have no DOM/WebGL dependency, so they pin the viewport drag
+// arithmetic the editor relies on — coverage the engine tests could not reach
+// while it lived inline in SceneApp.
+
+type MoveDragFixture = Extract<GizmoPointerDrag, { mode: "move" }>;
+const snapOff = {
+  move: 1,
+  moveEnabled: false,
+  rotate: 15,
+  rotateEnabled: false,
+  scale: 0.1,
+  scaleEnabled: false,
+};
+const moveDragBase: MoveDragFixture = {
+  mode: "move",
+  axis: "x",
+  selection: { kind: "instance", assetId: "a", placementIndex: 0 },
+  offset: new Vector3(),
+  pointerId: 1,
+  startTransform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+  startPosition: [0, 0, 0],
+  startClientX: 0,
+  startClientY: 0,
+};
+
+check("free move drag offsets the start position along the camera basis", () => {
+  const drag: MoveDragFixture = {
+    ...moveDragBase,
+    axis: "xyz",
+    freeMoveRight: new Vector3(1, 0, 0),
+    freeMoveUp: new Vector3(0, 1, 0),
+  };
+  // +50px right, -30px screen-up (screen Y is inverted) -> +0.5 x, +0.3 y.
+  assert.deepEqual(freeMoveDragPosition(drag, 50, -30, snapOff), [0.5, 0.3, 0]);
+});
+
+check("world axis move sets only the dragged axis from the floor hit + offset", () => {
+  const drag: MoveDragFixture = { ...moveDragBase, axis: "x", offset: new Vector3(0.2, 0, 0) };
+  assert.deepEqual(
+    worldAxisMoveDragPosition([1, 2, 3], drag, new Vector3(5, 0, 7), snapOff),
+    [5.2, 2, 3],
+  );
+});
+
+check("vertical move drag changes height only, keeping base x/z", () => {
+  const drag: MoveDragFixture = { ...moveDragBase, axis: "y", startPosition: [0, 2, 0] };
+  assert.deepEqual(axisYMoveDragPosition([1, 2, 3], drag, -50, snapOff), [1, 2.5, 3]);
+});
+
+check("plane move drag applies the world delta from the plane hit", () => {
+  const drag: MoveDragFixture = {
+    ...moveDragBase,
+    axis: "xy",
+    planeStartHit: new Vector3(0, 0, 0),
+  };
+  assert.deepEqual(planeMoveDragPosition(drag, new Vector3(1.5, 0, -2), snapOff), [1.5, 0, -2]);
+});
+
+check("local axis move projects onto the object heading (90deg turns +x into -z)", () => {
+  const drag: MoveDragFixture = {
+    ...moveDragBase,
+    axis: "x",
+    startTransform: { position: [0, 0, 0], rotation: [0, 90, 0], scale: [1, 1, 1] },
+  };
+  // Heading is 90deg, so the perpendicular world-x component of the hit is
+  // ignored and the +x handle slides along world -z.
+  assert.deepEqual(localAxisMoveDragPosition([0, 0, 0], drag, new Vector3(4, 0, -3), snapOff), [
+    0, 0, -3,
+  ]);
+});
+
+check("rotate drag turns the horizontal pointer delta into degrees (and snaps)", () => {
+  const drag: GizmoPointerDrag = {
+    mode: "rotate",
+    axis: "y",
+    selection: { kind: "instance", assetId: "a", placementIndex: 0 },
+    pointerId: 1,
+    startTransform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+    startClientX: 0,
+    startRotation: [0, 0, 0],
+  };
+  assert.deepEqual(rotateDragRotation(drag, 20, snapOff), [0, 10, 0]);
+  assert.deepEqual(rotateDragRotation(drag, 20, { ...snapOff, rotateEnabled: true }), [0, 15, 0]);
+});
+
+check("scale drag handles uniform, single-axis, planar, and the 0.05 floor", () => {
+  const drag: GizmoPointerDrag = {
+    mode: "scale",
+    axis: "uniform",
+    selection: { kind: "instance", assetId: "a", placementIndex: 0 },
+    pointerId: 1,
+    startTransform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+    startClientX: 0,
+    startClientY: 0,
+    startScale: [1, 1, 1],
+  };
+  assert.deepEqual(scaleDragScale(drag, 100, 0, snapOff), [1.5, 1.5, 1.5]);
+  assert.deepEqual(scaleDragScale({ ...drag, axis: "x" }, 100, 0, snapOff), [1.5, 1, 1]);
+  assert.deepEqual(scaleDragScale({ ...drag, axis: "xy" }, 100, 0, snapOff), [1.5, 1.5, 1]);
+  // Large shrink clamps every axis to the 0.05 minimum.
+  assert.deepEqual(scaleDragScale(drag, 0, 1000, snapOff), [0.05, 0.05, 0.05]);
+});
+
+// ===========================================================================
+// Section 8 - Wall-snap geometry (pure, extracted from SceneApp)
+// ===========================================================================
+
+check("wall snap slides flush against the nearest wall and faces the interior", () => {
+  // 10x10 room (y 0..3); a thin asset facing +Z near the +Z wall (max.z = 5).
+  const room = new Box3(new Vector3(-5, 0, -5), new Vector3(5, 3, 5));
+  const bounds = new Box3(new Vector3(-0.5, 0, -0.1), new Vector3(0.5, 2, 0.1));
+  const snap = computeWallSnap(bounds, room, [0, 0, 4], 0, 1);
+  // Nearest wall is +Z: turn to face -Z (180deg) and slide so the back is flush
+  // (wall at z=5, half-depth 0.1 -> centre at 4.9).
+  assert.equal(snap.rotationYDeg, 180);
+  assert.deepEqual(snap.position, [0, 0, 4.9]);
+});
+
+check("pivot-corrected position keeps the pivot world point fixed", () => {
+  // No rotation, unit scale, origin pivot -> the origin equals the pivot world.
+  assert.deepEqual(pivotCorrectedPosition(new Vector3(1, 2, 3), [0, 0, 0], [1, 1, 1], [0, 0, 0]), [
+    1, 2, 3,
+  ]);
+  // 90deg about Y turns local +x into world -z, so a [1,0,0] pivot shifts the
+  // origin by +1 along z to keep the pivot world point (5,0,5) fixed.
+  assert.deepEqual(pivotCorrectedPosition(new Vector3(5, 0, 5), [0, 90, 0], [1, 1, 1], [1, 0, 0]), [
+    5, 0, 6,
+  ]);
 });
 
 console.log(`[engine-tests] ${checks} checks passed`);
