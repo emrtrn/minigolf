@@ -326,6 +326,16 @@ npm run build:verify     # build + engine tests + verify-dist --strict
 Append newest entries at the top. Record: date, item #, what changed, where it
 stopped, and any decision made (so the next session does not re-litigate it).
 
+- *2026-06-15* — **Item 3 stretch Piece 3 done — group/parent command orchestration moved.**
+  Moved `groupSelected`, `ungroupSelected`, `parentSelectionToActive`,
+  `parentObjectsTo`, `unparentSelected`, plus group/node id generation into
+  `EditorSceneController`. `SceneApp` now supplies host callbacks for layout
+  mutation/queries (`getMutableTransform`, `getAllSelections`, `descendantsOf`,
+  `applyGroupId`, labels) and keeps only same-named public wrappers. Added 1
+  headless engine test for undoable group/ungroup and parent/unparent host
+  mutations, including the nodeId-based cycle guard (45 → 46 checks).
+  `SceneApp.ts` 3159 → 2948 lines.
+
 - *2026-06-15* — **Item 3 stretch Piece 2 done — selection state moved into EditorSceneController.**
   `EditorSceneController` now owns `SelectionStore` in addition to
   `EditorCommandStore`, with same-named `select`/`selectMany`/`toggleSelection`/

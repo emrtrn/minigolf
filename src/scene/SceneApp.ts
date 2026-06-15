@@ -374,9 +374,15 @@ export class SceneApp {
     this.scene.background = new Color(0xd7d7c7);
     this.camera = createSceneCamera();
     this.editorSceneController = new EditorSceneController({
+      applyGroupId: (selection, groupId, options) =>
+        this.applyGroupId(selection, groupId, options),
+      descendantsOf: (selection) => this.descendantsOf(selection),
       emitHistoryChanged: () => this.emitHistoryChanged(),
       emitSelectionChanged: () => this.emitSelectionChanged(),
+      getAllSelections: (options) => this.getAllSelections(options),
       getGroupedSelections: (selection) => this.getGroupedSelections(selection),
+      getMutableTransform: (selection) => this.getMutableTransform(selection),
+      getSelectionLabel: (selection) => this.getSelectionLabel(selection),
       hasSelection: (selection) => this.hasSelection(selection),
       onStatus: (message, tone) => this.onStatus?.(message, tone),
       updateGizmo: () => this.updateGizmo(),
@@ -1059,145 +1065,17 @@ export class SceneApp {
   }
 
   groupSelected(): void {
-    const selections = this.getSelectedSelections();
-    if (selections.length < 2) {
-      this.onStatus?.("Select at least two objects to group.", "warning");
-      return;
-    }
-
-    const groupId = this.createGroupId();
-    const entries = selections.flatMap((selection) => {
-      const target = this.getMutableTransform(selection);
-      return target
-        ? [
-            {
-              selection: cloneSelection(selection),
-              previousGroupId: target.groupId,
-            },
-          ]
-        : [];
-    });
-    if (entries.length < 2) {
-      this.onStatus?.("Select at least two objects to group.", "warning");
-      return;
-    }
-
-    const active = this.selection
-      ? cloneSelection(this.selection)
-      : cloneSelection(entries[0]!.selection);
-    const applyEntries = (mode: EditorCommandPhase): void => {
-      for (const entry of entries) {
-        this.applyGroupId(
-          entry.selection,
-          mode === "redo" ? groupId : entry.previousGroupId,
-          { notify: false },
-        );
-      }
-      this.selectMany(
-        entries.map((entry) => cloneSelection(entry.selection)),
-        active,
-      );
-      this.emitSelectionChanged();
-    };
-
-    this.executeCommand({
-      label: `Group ${entries.length} objects`,
-      redo: () => applyEntries("redo"),
-      undo: () => applyEntries("undo"),
-    });
+    this.editorSceneController.groupSelected();
   }
 
   /** Clears the group id from every member of any group in the current selection. */
   ungroupSelected(): void {
-    const groupIds = new Set<string>();
-    for (const selection of this.getSelectedSelections()) {
-      const groupId = this.getMutableTransform(selection)?.groupId;
-      if (groupId) groupIds.add(groupId);
-    }
-    if (groupIds.size === 0) {
-      this.onStatus?.("Selection is not grouped.", "warning");
-      return;
-    }
-
-    const entries = this.getAllSelections({ includeHidden: true }).flatMap((selection) => {
-      const target = this.getMutableTransform(selection);
-      return target?.groupId && groupIds.has(target.groupId)
-        ? [{ selection: cloneSelection(selection), previousGroupId: target.groupId }]
-        : [];
-    });
-    if (entries.length === 0) return;
-    const active = this.selection ? cloneSelection(this.selection) : null;
-
-    const applyEntries = (mode: EditorCommandPhase): void => {
-      for (const entry of entries) {
-        this.applyGroupId(
-          entry.selection,
-          mode === "redo" ? undefined : entry.previousGroupId,
-          { notify: false },
-        );
-      }
-      this.selectMany(entries.map((entry) => cloneSelection(entry.selection)), active);
-      this.emitSelectionChanged();
-    };
-
-    this.executeCommand({
-      label: `Ungroup ${entries.length} objects`,
-      redo: () => applyEntries("redo"),
-      undo: () => applyEntries("undo"),
-    });
+    this.editorSceneController.ungroupSelected();
   }
 
   /** Parents the other selected objects to the active selection (the parent). */
   parentSelectionToActive(): void {
-    if (!this.selection) return;
-    const parent = cloneSelection(this.selection);
-    const parentTarget = this.getMutableTransform(parent);
-    if (!parentTarget) return;
-
-    // Cycle guard: an ancestor of the parent cannot become its child.
-    const parentDescendantIds = new Set(
-      this.descendantsOf(parent)
-        .map((entry) => this.getMutableTransform(entry)?.nodeId)
-        .filter((id): id is string => Boolean(id)),
-    );
-
-    const parentNodeId = parentTarget.nodeId ?? this.createNodeId();
-    const children = this.getSelectedSelections().flatMap((selection) => {
-      if (selectionsEqual(selection, parent)) return [];
-      const target = this.getMutableTransform(selection);
-      if (!target) return [];
-      // Skip if this object is the parent's ancestor (would form a cycle).
-      if (target.nodeId && parentDescendantIds.has(target.nodeId)) return [];
-      if (target.parentId === parentNodeId) return [];
-      return [{ selection: cloneSelection(selection), previousParentId: target.parentId }];
-    });
-    if (children.length === 0) {
-      this.onStatus?.("Select children plus a parent (active) to parent.", "warning");
-      return;
-    }
-
-    const hadParentNodeId = parentTarget.nodeId !== undefined;
-    const apply = (mode: EditorCommandPhase): void => {
-      const parentMut = this.getMutableTransform(parent);
-      if (parentMut) {
-        if (mode === "redo") parentMut.nodeId = parentNodeId;
-        else if (!hadParentNodeId) delete parentMut.nodeId;
-      }
-      for (const child of children) {
-        const target = this.getMutableTransform(child.selection);
-        if (!target) continue;
-        if (mode === "redo") target.parentId = parentNodeId;
-        else if (child.previousParentId === undefined) delete target.parentId;
-        else target.parentId = child.previousParentId;
-      }
-      this.emitSelectionChanged();
-    };
-
-    this.executeCommand({
-      label: `Parent ${children.length} to ${this.getSelectionLabel(parent)}`,
-      redo: () => apply("redo"),
-      undo: () => apply("undo"),
-    });
+    this.editorSceneController.parentSelectionToActive();
   }
 
   /**
@@ -1206,82 +1084,12 @@ export class SceneApp {
    * Cycle-safe (a target that is a descendant of a dragged object is skipped).
    */
   parentObjectsTo(childIds: string[], parentId: string): void {
-    const parent = parseSelectionId(parentId);
-    if (!parent || !this.hasSelection(parent)) return;
-    const parentTarget = this.getMutableTransform(parent);
-    if (!parentTarget) return;
-
-    const parentNodeId = parentTarget.nodeId ?? this.createNodeId();
-    const children = childIds.flatMap((childId) => {
-      const selection = parseSelectionId(childId);
-      if (!selection || !this.hasSelection(selection)) return [];
-      if (selectionsEqual(selection, parent)) return [];
-      const target = this.getMutableTransform(selection);
-      if (!target) return [];
-      // Cycle guard: the target cannot be a descendant of this child.
-      const descendantIds = new Set(
-        this.descendantsOf(selection)
-          .map((entry) => this.getMutableTransform(entry)?.nodeId)
-          .filter((id): id is string => Boolean(id)),
-      );
-      if (target.nodeId && descendantIds.has(parentNodeId)) return [];
-      if (target.parentId === parentNodeId) return [];
-      return [{ selection: cloneSelection(selection), previousParentId: target.parentId }];
-    });
-    if (children.length === 0) return;
-
-    const hadParentNodeId = parentTarget.nodeId !== undefined;
-    const apply = (mode: EditorCommandPhase): void => {
-      const parentMut = this.getMutableTransform(parent);
-      if (parentMut) {
-        if (mode === "redo") parentMut.nodeId = parentNodeId;
-        else if (!hadParentNodeId) delete parentMut.nodeId;
-      }
-      for (const child of children) {
-        const target = this.getMutableTransform(child.selection);
-        if (!target) continue;
-        if (mode === "redo") target.parentId = parentNodeId;
-        else if (child.previousParentId === undefined) delete target.parentId;
-        else target.parentId = child.previousParentId;
-      }
-      this.emitSelectionChanged();
-    };
-
-    this.executeCommand({
-      label: `Parent ${children.length} to ${this.getSelectionLabel(parent)}`,
-      redo: () => apply("redo"),
-      undo: () => apply("undo"),
-    });
+    this.editorSceneController.parentObjectsTo(childIds, parentId);
   }
 
   /** Clears the parent of every selected object. */
   unparentSelected(): void {
-    const entries = this.getSelectedSelections().flatMap((selection) => {
-      const target = this.getMutableTransform(selection);
-      return target?.parentId !== undefined
-        ? [{ selection: cloneSelection(selection), previousParentId: target.parentId }]
-        : [];
-    });
-    if (entries.length === 0) {
-      this.onStatus?.("Selection has no parent.", "warning");
-      return;
-    }
-
-    const apply = (mode: EditorCommandPhase): void => {
-      for (const entry of entries) {
-        const target = this.getMutableTransform(entry.selection);
-        if (!target) continue;
-        if (mode === "redo") delete target.parentId;
-        else target.parentId = entry.previousParentId;
-      }
-      this.emitSelectionChanged();
-    };
-
-    this.executeCommand({
-      label: `Unparent ${entries.length} objects`,
-      redo: () => apply("redo"),
-      undo: () => apply("undo"),
-    });
+    this.editorSceneController.unparentSelected();
   }
 
   /**
@@ -2368,16 +2176,6 @@ export class SceneApp {
     if (options.notify !== false) this.emitSelectionChanged();
   }
 
-  private createGroupId(): string {
-    const existing = new Set<string>();
-    for (const selection of this.getAllSelections({ includeHidden: true })) {
-      const groupId = this.getMutableTransform(selection)?.groupId;
-      if (groupId) existing.add(groupId);
-    }
-
-    return uniqueEditorId("group", existing, 10_000);
-  }
-
   private applyVisibility(selection: Selection): void {
     if (selection.kind === "instance") {
       this.rebuildInstanceGroup(selection.assetId);
@@ -2802,15 +2600,6 @@ export class SceneApp {
       this.getAllSelections({ includeHidden: true }),
       (entry) => this.getMutableTransform(entry),
     );
-  }
-
-  private createNodeId(): string {
-    const existing = new Set<string>();
-    for (const selection of this.getAllSelections({ includeHidden: true })) {
-      const nodeId = this.getMutableTransform(selection)?.nodeId;
-      if (nodeId) existing.add(nodeId);
-    }
-    return uniqueEditorId("node", existing);
   }
 
   private isSelectionSelected(selection: Selection): boolean {

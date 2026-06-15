@@ -41,7 +41,7 @@ import { AudioSubsystem } from "../engine/audio/audioSubsystem";
 import { DEFAULT_AUDIO_CLIP_MANIFEST, audioClipById } from "../engine/assets/audio";
 import { KeyboardInputSource } from "../src/input/keyboardInputSource";
 import type { Entity } from "../engine/scene/entity";
-import { selectionId } from "../editor/core/selection";
+import { selectionId, type Selection } from "../editor/core/selection";
 import { EditorSceneController } from "../editor/scene/EditorSceneController";
 import {
   axisYMoveDragPosition,
@@ -958,10 +958,20 @@ check("saved layout carries the collision audio demo cue", () => {
 // Section 7 - EditorSceneController state (headless, extracted from SceneApp)
 // ===========================================================================
 
+type HeadlessTransform = {
+  groupId?: string;
+  nodeId?: string;
+  parentId?: string;
+};
+
 check("EditorSceneController owns selection and command history state", () => {
   const primary = { kind: "instance" as const, assetId: "desk", placementIndex: 0 };
   const grouped = { kind: "character" as const, index: 1 };
   const invalid = { kind: "light" as const, index: 99 };
+  const transforms = new Map<string, HeadlessTransform>([
+    [selectionId(primary), {}],
+    [selectionId(grouped), {}],
+  ]);
   const events = {
     history: 0,
     selection: 0,
@@ -970,14 +980,24 @@ check("EditorSceneController owns selection and command history state", () => {
     statuses: [] as string[],
   };
   const controller = new EditorSceneController({
+    applyGroupId: (selection, groupId) => {
+      const transform = transforms.get(selectionId(selection));
+      if (!transform) return;
+      if (groupId) transform.groupId = groupId;
+      else delete transform.groupId;
+    },
+    descendantsOf: () => [],
     emitHistoryChanged: () => {
       events.history += 1;
     },
     emitSelectionChanged: () => {
       events.selection += 1;
     },
+    getAllSelections: () => [primary, grouped],
     getGroupedSelections: (selection) =>
       selectionId(selection) === selectionId(primary) ? [primary, grouped] : [selection],
+    getMutableTransform: (selection) => transforms.get(selectionId(selection)) ?? null,
+    getSelectionLabel: (selection) => selectionId(selection),
     hasSelection: (selection) => selectionId(selection) !== selectionId(invalid),
     onStatus: (message) => {
       events.statuses.push(message);
@@ -1024,6 +1044,83 @@ check("EditorSceneController owns selection and command history state", () => {
   assert.equal(value, 1);
   assert.deepEqual(events.statuses, ["Set value", "Undo: Set value", "Redo: Set value"]);
   assert.equal(events.history, 3);
+});
+
+check("EditorSceneController groups and parents through undoable host mutations", () => {
+  const parent = { kind: "instance" as const, assetId: "desk", placementIndex: 0 };
+  const child = { kind: "character" as const, index: 1 };
+  const other = { kind: "light" as const, index: 2 };
+  const allSelections: Selection[] = [parent, child, other];
+  const transforms = new Map<string, HeadlessTransform>([
+    [selectionId(parent), {}],
+    [selectionId(child), {}],
+    [selectionId(other), {}],
+  ]);
+  const statuses: string[] = [];
+  const controller = new EditorSceneController({
+    applyGroupId: (selection, groupId) => {
+      const transform = transforms.get(selectionId(selection));
+      if (!transform) return;
+      if (groupId) transform.groupId = groupId;
+      else delete transform.groupId;
+    },
+    descendantsOf: (selection) => (selectionId(selection) === selectionId(parent) ? [child] : []),
+    emitHistoryChanged: () => {},
+    emitSelectionChanged: () => {},
+    getAllSelections: () => allSelections,
+    getGroupedSelections: (selection) => [selection],
+    getMutableTransform: (selection) => transforms.get(selectionId(selection)) ?? null,
+    getSelectionLabel: (selection) => selectionId(selection),
+    hasSelection: (selection) => transforms.has(selectionId(selection)),
+    onStatus: (message) => {
+      statuses.push(message);
+    },
+    updateGizmo: () => {},
+    updateSelectionBox: () => {},
+  });
+
+  controller.selectMany([parent, child], parent);
+  controller.groupSelected();
+  const groupId = transforms.get(selectionId(parent))?.groupId;
+  assert.ok(groupId, "group command assigns a group id");
+  assert.equal(transforms.get(selectionId(child))?.groupId, groupId);
+  controller.undo();
+  assert.equal(transforms.get(selectionId(parent))?.groupId, undefined);
+  assert.equal(transforms.get(selectionId(child))?.groupId, undefined);
+  controller.redo();
+  assert.equal(transforms.get(selectionId(child))?.groupId, groupId);
+
+  controller.ungroupSelected();
+  assert.equal(transforms.get(selectionId(parent))?.groupId, undefined);
+  assert.equal(transforms.get(selectionId(child))?.groupId, undefined);
+  controller.undo();
+  assert.equal(transforms.get(selectionId(parent))?.groupId, groupId);
+  assert.equal(transforms.get(selectionId(child))?.groupId, groupId);
+
+  controller.selectMany([parent, child], parent);
+  controller.parentSelectionToActive();
+  const parentNodeId = transforms.get(selectionId(parent))?.nodeId;
+  assert.ok(parentNodeId, "parent command assigns a node id");
+  assert.equal(transforms.get(selectionId(child))?.parentId, parentNodeId);
+  controller.undo();
+  assert.equal(transforms.get(selectionId(child))?.parentId, undefined);
+  controller.redo();
+  assert.equal(transforms.get(selectionId(child))?.parentId, parentNodeId);
+
+  controller.unparentSelected();
+  assert.equal(transforms.get(selectionId(child))?.parentId, undefined);
+  controller.undo();
+  assert.equal(transforms.get(selectionId(child))?.parentId, parentNodeId);
+
+  transforms.get(selectionId(child))!.nodeId = "child-node";
+  controller.parentObjectsTo([selectionId(parent)], selectionId(child));
+  assert.notEqual(
+    transforms.get(selectionId(parent))?.parentId,
+    "child-node",
+    "cycle guard skips parenting a parent under its child",
+  );
+  assert.ok(statuses.includes("Group 2 objects"));
+  assert.ok(statuses.includes("Parent 1 to instance:desk:0"));
 });
 
 // ===========================================================================
