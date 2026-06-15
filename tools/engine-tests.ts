@@ -42,6 +42,7 @@ import { DEFAULT_AUDIO_CLIP_MANIFEST, audioClipById } from "../engine/assets/aud
 import { KeyboardInputSource } from "../src/input/keyboardInputSource";
 import type { Entity } from "../engine/scene/entity";
 import { selectionId } from "../editor/core/selection";
+import { EditorSceneController } from "../editor/scene/EditorSceneController";
 import {
   axisYMoveDragPosition,
   freeMoveDragPosition,
@@ -954,7 +955,79 @@ check("saved layout carries the collision audio demo cue", () => {
 });
 
 // ===========================================================================
-// Section 7 - Gizmo transform-drag math (pure, extracted from SceneApp)
+// Section 7 - EditorSceneController state (headless, extracted from SceneApp)
+// ===========================================================================
+
+check("EditorSceneController owns selection and command history state", () => {
+  const primary = { kind: "instance" as const, assetId: "desk", placementIndex: 0 };
+  const grouped = { kind: "character" as const, index: 1 };
+  const invalid = { kind: "light" as const, index: 99 };
+  const events = {
+    history: 0,
+    selection: 0,
+    gizmo: 0,
+    boxes: 0,
+    statuses: [] as string[],
+  };
+  const controller = new EditorSceneController({
+    emitHistoryChanged: () => {
+      events.history += 1;
+    },
+    emitSelectionChanged: () => {
+      events.selection += 1;
+    },
+    getGroupedSelections: (selection) =>
+      selectionId(selection) === selectionId(primary) ? [primary, grouped] : [selection],
+    hasSelection: (selection) => selectionId(selection) !== selectionId(invalid),
+    onStatus: (message) => {
+      events.statuses.push(message);
+    },
+    updateGizmo: () => {
+      events.gizmo += 1;
+    },
+    updateSelectionBox: () => {
+      events.boxes += 1;
+    },
+  });
+
+  controller.select(primary);
+  assert.deepEqual(controller.selection, primary);
+  assert.equal(controller.selectedCount, 2);
+  assert.equal(controller.isSelectionSelected(grouped), true);
+  assert.deepEqual(controller.getSelectedSelections().map(selectionId).sort(), [
+    selectionId(grouped),
+    selectionId(primary),
+  ]);
+  assert.equal(events.selection, 1);
+  assert.equal(events.gizmo, 1);
+  assert.equal(events.boxes, 1);
+
+  controller.selectMany([primary, invalid], primary);
+  assert.deepEqual(controller.getSelectedSelections(), [primary]);
+
+  let value = 0;
+  controller.executeCommand({
+    label: "Set value",
+    redo: () => {
+      value = 1;
+    },
+    undo: () => {
+      value = 0;
+    },
+  });
+  assert.equal(value, 1);
+  assert.equal(controller.getHistoryState().canUndo, true);
+  controller.undo();
+  assert.equal(value, 0);
+  assert.equal(controller.getHistoryState().canRedo, true);
+  controller.redo();
+  assert.equal(value, 1);
+  assert.deepEqual(events.statuses, ["Set value", "Undo: Set value", "Redo: Set value"]);
+  assert.equal(events.history, 3);
+});
+
+// ===========================================================================
+// Section 8 - Gizmo transform-drag math (pure, extracted from SceneApp)
 // ===========================================================================
 // These functions have no DOM/WebGL dependency, so they pin the viewport drag
 // arithmetic the editor relies on — coverage the engine tests could not reach
@@ -1060,7 +1133,7 @@ check("scale drag handles uniform, single-axis, planar, and the 0.05 floor", () 
 });
 
 // ===========================================================================
-// Section 8 - Wall-snap geometry (pure, extracted from SceneApp)
+// Section 9 - Wall-snap geometry (pure, extracted from SceneApp)
 // ===========================================================================
 
 check("wall snap slides flush against the nearest wall and faces the interior", () => {
@@ -1087,7 +1160,7 @@ check("pivot-corrected position keeps the pivot world point fixed", () => {
 });
 
 // ===========================================================================
-// Section 9 - Save-payload validator (extracted from vite.config.ts)
+// Section 10 - Save-payload validator (extracted from vite.config.ts)
 // ===========================================================================
 // The /__save-layout validator is an allowlist: anything not copied explicitly
 // is dropped on save (documented footgun). These tests run the real validator

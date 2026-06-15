@@ -326,6 +326,17 @@ npm run build:verify     # build + engine tests + verify-dist --strict
 Append newest entries at the top. Record: date, item #, what changed, where it
 stopped, and any decision made (so the next session does not re-litigate it).
 
+- *2026-06-15* — **Item 3 stretch Piece 2 done — selection state moved into EditorSceneController.**
+  `EditorSceneController` now owns `SelectionStore` in addition to
+  `EditorCommandStore`, with same-named `select`/`selectMany`/`toggleSelection`/
+  `isSelectionSelected`/`getSelectedSelections` wrappers delegated from
+  `SceneApp`. Host callbacks mirror the existing controller pattern and keep
+  live scene side effects (`updateSelectionBox`, `updateGizmo`,
+  `emitSelectionChanged`) in `SceneApp`. Added 1 headless engine test for
+  controller-owned grouped selection, invalid-selection filtering, command
+  history, and status callbacks (44 → 45 checks). `SceneApp.ts` 3175 → 3159
+  lines.
+
 - *2026-06-15* — **Item 3 stretch Piece 1 done — EditorSceneController shell owns history/commands.**
   Merged `refactor/sceneapp-split` and `test/item4-smoke-tests` into `main`
   with non-squash merge commits, pushed `main`, then branched

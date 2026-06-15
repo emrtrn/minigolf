@@ -166,7 +166,6 @@ import {
   type LightSelection,
   type Selection,
 } from "@editor/core/selection";
-import { SelectionStore } from "@editor/core/selectionStore";
 import { isPlaneAxis } from "@editor/gizmos/axes";
 import { type GizmoHandle } from "@editor/gizmos/handles";
 import { buildGizmoHandles, clearGizmoGroup } from "@editor/gizmos/builder";
@@ -327,14 +326,12 @@ export class SceneApp {
   private lightObjects: LightObjectRecord[] = [];
   private localBounds = new Map<string, Box3>();
   private assetPlacements = new Map<string, EditableAsset["placement"]>();
-  /** Owns the active selection + multi-select set (editor state, not runtime). */
-  private readonly selectionStore = new SelectionStore();
   /** Active selection, delegating to the store so ownership lives there. */
   private get selection(): Selection | null {
-    return this.selectionStore.activeSelection;
+    return this.editorSceneController.selection;
   }
   private set selection(value: Selection | null) {
-    this.selectionStore.activeSelection = value;
+    this.editorSceneController.selection = value;
   }
   private readonly selectionBoxes: Box3Helper[] = [];
   private readonly gizmoGroup = new Group();
@@ -378,7 +375,12 @@ export class SceneApp {
     this.camera = createSceneCamera();
     this.editorSceneController = new EditorSceneController({
       emitHistoryChanged: () => this.emitHistoryChanged(),
+      emitSelectionChanged: () => this.emitSelectionChanged(),
+      getGroupedSelections: (selection) => this.getGroupedSelections(selection),
+      hasSelection: (selection) => this.hasSelection(selection),
       onStatus: (message, tone) => this.onStatus?.(message, tone),
+      updateGizmo: () => this.updateGizmo(),
+      updateSelectionBox: () => this.updateSelectionBox(),
     });
     this.cameraController = new EditorCameraController({
       camera: this.camera,
@@ -577,7 +579,7 @@ export class SceneApp {
   setSceneObjectHidden(id: string, hidden: boolean): void {
     const selection = parseSelectionId(id);
     if (!selection || !this.hasSelection(selection)) return;
-    if (this.selectionStore.selectedCount > 1 && this.isSelectionSelected(selection)) {
+    if (this.editorSceneController.selectedCount > 1 && this.isSelectionSelected(selection)) {
       this.setSelectedHidden(hidden);
       return;
     }
@@ -587,7 +589,7 @@ export class SceneApp {
   setSceneObjectLocked(id: string, locked: boolean): void {
     const selection = parseSelectionId(id);
     if (!selection || !this.hasSelection(selection)) return;
-    if (this.selectionStore.selectedCount > 1 && this.isSelectionSelected(selection)) {
+    if (this.editorSceneController.selectedCount > 1 && this.isSelectionSelected(selection)) {
       this.setSelectedLocked(locked);
       return;
     }
@@ -2695,33 +2697,15 @@ export class SceneApp {
   }
 
   private select(selection: Selection | null): void {
-    this.selection = this.selectionStore.selectGroup(
-      selection,
-      selection ? this.getGroupedSelections(selection) : [],
-    );
-    this.updateSelectionBox();
-    this.updateGizmo();
-    this.emitSelectionChanged();
+    this.editorSceneController.select(selection);
   }
 
   private selectMany(selections: Selection[], active: Selection | null): void {
-    this.selection = this.selectionStore.selectMany(
-      selections.filter((selection) => this.hasSelection(selection)),
-      active,
-    );
-    this.updateSelectionBox();
-    this.updateGizmo();
-    this.emitSelectionChanged();
+    this.editorSceneController.selectMany(selections, active);
   }
 
   private toggleSelection(selection: Selection): void {
-    this.selection = this.selectionStore.toggleGroup(
-      selection,
-      this.getGroupedSelections(selection),
-    );
-    this.updateSelectionBox();
-    this.updateGizmo();
-    this.emitSelectionChanged();
+    this.editorSceneController.toggleSelection(selection);
   }
 
   private captureLinkedMoveStarts(active: Selection): LinkedMoveStart[] | undefined {
@@ -2830,11 +2814,11 @@ export class SceneApp {
   }
 
   private isSelectionSelected(selection: Selection): boolean {
-    return this.selectionStore.has(selection);
+    return this.editorSceneController.isSelectionSelected(selection);
   }
 
   private getSelectedSelections(): Selection[] {
-    return this.selectionStore.list((selection) => this.hasSelection(selection));
+    return this.editorSceneController.getSelectedSelections();
   }
 
   private getAllSelections(options: { includeHidden: boolean }): Selection[] {
@@ -2937,7 +2921,7 @@ export class SceneApp {
   }
 
   private isLightSelected(index: number): boolean {
-    return this.selectionStore.has({ kind: "light", index });
+    return this.isSelectionSelected({ kind: "light", index });
   }
 
   private removeSelectionBox(): void {
