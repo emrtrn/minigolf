@@ -1,5 +1,13 @@
-import { AmbientLight, Box3, Color, Scene, Vector3 } from "three";
-import type { DirectionalLight, PerspectiveCamera, WebGLRenderer } from "three";
+import { AmbientLight, AnimationMixer, Box3, Color, Scene, Vector3 } from "three";
+import type {
+  DirectionalLight,
+  Group,
+  InstancedMesh,
+  Object3D,
+  PerspectiveCamera,
+  WebGLRenderer,
+} from "three";
+import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import {
   applyResponsiveCameraViewport,
@@ -10,7 +18,28 @@ import {
   readRenderStats,
 } from "@engine/render-three/renderer";
 import { composePlacementMatrix } from "@engine/render-three/transforms";
-import type { RoomLayout } from "@engine/scene/layout";
+import {
+  createCharacterSceneObject,
+  createInstancedModelGroup,
+  entityCharacterItem,
+  entityInstanceItems,
+} from "@engine/render-three/models";
+import {
+  createLightObject as createThreeLightObject,
+  entityLightItem,
+  type LightObjectRecord,
+} from "@engine/render-three/lights";
+import {
+  characterEntity,
+  instanceEntitiesForAsset,
+  lightEntity,
+} from "@engine/scene/legacyRoomLayoutAdapter";
+import type {
+  LayoutCharacter,
+  LayoutLightActor,
+  LayoutPlacement,
+  RoomLayout,
+} from "@engine/scene/layout";
 
 const MAX_PIXEL_RATIO = 2;
 
@@ -168,4 +197,101 @@ export function applySceneBackgroundAndAmbient(options: {
   options.ambientLight.color.set(options.settings.ambientColor);
   options.ambientLight.intensity = options.settings.ambientIntensity;
   return options.ambientLight;
+}
+
+/**
+ * Build the instanced render group for one asset's placements. Derives the
+ * placements into instance entities → render items (same matrices as the legacy
+ * placement path) and hands them to the engine instanced-mesh builder. The
+ * caller registers the returned group/meshes into its own bookkeeping maps.
+ */
+export function buildSceneInstancedModel(options: {
+  assetId: string;
+  gltf: GLTF;
+  placements: LayoutPlacement[];
+  castShadow: boolean;
+  receiveShadow: boolean;
+}): { group: Group; meshes: InstancedMesh[] } {
+  const items = entityInstanceItems(
+    instanceEntitiesForAsset(options.assetId, options.placements),
+  );
+  return createInstancedModelGroup({
+    assetId: options.assetId,
+    gltf: options.gltf,
+    items,
+    castShadow: options.castShadow,
+    receiveShadow: options.receiveShadow,
+  });
+}
+
+/**
+ * Build the scene object for a character placement. Routes the layout character
+ * through the entity/component model (same transform round-trip as the legacy
+ * placement path) before the engine builds the renderable object.
+ */
+export function buildSceneCharacterObject(
+  gltf: GLTF,
+  placement: LayoutCharacter,
+  index: number,
+): Object3D {
+  return createCharacterSceneObject(
+    gltf,
+    entityCharacterItem(characterEntity(index, placement)),
+  );
+}
+
+/**
+ * Create a playing animation mixer for a character if the named clip exists,
+ * otherwise return null. The caller registers the mixer with its animation
+ * subsystem.
+ */
+export function createSceneCharacterMixer(
+  character: Object3D,
+  gltf: GLTF,
+  animationName: string | undefined,
+): AnimationMixer | null {
+  const clip = animationName
+    ? gltf.animations.find((candidate) => candidate.name === animationName)
+    : null;
+  if (!clip) return null;
+  const mixer = new AnimationMixer(character);
+  mixer.clipAction(clip).play();
+  return mixer;
+}
+
+/**
+ * Build the Three.js light record for a layout actor. Routes the actor through
+ * the entity/component model (same light/transform round-trip as the legacy
+ * actor path). The caller adds the record to the scene and tracks it.
+ */
+export function buildSceneLightObject(
+  actor: LayoutLightActor,
+  index: number,
+): LightObjectRecord {
+  return createThreeLightObject(
+    entityLightItem(lightEntity(index, actor)),
+    DEFAULT_SCENE_LIGHT_COLOR,
+  );
+}
+
+/** Tag a light record's root + descendants with their light index for picking. */
+export function tagSceneLightRecordIndex(record: LightObjectRecord, index: number): void {
+  record.root.userData.lightIndex = index;
+  record.root.traverse((child) => {
+    child.userData.lightIndex = index;
+  });
+}
+
+/**
+ * Whether a newly added directional actor should become the scene sun: true when
+ * no sun is tracked yet, or the actor is the canonical default-sun id.
+ */
+export function isSceneSunLight(
+  actor: LayoutLightActor,
+  currentSun: DirectionalLight | null,
+): boolean {
+  return (
+    actor.type === "directional" &&
+    (!currentSun || actor.id === DEFAULT_SCENE_SUN_ID)
+  );
 }

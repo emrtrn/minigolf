@@ -374,6 +374,28 @@ npm run build:verify
 Append newest entries at the top. Record: date, item #, what changed, where it
 stopped, and any decision made (so the next session does not re-litigate it).
 
+- *2026-06-16* - **Item 5 Piece 3 done - shared model/character/light scene-build builders extracted.**
+  On branch `refactor/scene-build-entity-builders`, moved the entity-builder
+  bodies that `SceneApp` and `RuntimeSceneApp` duplicated near-verbatim into
+  `src/scene/SceneRuntimeCore.ts`: `buildSceneInstancedModel` (placements →
+  instance entities → render items → instanced group), `buildSceneCharacterObject`
+  + `createSceneCharacterMixer`, and `buildSceneLightObject` +
+  `tagSceneLightRecordIndex` + `isSceneSunLight` (sun-election predicate). Both
+  shells now delegate; `SceneApp` keeps its own editor-only extras unchanged
+  (`refreshLightObject` selection highlight via `syncLightObject`/`entityLightItem`,
+  `createCharacterObject`/`createLightObject`/`playCharacterAnimation` thin
+  wrappers so insert/refresh call sites are untouched). Dropped the now-unused
+  `@engine/render-three/models` import block from both shells plus several
+  `legacyRoomLayoutAdapter`/`three` symbols (tsc `noUnusedLocals` verified).
+  Added 3 headless engine checks (53 -> 56) for the DOM/WebGL-free helpers —
+  `createSceneCharacterMixer` (clip match/miss/undefined), `tagSceneLightRecordIndex`
+  (root + descendant tagging), and `isSceneSunLight` (empty-slot then canonical-id
+  election, non-directional rejected). The light/character *object* builders touch
+  the canvas-icon path / need a real GLTF so they stay covered only via build.
+  `npm run build:verify` green (build + 56 checks + strict dist scan). `wc -l`:
+  `SceneApp.ts` 2428 -> 2405, `RuntimeSceneApp.ts` 307 -> 278, `SceneRuntimeCore.ts`
+  171 -> 297. `loadActiveProjectScene` consolidation remains the last Item 5 target.
+
 - *2026-06-16* - **Item 5 Piece 2 done - shared world/lighting/room-bounds helpers extracted.**
   On branch `refactor/scene-build-runtime-core`, expanded
   `src/scene/SceneRuntimeCore.ts` with shared scene-build helpers for resolved

@@ -6,7 +6,6 @@
  * This class owns: renderer, scene graph, camera rig, lights, frame loop.
  */
 import {
-  AnimationMixer,
   Box3,
   Box3Helper,
   DirectionalLight,
@@ -48,20 +47,17 @@ import {
   isRenderableMesh,
 } from "@engine/render-three/materials";
 import {
-  createCharacterSceneObject,
-  createInstancedModelGroup,
-  entityCharacterItem,
-  entityInstanceItems,
-} from "@engine/render-three/models";
-import {
-  createLightObject as createThreeLightObject,
   entityLightItem,
   syncLightObject,
   type LightObjectRecord,
 } from "@engine/render-three/lights";
 import {
   applySceneBackgroundAndAmbient,
+  buildSceneCharacterObject,
+  buildSceneInstancedModel,
+  buildSceneLightObject,
   computeSceneRoomBounds,
+  createSceneCharacterMixer,
   createSceneRuntimeCore,
   DEFAULT_SCENE_AMBIENT_COLOR,
   DEFAULT_SCENE_AMBIENT_INTENSITY,
@@ -72,10 +68,12 @@ import {
   DEFAULT_SCENE_SUN_ID,
   ensureDefaultSceneLights,
   fitDirectionalShadowToBounds,
+  isSceneSunLight,
   readSceneRuntimeStats,
   resolveSceneWorldSettings,
   resizeSceneRuntimeViewport,
   SCENE_CAMERA_TARGET,
+  tagSceneLightRecordIndex,
 } from "./SceneRuntimeCore";
 import {
   defaultLightIntensity,
@@ -97,8 +95,6 @@ import type {
   Vec3,
 } from "@engine/scene/layout";
 import {
-  characterEntity,
-  instanceEntitiesForAsset,
   lightEntity,
   roomLayoutToSceneDocument,
 } from "@engine/scene/legacyRoomLayoutAdapter";
@@ -1263,14 +1259,10 @@ export class SceneApp {
     const gltf = this.models.get(assetId);
     if (!gltf) throw new Error(`Render test asset missing: ${assetId}`);
 
-    // Static mesh instances now flow through the entity/component model: the
-    // layout placements are derived into instance entities, then into render
-    // items. Matrices match the legacy placement path (same composeTransformMatrix).
-    const items = entityInstanceItems(instanceEntitiesForAsset(assetId, placements));
-    const { group, meshes } = createInstancedModelGroup({
+    const { group, meshes } = buildSceneInstancedModel({
       assetId,
       gltf,
-      items,
+      placements,
       castShadow: this.staticObjectsCastShadow(),
       receiveShadow: this.staticObjectsReceiveShadow(),
     });
@@ -1404,24 +1396,18 @@ export class SceneApp {
 
   private addLight(actor: LayoutLightActor): void {
     const record = this.createLightObject(actor, this.lightObjects.length);
-    record.root.userData.lightIndex = this.lightObjects.length;
-    record.root.traverse((child) => {
-      child.userData.lightIndex = this.lightObjects.length;
-    });
+    tagSceneLightRecordIndex(record, this.lightObjects.length);
     this.scene.add(record.root);
     if (record.target) this.scene.add(record.target);
     this.lightObjects.push(record);
-    if (actor.type === "directional" && (!this.sun || actor.id === DEFAULT_SCENE_SUN_ID)) {
+    if (isSceneSunLight(actor, this.sun)) {
       this.sun = record.light as DirectionalLight;
     }
     this.refreshLightObject(this.lightObjects.length - 1);
   }
 
   private createLightObject(actor: LayoutLightActor, index: number): LightObjectRecord {
-    // Light objects now flow through the entity/component model: the layout
-    // actor is derived into a scene entity, then into a render item. Inputs
-    // match the legacy actor path (same transform/light component round-trip).
-    return createThreeLightObject(entityLightItem(lightEntity(index, actor)), DEFAULT_SCENE_LIGHT_COLOR);
+    return buildSceneLightObject(actor, index);
   }
 
   private insertLightActor(index: number, actor: LayoutLightActor): void {
@@ -1677,10 +1663,7 @@ export class SceneApp {
   }
 
   private createCharacterObject(gltf: GLTF, placement: LayoutCharacter, index: number): Object3D {
-    // Character objects now flow through the entity/component model: the layout
-    // character is derived into a scene entity, then into a render item. Inputs
-    // match the legacy placement path (same readRotation/readScale transform).
-    return createCharacterSceneObject(gltf, entityCharacterItem(characterEntity(index, placement)));
+    return buildSceneCharacterObject(gltf, placement, index);
   }
 
   private playCharacterAnimation(
@@ -1688,14 +1671,8 @@ export class SceneApp {
     gltf: GLTF,
     animationName: string | undefined,
   ): void {
-    const idle = animationName
-      ? gltf.animations.find((clip) => clip.name === animationName)
-      : null;
-    if (idle) {
-      const mixer = new AnimationMixer(character);
-      mixer.clipAction(idle).play();
-      this.animationSubsystem.add(mixer);
-    }
+    const mixer = createSceneCharacterMixer(character, gltf, animationName);
+    if (mixer) this.animationSubsystem.add(mixer);
   }
 
   private refreshCharacterIndices(): void {

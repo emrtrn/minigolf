@@ -68,6 +68,9 @@ import {
   ensureDefaultSceneLights,
   fitDirectionalShadowToBounds,
   resolveSceneWorldSettings,
+  createSceneCharacterMixer,
+  isSceneSunLight,
+  tagSceneLightRecordIndex,
 } from "../src/scene/SceneRuntimeCore";
 import {
   validateLayout,
@@ -75,7 +78,18 @@ import {
   validatePlacement,
 } from "./saveValidator";
 import type { LayoutCharacter, LayoutLightActor, RoomLayout } from "../engine/scene/layout";
-import { AmbientLight, Box3, Color, DirectionalLight, Scene, Vector3 } from "three";
+import type { LightObjectRecord } from "../engine/render-three/lights";
+import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
+import {
+  AmbientLight,
+  AnimationClip,
+  Box3,
+  Color,
+  DirectionalLight,
+  Object3D,
+  Scene,
+  Vector3,
+} from "three";
 import type { AnimationMixer } from "three";
 
 let checks = 0;
@@ -264,6 +278,41 @@ check("scene runtime applies background and ambient light lifecycle", () => {
   assert.equal(ambient, null);
   assert.equal((scene.background as Color).getHexString(), "333333");
   assert.equal(scene.children.length, 0);
+});
+
+check("scene runtime creates a character mixer only for a matching clip", () => {
+  const character = new Object3D();
+  const gltf = { animations: [new AnimationClip("Idle", 1, [])] } as unknown as GLTF;
+
+  assert.ok(createSceneCharacterMixer(character, gltf, "Idle"));
+  assert.equal(createSceneCharacterMixer(character, gltf, "Missing"), null);
+  assert.equal(createSceneCharacterMixer(character, gltf, undefined), null);
+});
+
+check("scene runtime tags a light record root and descendants with its index", () => {
+  const root = new Object3D();
+  const child = new Object3D();
+  root.add(child);
+  const record = { root } as LightObjectRecord;
+
+  tagSceneLightRecordIndex(record, 4);
+
+  assert.equal(root.userData.lightIndex, 4);
+  assert.equal(child.userData.lightIndex, 4);
+});
+
+check("scene runtime sun election prefers empty slot then the canonical sun id", () => {
+  const existingSun = new DirectionalLight();
+  const directional = (id: string): LayoutLightActor =>
+    ({ id, type: "directional", position: [0, 0, 0] }) as LayoutLightActor;
+
+  assert.equal(isSceneSunLight(directional("any"), null), true);
+  assert.equal(isSceneSunLight(directional(DEFAULT_SCENE_SUN_ID), existingSun), true);
+  assert.equal(isSceneSunLight(directional("other"), existingSun), false);
+  assert.equal(
+    isSceneSunLight({ id: DEFAULT_SCENE_SUN_ID, type: "point", position: [0, 0, 0] } as LayoutLightActor, null),
+    false,
+  );
 });
 check("instance entity count equals total placements (empty instances add none)", () => {
   const totalPlacements = layout.instances.reduce(

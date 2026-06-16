@@ -1,10 +1,4 @@
-import {
-  AnimationMixer,
-  Box3,
-  DirectionalLight,
-  Group,
-  Object3D,
-} from "three";
+import { Box3, DirectionalLight, Group, Object3D } from "three";
 import type { AmbientLight, InstancedMesh, PerspectiveCamera, Scene, WebGLRenderer } from "three";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 
@@ -22,37 +16,26 @@ import { createBehaviorRegistry } from "@/game/behaviors";
 import { loadActiveProject, type ActiveProject } from "@/project/ProjectSystem";
 import {
   applySceneBackgroundAndAmbient,
+  buildSceneCharacterObject,
+  buildSceneInstancedModel,
+  buildSceneLightObject,
   computeSceneRoomBounds,
+  createSceneCharacterMixer,
   createSceneRuntimeCore,
   DEFAULT_SCENE_BACKGROUND_COLOR,
-  DEFAULT_SCENE_LIGHT_COLOR,
-  DEFAULT_SCENE_SUN_ID,
   ensureDefaultSceneLights,
   fitDirectionalShadowToBounds,
+  isSceneSunLight,
   readSceneRuntimeStats,
   resolveSceneWorldSettings,
   resizeSceneRuntimeViewport,
+  tagSceneLightRecordIndex,
 } from "./SceneRuntimeCore";
-import {
-  createCharacterSceneObject,
-  createInstancedModelGroup,
-  entityCharacterItem,
-  entityInstanceItems,
-} from "@engine/render-three/models";
-import {
-  createLightObject as createThreeLightObject,
-  entityLightItem,
-  type LightObjectRecord,
-} from "@engine/render-three/lights";
+import type { LightObjectRecord } from "@engine/render-three/lights";
 import { collectMaterialStats, convertUnlitModelMaterialsToLit } from "@engine/render-three/materials";
 import { applyEulerDegrees } from "@engine/render-three/transforms";
 import type { LayoutCharacter, LayoutLightActor, LayoutPlacement, RoomLayout } from "@engine/scene/layout";
-import {
-  characterEntity,
-  instanceEntitiesForAsset,
-  lightEntity,
-  roomLayoutToSceneDocument,
-} from "@engine/scene/legacyRoomLayoutAdapter";
+import { roomLayoutToSceneDocument } from "@engine/scene/legacyRoomLayoutAdapter";
 import type { TransformComponent } from "@engine/scene/components";
 
 const DEFAULT_INPUT_BINDINGS: ActionBindings = {
@@ -213,10 +196,10 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
   private createInstancedModel(assetId: string, placements: LayoutPlacement[]): Group {
     const gltf = this.models.get(assetId);
     if (!gltf) throw new Error(`Runtime asset missing: ${assetId}`);
-    const { group, meshes } = createInstancedModelGroup({
+    const { group, meshes } = buildSceneInstancedModel({
       assetId,
       gltf,
-      items: entityInstanceItems(instanceEntitiesForAsset(assetId, placements)),
+      placements,
       castShadow: this.staticObjectsCastShadow(),
       receiveShadow: this.staticObjectsReceiveShadow(),
     });
@@ -228,34 +211,22 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
   private addCharacter(gltf: GLTF | undefined, placement: LayoutCharacter): void {
     if (!gltf) return;
     const index = this.characterObjects.length;
-    const character = createCharacterSceneObject(gltf, entityCharacterItem(characterEntity(index, placement)));
+    const character = buildSceneCharacterObject(gltf, placement, index);
     character.userData.characterIndex = index;
     this.scene.add(character);
     this.characterObjects.push(character);
-    const clip = placement.animation
-      ? gltf.animations.find((candidate) => candidate.name === placement.animation)
-      : null;
-    if (clip) {
-      const mixer = new AnimationMixer(character);
-      mixer.clipAction(clip).play();
-      this.animationSubsystem.add(mixer);
-    }
+    const mixer = createSceneCharacterMixer(character, gltf, placement.animation);
+    if (mixer) this.animationSubsystem.add(mixer);
   }
 
   private addLight(actor: LayoutLightActor): void {
     const index = this.lightObjects.length;
-    const record = createThreeLightObject(
-      entityLightItem(lightEntity(index, actor)),
-      DEFAULT_SCENE_LIGHT_COLOR,
-    );
-    record.root.userData.lightIndex = index;
-    record.root.traverse((child) => {
-      child.userData.lightIndex = index;
-    });
+    const record = buildSceneLightObject(actor, index);
+    tagSceneLightRecordIndex(record, index);
     this.scene.add(record.root);
     if (record.target) this.scene.add(record.target);
     this.lightObjects.push(record);
-    if (actor.type === "directional" && (!this.sun || actor.id === DEFAULT_SCENE_SUN_ID)) {
+    if (isSceneSunLight(actor, this.sun)) {
       this.sun = record.light as DirectionalLight;
     }
   }
