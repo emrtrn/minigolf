@@ -41,8 +41,18 @@ export interface PhysicsContact {
   readonly isSensor: boolean;
 }
 
+/** A world-space axis-aligned bounding box. */
+export interface PhysicsAabb {
+  readonly min: readonly [number, number, number];
+  readonly max: readonly [number, number, number];
+}
+
 export interface PhysicsQuery {
   contactsForEntity(entityId: EntityId): readonly PhysicsContact[];
+  /** World-space AABBs of every static, non-sensor collider (movement blockers). */
+  staticBlockerAabbs(): readonly PhysicsAabb[];
+  /** Half-extents (size*scale/2) of an entity's collider, or null if it has none. */
+  colliderHalfExtents(entityId: EntityId): readonly [number, number, number] | null;
 }
 
 /** Resolves a script id to its update function. Runtime/game-owned. */

@@ -100,7 +100,7 @@ tutkalı shell'lerde ince kalır.
 |---|-------|-----------|----------|-------|
 | G1 | Oyuncu hareket çekirdeği (normalize + yön) | — | §3 | `[x]` |
 | G2 | Yerçekimi, zemin & zıplama | G1 | §3, §4 | `[x]` |
-| G3 | Çarpışma yanıtı (duvardan geçmeyi durdur) | G1 | §3 | `[ ]` |
+| G3 | Çarpışma yanıtı (duvardan geçmeyi durdur) | G1 | §3 | `[x]` |
 | G4 | 3. şahıs takip kamerası + kameraya-göreli hareket | G1 | §5 | `[x]` |
 | G5 | Harekete bağlı animasyon durumları | G1, G2 | §3 | `[ ]` |
 | G6 | Authored oynanabilir örnek sahne | G1–G5 | §4, §5 | `[ ]` |
@@ -161,7 +161,7 @@ deterministik sabitler.
 **Açık soru.** Zemin algısı: önce sabit `floorY` (basit/deterministik) vs.
 fizik aşağı-ray (proplar üstünde doğru). G3 inerken karar ver.
 
-### G3 — Çarpışma yanıtı (duvardan geçmeyi durdur)  `[ ]`
+### G3 — Çarpışma yanıtı (duvardan geçmeyi durdur)  `[x]`
 
 **Problem.** Hareket kısıtsız — oyuncu duvardan geçer; fizik yalnızca temas
 raporlar (ses için kullanılıyor), hareketi engellemez.
@@ -264,6 +264,27 @@ Yürütme track'i bittikçe buradan çekilir; detaylar yukarıdaki ilgili §'de.
 Yeni kayıtları en üste ekle. Kaydet: tarih, madde #, ne değişti, nerede durdu,
 alınan karar (sonraki oturum yeniden tartışmasın).
 
+- *2026-06-16* — **G3 bitti (çarpışma yanıtı — A Seçeneği, saf AABB).** Yeni saf
+  helper `src/game/collision.ts`: `resolvePlanarMovement(position, {dx,dz}, half,
+  blockers)` — önerilen XZ hareketini statik collider AABB'lerine karşı çözer;
+  X ve Z **ayrı** çözülür → duvar boyunca **kayma**; düşey span **gate**'i (kısa
+  engeli atlama); ve **yalnızca yeni penetrasyon** çözülür (başlangıçta zaten
+  örtüşen blocker bırakılır → oyuncunun üstünde durduğu zemin/halı hareketi
+  dondurmaz, ön-örtüşmeden snap yok). `PhysicsQuery` (engine) iki generic sorgu
+  ile genişletildi: `staticBlockerAabbs()` (statik, non-sensor) ve
+  `colliderHalfExtents(id)`; `PhysicsSubsystem` `bodyAabb`/size*scale'den
+  uygular (placeholder+rapier her ikisinde `this.bodies`'ten). `input-move`
+  planar adımı uygulamadan önce blocker'lara karşı çözer, yön çözülmüş harekete
+  bakar; chime korunur; fizik/collider yoksa ham harekete döner. Headless
+  testler eklendi (tools/engine-tests.ts: 75 → 82 check) — no-blocker, head-on
+  block + diagonal slide, düşey gate, zemin (ön-örtüşme), çoklu blocker, fizik
+  sorgu metodları, gerçek `input-move` duvar entegrasyonu. `npm run build:verify`
+  yeşil. **Karar:** A Seçeneği (saf AABB) seçildi; Rapier KCC (B) gerekmedi.
+  **Sınırlama (bilinçli, G3 dışı):** collider'lar hâlâ `size [1,1,1]*scale`
+  birim-küp yaklaşımı (adapter default'u) — görsel mesh sınırlarıyla birebir
+  örtüşmez; mobilya/duvar engeller ama kenarlar görselle tam hizalı değil. Mesh
+  bounds'tan collider boyutlandırma + decor için `collision:false` ayrı içerik/
+  takip işi. Sıradaki: önerilen sıraya göre **G5** (harekete bağlı animasyon).
 - *2026-06-16* — **G2 bitti (yerçekimi, zemin & zıplama).** Yeni saf helper
   `src/game/verticalMotion.ts`: `stepVerticalMotion(prev, {gravityY, jumpSpeed,
   floorY, dt, jump})` + `groundedAt(y)`. Jump impulse yalnızca **zeminde + basış

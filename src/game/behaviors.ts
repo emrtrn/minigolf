@@ -12,6 +12,7 @@ import type {
 } from "@engine/behavior/behaviorSubsystem";
 import { facingYawFromMove, planarMoveStep } from "./playerMovement";
 import { groundedAt, stepVerticalMotion, type VerticalMotionState } from "./verticalMotion";
+import { resolvePlanarMovement, type PlanarDelta } from "./collision";
 
 /** Gravity used when the host does not inject one (e.g. headless tests). */
 const DEFAULT_GRAVITY_Y = -9.81;
@@ -56,6 +57,24 @@ function playCollisionAudioOnce(
 
 const collisionChime: BehaviorUpdate = playCollisionAudioOnce;
 
+/**
+ * Clamps a proposed planar move so the entity cannot enter static colliders,
+ * using the AABBs the physics subsystem already derives. Falls back to the raw
+ * move when there is no physics query, no blockers, or no collider on the entity.
+ */
+function resolvePlanarAgainstBlockers(
+  context: Parameters<BehaviorUpdate>[0],
+  planar: PlanarDelta,
+): PlanarDelta {
+  const { physics, entityId, transform } = context;
+  if (!physics) return planar;
+  const blockers = physics.staticBlockerAabbs();
+  if (blockers.length === 0) return planar;
+  const half = physics.colliderHalfExtents(entityId);
+  if (!half) return planar;
+  return resolvePlanarMovement(transform.position, planar, half, blockers);
+}
+
 /** Per-entity vertical motion state plus the floor height captured on entry. */
 interface PlayerVertical {
   state: VerticalMotionState;
@@ -74,8 +93,8 @@ export function createBehaviorRegistry(options: BehaviorRegistryOptions = {}): B
   const inputMove: BehaviorUpdate = (context) => {
     const { engine, actions, params, transform } = context;
 
-    // Planar movement + facing (G1).
-    const { dx, dz } = planarMoveStep(
+    // Planar movement (G1) resolved against static blockers (G3), then facing.
+    const planar = planarMoveStep(
       {
         forward: actions.held("move-forward"),
         back: actions.held("move-back"),
@@ -85,6 +104,7 @@ export function createBehaviorRegistry(options: BehaviorRegistryOptions = {}): B
       numberParam(params.speed, 3),
       engine.deltaSeconds,
     );
+    const { dx, dz } = resolvePlanarAgainstBlockers(context, planar);
     transform.position[0] += dx;
     transform.position[2] += dz;
     const yaw = facingYawFromMove(dx, dz);

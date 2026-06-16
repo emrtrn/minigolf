@@ -51,6 +51,7 @@ import {
   type FollowCameraConfig,
 } from "../src/game/followCamera";
 import { groundedAt, stepVerticalMotion } from "../src/game/verticalMotion";
+import { resolvePlanarMovement, type Aabb3 } from "../src/game/collision";
 import type { Entity } from "../engine/scene/entity";
 import { selectionId, type Selection } from "../editor/core/selection";
 import { EditorSceneController } from "../editor/scene/EditorSceneController";
@@ -2053,6 +2054,120 @@ check("save validator allowlist keeps a valid worldSettings.gravity, rejects a b
       worldSettings: { gravity: [0, -12.5] },
     }),
   );
+});
+
+// G3 collision response (src/game/collision.ts): resolve a proposed XZ move
+// against static collider AABBs so the player cannot enter walls and slides
+// along them. Vertical span gates which blockers apply (jump over short ones).
+check("resolvePlanarMovement: no blockers leaves the move unchanged", () => {
+  assert.deepEqual(
+    resolvePlanarMovement([0, 0, 0], { dx: 1, dz: 2 }, [0.5, 0.5, 0.5], []),
+    { dx: 1, dz: 2 },
+  );
+});
+
+check("resolvePlanarMovement: head-on into a wall is blocked; diagonal slides", () => {
+  const wall: Aabb3 = { min: [0.5, -1, -5], max: [1.5, 1, 5] }; // X-facing slab
+  // Head-on +x from x=-0.1 (half 0.5): clamps flush to x=0 (wall.min - half).
+  const headOn = resolvePlanarMovement([-0.1, 0, 0], { dx: 0.3, dz: 0 }, [0.5, 0.5, 0.5], [wall]);
+  assert.ok(Math.abs(headOn.dx - 0.1) <= 1e-12);
+  assert.equal(headOn.dz, 0);
+  // Diagonal into the same wall: x is blocked, z slides freely.
+  const diag = resolvePlanarMovement([-0.1, 0, 0], { dx: 0.3, dz: 0.4 }, [0.5, 0.5, 0.5], [wall]);
+  assert.ok(Math.abs(diag.dx - 0.1) <= 1e-12);
+  assert.ok(Math.abs(diag.dz - 0.4) <= 1e-12);
+});
+
+check("resolvePlanarMovement: a blocker above the player's span does not block", () => {
+  const overhead: Aabb3 = { min: [0.5, 1, -5], max: [1.5, 2, 5] };
+  // Player vertical span [-0.25, 0.25] sits below the overhead blocker.
+  const moved = resolvePlanarMovement([-0.1, 0, 0], { dx: 0.3, dz: 0 }, [0.5, 0.25, 0.5], [overhead]);
+  assert.ok(Math.abs(moved.dx - 0.3) <= 1e-12);
+});
+
+check("resolvePlanarMovement: a blocker the player already overlaps does not block (ground)", () => {
+  // Large ground slab the player stands within (overlaps on every axis at start).
+  const ground: Aabb3 = { min: [-5, -0.5, -5], max: [5, 0.5, 5] };
+  const moved = resolvePlanarMovement([0, 0, 0], { dx: 0.3, dz: -0.4 }, [0.15, 0.15, 0.15], [ground]);
+  assert.ok(Math.abs(moved.dx - 0.3) <= 1e-12);
+  assert.ok(Math.abs(moved.dz + 0.4) <= 1e-12);
+});
+
+check("resolvePlanarMovement: stops at the blocker in the path among several", () => {
+  const near: Aabb3 = { min: [0.5, -1, -5], max: [1.5, 1, 5] };
+  const far: Aabb3 = { min: [3, -1, -5], max: [4, 1, 5] };
+  const moved = resolvePlanarMovement([0, 0, 0], { dx: 1.2, dz: 0 }, [0.5, 0.5, 0.5], [far, near]);
+  assert.ok(Math.abs(moved.dx) <= 1e-12); // flush against the near wall (x stays 0)
+});
+
+check("physics subsystem exposes static blocker AABBs and collider half-extents", () => {
+  const physics = new PhysicsSubsystem();
+  physics.setEntities([
+    {
+      id: "wall",
+      components: {
+        Transform: { position: [2, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+        Collider: { shape: "box", size: [1, 1, 1], isStatic: true, isSensor: false },
+      },
+    },
+    {
+      id: "trigger",
+      components: {
+        Transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+        Collider: { shape: "box", size: [1, 1, 1], isStatic: true, isSensor: true },
+      },
+    },
+    {
+      id: "player",
+      components: {
+        Transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [2, 1, 1] },
+        Collider: { shape: "box", size: [1, 1, 1], isStatic: false, isSensor: false },
+      },
+    },
+  ]);
+  const blockers = physics.staticBlockerAabbs();
+  assert.equal(blockers.length, 1); // wall only: the sensor and the non-static player are excluded
+  assert.deepEqual(blockers[0], { min: [1.5, -0.5, -0.5], max: [2.5, 0.5, 0.5] });
+  assert.deepEqual(physics.colliderHalfExtents("player"), [1, 0.5, 0.5]); // size*scale/2
+  assert.equal(physics.colliderHalfExtents("missing"), null);
+});
+
+check("input-move behavior: the player cannot walk through a static wall", () => {
+  const registry = createBehaviorRegistry();
+  const actions = new ActionMap({ KeyD: "move-right" });
+  const physics = new PhysicsSubsystem();
+  const player: Entity = {
+    id: "player:wall",
+    components: {
+      Transform: { position: [-1, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+      Collider: { shape: "box", size: [1, 1, 1], isStatic: false, isSensor: false },
+      Behavior: { scriptId: "input-move", params: { speed: 3 } },
+    },
+  };
+  const wall: Entity = {
+    id: "wall",
+    components: {
+      Transform: { position: [1, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+      Collider: { shape: "box", size: [1, 1, 1], isStatic: true, isSensor: false },
+    },
+  };
+  physics.setEntities([player, wall]);
+
+  let synced: TransformComponent | undefined;
+  const subsystem = new BehaviorSubsystem(registry, actions, (_id, t) => { synced = t; }, physics);
+  subsystem.setEntities([player]);
+
+  // Hold move-right into the wall for many ticks. The wall spans x [0.5,1.5];
+  // the player (half 0.5) must stop flush at x=0 and never cross it.
+  actions.handleDown("KeyD");
+  let maxX = -Infinity;
+  for (let frame = 1; frame <= 40; frame += 1) {
+    actions.advance();
+    subsystem.update({ deltaSeconds: 0.1, elapsedSeconds: frame * 0.1, frame });
+    maxX = Math.max(maxX, (synced ?? assert.fail("synced")).position[0]);
+  }
+  assert.ok(maxX <= 1e-9, `player crossed the wall: maxX=${maxX}`);
+  assert.ok(Math.abs((synced ?? assert.fail("synced")).position[0]) <= 1e-9); // resting flush at x=0
 });
 
 console.log(`[engine-tests] ${checks} checks passed`);

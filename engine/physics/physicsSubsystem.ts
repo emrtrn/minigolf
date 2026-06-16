@@ -6,7 +6,7 @@ import {
   type TransformComponent,
 } from "../scene/components";
 import type { Entity, EntityId } from "../scene/entity";
-import type { PhysicsContact, PhysicsQuery } from "../behavior/behaviorSubsystem";
+import type { PhysicsAabb, PhysicsContact, PhysicsQuery } from "../behavior/behaviorSubsystem";
 
 export const PHYSICS_SUBSYSTEM_ID = "physics";
 export type PhysicsBackend = "placeholder" | "rapier";
@@ -109,6 +109,27 @@ export class PhysicsSubsystem implements Subsystem, PhysicsQuery {
 
   contactsForEntity(entityId: EntityId): readonly PhysicsContact[] {
     return this.contacts.filter((contact) => contact.a === entityId || contact.b === entityId);
+  }
+
+  /** World-space AABBs of every static, non-sensor collider — the movement blockers. */
+  staticBlockerAabbs(): readonly PhysicsAabb[] {
+    const blockers: PhysicsAabb[] = [];
+    for (const body of this.bodies) {
+      if (!body.collider.isStatic || body.collider.isSensor) continue;
+      blockers.push(bodyAabb(body));
+    }
+    return blockers;
+  }
+
+  /** Half-extents (size*scale/2) of an entity's collider, or null if it has none. */
+  colliderHalfExtents(entityId: EntityId): readonly [number, number, number] | null {
+    const body = this.bodies.find((candidate) => candidate.id === entityId);
+    if (!body) return null;
+    return [
+      Math.abs(body.transform.scale[0] ?? 1) * (body.collider.size[0] ?? 0) / 2,
+      Math.abs(body.transform.scale[1] ?? 1) * (body.collider.size[1] ?? 0) / 2,
+      Math.abs(body.transform.scale[2] ?? 1) * (body.collider.size[2] ?? 0) / 2,
+    ];
   }
 
   update(_context: EngineUpdateContext): void {
