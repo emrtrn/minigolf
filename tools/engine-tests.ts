@@ -56,12 +56,26 @@ import type { GizmoPointerDrag } from "../editor/gizmos/interaction";
 import { computeWallSnap } from "../editor/render-three/wallSnap";
 import { pivotCorrectedPosition } from "../editor/render-three/transformMatrices";
 import {
+  applySceneBackgroundAndAmbient,
+  computeSceneRoomBounds,
+  DEFAULT_SCENE_AMBIENT_COLOR,
+  DEFAULT_SCENE_AMBIENT_INTENSITY,
+  DEFAULT_SCENE_BACKGROUND_COLOR,
+  DEFAULT_SCENE_LIGHT_COLOR,
+  DEFAULT_SCENE_STATIC_OBJECTS_CAST_SHADOWS,
+  DEFAULT_SCENE_STATIC_OBJECTS_RECEIVE_SHADOWS,
+  DEFAULT_SCENE_SUN_ID,
+  ensureDefaultSceneLights,
+  fitDirectionalShadowToBounds,
+  resolveSceneWorldSettings,
+} from "../src/scene/SceneRuntimeCore";
+import {
   validateLayout,
   validateLightActor,
   validatePlacement,
 } from "./saveValidator";
 import type { LayoutCharacter, LayoutLightActor, RoomLayout } from "../engine/scene/layout";
-import { Box3, Vector3 } from "three";
+import { AmbientLight, Box3, Color, DirectionalLight, Scene, Vector3 } from "three";
 import type { AnimationMixer } from "three";
 
 let checks = 0;
@@ -119,6 +133,137 @@ check("derived entity ids cover every placement/character/light", () => {
 });
 check("world settings preserved", () => {
   assert.equal(doc.worldSettings?.ambientIntensity, layout.worldSettings?.ambientIntensity);
+});
+
+check("scene runtime world settings resolve defaults and layout overrides", () => {
+  assert.deepEqual(resolveSceneWorldSettings(null), {
+    staticObjectsCastShadow: DEFAULT_SCENE_STATIC_OBJECTS_CAST_SHADOWS,
+    staticObjectsReceiveShadow: DEFAULT_SCENE_STATIC_OBJECTS_RECEIVE_SHADOWS,
+    backgroundColor: DEFAULT_SCENE_BACKGROUND_COLOR,
+    ambientColor: DEFAULT_SCENE_AMBIENT_COLOR,
+    ambientIntensity: DEFAULT_SCENE_AMBIENT_INTENSITY,
+  });
+
+  assert.deepEqual(
+    resolveSceneWorldSettings({
+      schema: 1,
+      name: "world-settings-fixture",
+      loadGroups: [],
+      instances: [],
+      characters: [],
+      worldSettings: {
+        staticObjectsCastShadow: true,
+        staticObjectsReceiveShadow: false,
+        backgroundColor: "#101010",
+        ambientColor: "#202020",
+        ambientIntensity: 0.4,
+      },
+    }),
+    {
+      staticObjectsCastShadow: true,
+      staticObjectsReceiveShadow: false,
+      backgroundColor: "#101010",
+      ambientColor: "#202020",
+      ambientIntensity: 0.4,
+    },
+  );
+});
+
+check("scene runtime inserts one default sun when a layout has no lights", () => {
+  const emptyLightLayout: RoomLayout = {
+    schema: 1,
+    name: "default-light-fixture",
+    loadGroups: [],
+    instances: [],
+    characters: [],
+  };
+
+  ensureDefaultSceneLights(emptyLightLayout);
+  ensureDefaultSceneLights(emptyLightLayout);
+
+  assert.equal(emptyLightLayout.lights?.length, 1);
+  assert.equal(emptyLightLayout.lights?.[0]?.id, DEFAULT_SCENE_SUN_ID);
+  assert.equal(emptyLightLayout.lights?.[0]?.type, "directional");
+  assert.equal(emptyLightLayout.lights?.[0]?.color, DEFAULT_SCENE_LIGHT_COLOR);
+});
+
+check("scene runtime room bounds unions placements and honors asset filters", () => {
+  const boundsLayout: RoomLayout = {
+    schema: 1,
+    name: "room-bounds-fixture",
+    loadGroups: [],
+    instances: [
+      {
+        assetId: "room",
+        placements: [{ position: [1, 0, 0] }, { position: [0, 0, 2] }],
+      },
+      {
+        assetId: "prop",
+        placements: [{ position: [100, 0, 0] }],
+      },
+    ],
+    characters: [],
+  };
+  const localBounds = new Map([
+    ["room", new Box3(new Vector3(0, 0, 0), new Vector3(1, 1, 1))],
+    ["prop", new Box3(new Vector3(0, 0, 0), new Vector3(1, 1, 1))],
+  ]);
+
+  const roomBounds = computeSceneRoomBounds(boundsLayout, localBounds, {
+    includeAsset: (assetId) => assetId === "room",
+  });
+
+  assert.deepEqual(roomBounds?.min.toArray(), [0, 0, 0]);
+  assert.deepEqual(roomBounds?.max.toArray(), [2, 1, 3]);
+});
+
+check("scene runtime fits directional shadows from room bounds", () => {
+  const sun = new DirectionalLight();
+  fitDirectionalShadowToBounds(
+    sun,
+    new Box3(new Vector3(-5, 0, -2), new Vector3(5, 4, 2)),
+  );
+
+  assert.equal(sun.shadow.camera.left, -7);
+  assert.equal(sun.shadow.camera.right, 7);
+  assert.equal(sun.shadow.camera.top, 7);
+  assert.equal(sun.shadow.camera.bottom, -7);
+  assert.equal(sun.shadow.camera.far, 34);
+});
+
+check("scene runtime applies background and ambient light lifecycle", () => {
+  const scene = new Scene();
+  let ambient = applySceneBackgroundAndAmbient({
+    scene,
+    ambientLight: null,
+    settings: {
+      backgroundColor: "#111111",
+      ambientColor: "#222222",
+      ambientIntensity: 0.5,
+    },
+    ambientName: "test-ambient",
+  });
+
+  assert.ok(ambient instanceof AmbientLight);
+  assert.equal(ambient.name, "test-ambient");
+  assert.equal((scene.background as Color).getHexString(), "111111");
+  assert.equal(ambient.color.getHexString(), "222222");
+  assert.equal(ambient.intensity, 0.5);
+  assert.equal(scene.children.includes(ambient), true);
+
+  ambient = applySceneBackgroundAndAmbient({
+    scene,
+    ambientLight: ambient,
+    settings: {
+      backgroundColor: "#333333",
+      ambientColor: "#444444",
+      ambientIntensity: 0,
+    },
+  });
+
+  assert.equal(ambient, null);
+  assert.equal((scene.background as Color).getHexString(), "333333");
+  assert.equal(scene.children.length, 0);
 });
 check("instance entity count equals total placements (empty instances add none)", () => {
   const totalPlacements = layout.instances.reduce(

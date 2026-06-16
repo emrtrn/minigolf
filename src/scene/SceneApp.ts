@@ -6,11 +6,9 @@
  * This class owns: renderer, scene graph, camera rig, lights, frame loop.
  */
 import {
-  AmbientLight,
   AnimationMixer,
   Box3,
   Box3Helper,
-  Color,
   DirectionalLight,
   Group,
   Matrix4,
@@ -19,7 +17,7 @@ import {
   Raycaster,
   Vector3,
 } from "three";
-import type { InstancedMesh, PerspectiveCamera, Scene, WebGLRenderer } from "three";
+import type { AmbientLight, InstancedMesh, PerspectiveCamera, Scene, WebGLRenderer } from "three";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import { AssetLoader } from "./assetLoader";
@@ -62,8 +60,20 @@ import {
   type LightObjectRecord,
 } from "@engine/render-three/lights";
 import {
+  applySceneBackgroundAndAmbient,
+  computeSceneRoomBounds,
   createSceneRuntimeCore,
+  DEFAULT_SCENE_AMBIENT_COLOR,
+  DEFAULT_SCENE_AMBIENT_INTENSITY,
+  DEFAULT_SCENE_BACKGROUND_COLOR,
+  DEFAULT_SCENE_LIGHT_COLOR,
+  DEFAULT_SCENE_STATIC_OBJECTS_CAST_SHADOWS,
+  DEFAULT_SCENE_STATIC_OBJECTS_RECEIVE_SHADOWS,
+  DEFAULT_SCENE_SUN_ID,
+  ensureDefaultSceneLights,
+  fitDirectionalShadowToBounds,
   readSceneRuntimeStats,
+  resolveSceneWorldSettings,
   resizeSceneRuntimeViewport,
   SCENE_CAMERA_TARGET,
 } from "./SceneRuntimeCore";
@@ -186,15 +196,6 @@ export type {
 export type {
   EditorHistoryState,
 } from "@editor/core/history";
-
-/** Perf budget: clamp DPR so 1080p+ phones don't render 3x fragments. */
-const DEFAULT_STATIC_OBJECTS_CAST_SHADOWS = false;
-const DEFAULT_STATIC_OBJECTS_RECEIVE_SHADOWS = true;
-const DEFAULT_LIGHT_COLOR = "#ffffff";
-const DEFAULT_SUN_ID = "sun";
-const DEFAULT_BACKGROUND_COLOR = "#d7d7c7";
-const DEFAULT_AMBIENT_COLOR = "#ffffff";
-const DEFAULT_AMBIENT_INTENSITY = 0;
 
 /**
  * Default raw-code -> action bindings for the runtime input map. Game-specific
@@ -345,7 +346,7 @@ export class SceneApp {
     this.editorEnabled = options.enabled;
 
     const runtimeCore = createSceneRuntimeCore(canvas, {
-      backgroundColor: DEFAULT_BACKGROUND_COLOR,
+      backgroundColor: DEFAULT_SCENE_BACKGROUND_COLOR,
     });
     this.renderer = runtimeCore.renderer;
     this.scene = runtimeCore.scene;
@@ -843,35 +844,13 @@ export class SceneApp {
 
   /** Fits the sun's shadow frustum to the room AABB so shadows stay crisp. */
   private fitSunShadowToScene(): void {
-    if (!this.sun) return;
-    const room = this.getRoomBounds();
-    if (!room || room.isEmpty()) return;
-    const size = room.getSize(new Vector3());
-    const half = Math.max(size.x, size.z) * 0.6 + 1;
-
-    const cam = this.sun.shadow.camera;
-    cam.left = -half;
-    cam.right = half;
-    cam.top = half;
-    cam.bottom = -half;
-    cam.far = size.y + 30;
-    cam.updateProjectionMatrix();
+    fitDirectionalShadowToBounds(this.sun, this.getRoomBounds());
   }
 
   private getRoomBounds(): Box3 | null {
-    if (!this.layout) return null;
-    const box = new Box3();
-    let found = false;
-    for (const instance of this.layout.instances) {
-      if (!this.isRoomAsset(instance.assetId)) continue;
-      const bounds = this.localBounds.get(instance.assetId);
-      if (!bounds) continue;
-      for (const placement of instance.placements) {
-        box.union(bounds.clone().applyMatrix4(composePlacementMatrix(placement)));
-        found = true;
-      }
-    }
-    return found ? box : null;
+    return computeSceneRoomBounds(this.layout, this.localBounds, {
+      includeAsset: (assetId) => this.isRoomAsset(assetId),
+    });
   }
 
   private isWallAsset(assetId: string): boolean {
@@ -1390,20 +1369,7 @@ export class SceneApp {
   }
 
   private ensureDefaultLights(): void {
-    if (!this.layout) return;
-    if (this.layout.lights && this.layout.lights.length > 0) return;
-    this.layout.lights = [
-      {
-        id: DEFAULT_SUN_ID,
-        type: "directional",
-        name: "Sun",
-        position: [3, 9, 4],
-        rotation: [-55, 35, 0],
-        color: DEFAULT_LIGHT_COLOR,
-        intensity: 2.0,
-        castShadow: true,
-      },
-    ];
+    ensureDefaultSceneLights(this.layout);
   }
 
   private createDefaultLightActor(type: LayoutLightActor["type"]): LayoutLightActor {
@@ -1415,7 +1381,7 @@ export class SceneApp {
       name: uniqueActorName(formatLightType(type), this.layout?.lights ?? []),
       position,
       rotation: type === "point" ? [0, 0, 0] : [-55, 35, 0],
-      color: DEFAULT_LIGHT_COLOR,
+      color: DEFAULT_SCENE_LIGHT_COLOR,
       intensity: defaultLightIntensity(type),
       castShadow: type !== "point",
       ...(type === "point" ? { distance: 8, decay: 2 } : {}),
@@ -1445,7 +1411,7 @@ export class SceneApp {
     this.scene.add(record.root);
     if (record.target) this.scene.add(record.target);
     this.lightObjects.push(record);
-    if (actor.type === "directional" && (!this.sun || actor.id === DEFAULT_SUN_ID)) {
+    if (actor.type === "directional" && (!this.sun || actor.id === DEFAULT_SCENE_SUN_ID)) {
       this.sun = record.light as DirectionalLight;
     }
     this.refreshLightObject(this.lightObjects.length - 1);
@@ -1455,7 +1421,7 @@ export class SceneApp {
     // Light objects now flow through the entity/component model: the layout
     // actor is derived into a scene entity, then into a render item. Inputs
     // match the legacy actor path (same transform/light component round-trip).
-    return createThreeLightObject(entityLightItem(lightEntity(index, actor)), DEFAULT_LIGHT_COLOR);
+    return createThreeLightObject(entityLightItem(lightEntity(index, actor)), DEFAULT_SCENE_LIGHT_COLOR);
   }
 
   private insertLightActor(index: number, actor: LayoutLightActor): void {
@@ -1467,7 +1433,7 @@ export class SceneApp {
     this.lightObjects.splice(insertionIndex, 0, record);
     this.scene.add(record.root);
     if (record.target) this.scene.add(record.target);
-    if (actor.type === "directional" && (!this.sun || actor.id === DEFAULT_SUN_ID)) {
+    if (actor.type === "directional" && (!this.sun || actor.id === DEFAULT_SCENE_SUN_ID)) {
       this.sun = record.light as DirectionalLight;
     }
     this.refreshLightIndices();
@@ -1501,7 +1467,7 @@ export class SceneApp {
     const record = this.lightObjects[index];
     if (!actor || !record) return;
     syncLightObject(record, entityLightItem(lightEntity(index, actor)), {
-      defaultColor: DEFAULT_LIGHT_COLOR,
+      defaultColor: DEFAULT_SCENE_LIGHT_COLOR,
       selected: this.isLightSelected(index),
     });
   }
@@ -1597,31 +1563,31 @@ export class SceneApp {
     if (!this.layout) return;
     const worldSettings: LayoutWorldSettings = { ...(this.layout.worldSettings ?? {}) };
 
-    if (settings.staticObjectsCastShadow === DEFAULT_STATIC_OBJECTS_CAST_SHADOWS) {
+    if (settings.staticObjectsCastShadow === DEFAULT_SCENE_STATIC_OBJECTS_CAST_SHADOWS) {
       delete worldSettings.staticObjectsCastShadow;
     } else {
       worldSettings.staticObjectsCastShadow = settings.staticObjectsCastShadow;
     }
 
-    if (settings.staticObjectsReceiveShadow === DEFAULT_STATIC_OBJECTS_RECEIVE_SHADOWS) {
+    if (settings.staticObjectsReceiveShadow === DEFAULT_SCENE_STATIC_OBJECTS_RECEIVE_SHADOWS) {
       delete worldSettings.staticObjectsReceiveShadow;
     } else {
       worldSettings.staticObjectsReceiveShadow = settings.staticObjectsReceiveShadow;
     }
 
-    if (settings.backgroundColor.toLowerCase() === DEFAULT_BACKGROUND_COLOR) {
+    if (settings.backgroundColor.toLowerCase() === DEFAULT_SCENE_BACKGROUND_COLOR) {
       delete worldSettings.backgroundColor;
     } else {
       worldSettings.backgroundColor = settings.backgroundColor;
     }
 
-    if (settings.ambientColor.toLowerCase() === DEFAULT_AMBIENT_COLOR) {
+    if (settings.ambientColor.toLowerCase() === DEFAULT_SCENE_AMBIENT_COLOR) {
       delete worldSettings.ambientColor;
     } else {
       worldSettings.ambientColor = settings.ambientColor;
     }
 
-    if (settings.ambientIntensity === DEFAULT_AMBIENT_INTENSITY) {
+    if (settings.ambientIntensity === DEFAULT_SCENE_AMBIENT_INTENSITY) {
       delete worldSettings.ambientIntensity;
     } else {
       worldSettings.ambientIntensity = settings.ambientIntensity;
@@ -1639,23 +1605,12 @@ export class SceneApp {
 
   /** Applies the resolved background color and ambient light to the live scene. */
   private applyBackgroundAndAmbient(): void {
-    this.scene.background = new Color(this.backgroundColor());
-    const intensity = this.ambientIntensity();
-    if (intensity <= 0) {
-      if (this.ambientLight) {
-        this.ambientLight.removeFromParent();
-        this.ambientLight = null;
-      }
-      return;
-    }
-    if (!this.ambientLight) {
-      this.ambientLight = new AmbientLight(new Color(this.ambientColor()), intensity);
-      this.ambientLight.name = "editor-ambient-light";
-      this.scene.add(this.ambientLight);
-    } else {
-      this.ambientLight.color.set(this.ambientColor());
-      this.ambientLight.intensity = intensity;
-    }
+    this.ambientLight = applySceneBackgroundAndAmbient({
+      scene: this.scene,
+      ambientLight: this.ambientLight,
+      settings: resolveSceneWorldSettings(this.layout),
+      ambientName: "editor-ambient-light",
+    });
   }
 
   /**
@@ -2427,29 +2382,23 @@ export class SceneApp {
   }
 
   private staticObjectsCastShadow(): boolean {
-    return (
-      this.layout?.worldSettings?.staticObjectsCastShadow ??
-      DEFAULT_STATIC_OBJECTS_CAST_SHADOWS
-    );
+    return resolveSceneWorldSettings(this.layout).staticObjectsCastShadow;
   }
 
   private staticObjectsReceiveShadow(): boolean {
-    return (
-      this.layout?.worldSettings?.staticObjectsReceiveShadow ??
-      DEFAULT_STATIC_OBJECTS_RECEIVE_SHADOWS
-    );
+    return resolveSceneWorldSettings(this.layout).staticObjectsReceiveShadow;
   }
 
   private backgroundColor(): string {
-    return this.layout?.worldSettings?.backgroundColor ?? DEFAULT_BACKGROUND_COLOR;
+    return resolveSceneWorldSettings(this.layout).backgroundColor;
   }
 
   private ambientColor(): string {
-    return this.layout?.worldSettings?.ambientColor ?? DEFAULT_AMBIENT_COLOR;
+    return resolveSceneWorldSettings(this.layout).ambientColor;
   }
 
   private ambientIntensity(): number {
-    return this.layout?.worldSettings?.ambientIntensity ?? DEFAULT_AMBIENT_INTENSITY;
+    return resolveSceneWorldSettings(this.layout).ambientIntensity;
   }
 
   private hasSelection(selection: Selection): boolean {

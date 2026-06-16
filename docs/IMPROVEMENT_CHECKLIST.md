@@ -374,6 +374,21 @@ npm run build:verify
 Append newest entries at the top. Record: date, item #, what changed, where it
 stopped, and any decision made (so the next session does not re-litigate it).
 
+- *2026-06-16* - **Item 5 Piece 2 done - shared world/lighting/room-bounds helpers extracted.**
+  On branch `refactor/scene-build-runtime-core`, expanded
+  `src/scene/SceneRuntimeCore.ts` with shared scene-build helpers for resolved
+  world settings, default sun injection, room bounds, directional shadow fitting,
+  and background/ambient lifecycle. `RuntimeSceneApp` and `SceneApp` now both
+  delegate those concerns to the shared helper; Editor Mode keeps its room-asset
+  filter via the helper's `includeAsset` callback, while Game Mode includes all
+  layout instances as before. Added 5 headless engine checks for the pure helper
+  behavior (engine checks 48 -> 53). `loadActiveProjectScene` and the larger
+  model/character build consolidation are intentionally untouched and remain
+  the next Item 5 target. Bash `wc -l`: `SceneApp.ts` 2479 -> 2428,
+  `RuntimeSceneApp.ts` 370 -> 307, `SceneRuntimeCore.ts` 51 -> 171. The prior
+  Item 3 `<2500` stretch line-count target is now reached as a byproduct of the
+  shared-runtime extraction.
+
 - *2026-06-15* — **Item 5 Piece 1 done — architecture split documented + render core helper started.**
   Created branch `refactor/shared-scene-runtime-core`. Updated
   `docs/ARCHITECTURE.md` to reflect the current split: `RuntimeSceneApp` is the

@@ -1,6 +1,6 @@
 # Forge Architecture Contract
 
-> Created: 2026-06-13 | Updated: 2026-06-15
+> Created: 2026-06-13 | Updated: 2026-06-16
 > Scope: architecture-v2 migration workspace for the single-codebase template.
 > Migration status: complete (phases 0-7 done); this file is the steady-state
 > contract going forward.
@@ -51,7 +51,8 @@ Kept dev middleware:
 Template/editor code lives in this repo:
 
 - `src/scene/`: `RuntimeSceneApp`, editor `SceneApp`, shared scene runtime
-  helpers, scene loading, and save hooks.
+  helpers for renderer/camera/world-lighting setup, scene loading, and save
+  hooks.
 - `src/editor/`: editor UI, selection panels, authoring affordances.
 - `src/project/`: local manifest loading and project public-path helpers.
 - `public/project.3dgame.json`: this copy's project identity and editor settings.
