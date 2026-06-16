@@ -43,6 +43,13 @@ import { KeyboardInputSource } from "../src/input/keyboardInputSource";
 import { facingYawFromMove, planarMoveStep } from "../src/game/playerMovement";
 import { createBehaviorRegistry } from "../src/game/behaviors";
 import type { TransformComponent } from "../engine/scene/components";
+import {
+  desiredFollowPose,
+  lerpVec3,
+  smoothingFactor,
+  stepFollowCamera,
+  type FollowCameraConfig,
+} from "../src/game/followCamera";
 import type { Entity } from "../engine/scene/entity";
 import { selectionId, type Selection } from "../editor/core/selection";
 import { EditorSceneController } from "../editor/scene/EditorSceneController";
@@ -1877,6 +1884,51 @@ check("input-move behavior: normalizes diagonal travel, faces it, holds facing i
   assert.equal(moved.position[0], xBefore);
   assert.equal(moved.position[2], zBefore);
   yawApproxEqual(moved.rotation[1], -45);
+});
+
+// G4 follow camera (src/game/followCamera.ts): a fixed-orientation third-person
+// camera eases toward a pose offset from the player. Pure math the runtime shell
+// applies each tick; the camera never rotates, so world-relative WASD reads as
+// camera-relative.
+const followConfig: FollowCameraConfig = { offset: [0, 1, 3], lookHeight: 0.5 };
+
+check("desiredFollowPose: offsets the camera from the player and aims above it", () => {
+  const pose = desiredFollowPose([2, 0, 4], followConfig);
+  assert.deepEqual(pose.position, [2, 1, 7]);
+  assert.deepEqual(pose.target, [2, 0.5, 4]);
+});
+
+check("smoothingFactor: framerate-independent easing in [0,1], zero when degenerate", () => {
+  assert.equal(smoothingFactor(0, 0.016), 0);
+  assert.equal(smoothingFactor(8, 0), 0);
+  assert.equal(smoothingFactor(-1, 0.016), 0);
+  const f = smoothingFactor(8, 0.5);
+  assert.ok(Math.abs(f - (1 - Math.exp(-4))) <= 1e-12);
+  assert.ok(f > 0 && f < 1);
+});
+
+check("lerpVec3: interpolates and clamps t to [0,1]", () => {
+  assert.deepEqual(lerpVec3([0, 0, 0], [10, 20, 30], 0.5), [5, 10, 15]);
+  assert.deepEqual(lerpVec3([1, 2, 3], [4, 5, 6], -1), [1, 2, 3]);
+  assert.deepEqual(lerpVec3([1, 2, 3], [4, 5, 6], 2), [4, 5, 6]);
+});
+
+check("stepFollowCamera: snaps on first frame, then eases and converges", () => {
+  // No previous pose -> snap to the desired pose (no easing in from the origin).
+  const first = stepFollowCamera(null, [0, 0, 0], followConfig, 0.1);
+  assert.deepEqual(first.position, [0, 1, 3]);
+  assert.deepEqual(first.target, [0, 0.5, 0]);
+
+  // With a previous pose -> ease halfway toward the new player's desired pose.
+  const next = stepFollowCamera(first, [2, 0, 0], followConfig, 0.5);
+  assert.deepEqual(next.position, [1, 1, 3]); // halfway [0,1,3] -> [2,1,3]
+  assert.deepEqual(next.target, [1, 0.5, 0]); // halfway [0,0.5,0] -> [2,0.5,0]
+
+  // Repeated easing converges on the desired pose.
+  let pose = first;
+  for (let i = 0; i < 200; i += 1) pose = stepFollowCamera(pose, [2, 0, 0], followConfig, 0.5);
+  assert.ok(Math.abs(pose.position[0] - 2) <= 1e-9);
+  assert.ok(Math.abs(pose.target[0] - 2) <= 1e-9);
 });
 
 console.log(`[engine-tests] ${checks} checks passed`);

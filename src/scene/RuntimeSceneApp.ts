@@ -13,6 +13,13 @@ import { PhysicsSubsystem } from "@engine/physics/physicsSubsystem";
 import { AudioSubsystem } from "@engine/audio/audioSubsystem";
 import { KeyboardInputSource } from "@/input/keyboardInputSource";
 import { createBehaviorRegistry } from "@/game/behaviors";
+import {
+  smoothingFactor,
+  stepFollowCamera,
+  type FollowCameraConfig,
+  type FollowCameraPose,
+  type Vec3,
+} from "@/game/followCamera";
 import { loadActiveProject, type ActiveProject } from "@/project/ProjectSystem";
 import {
   applySceneBackgroundAndAmbient,
@@ -40,6 +47,17 @@ import { applyEulerDegrees } from "@engine/render-three/transforms";
 import type { LayoutCharacter, LayoutLightActor, LayoutPlacement, RoomLayout } from "@engine/scene/layout";
 import { roomLayoutToSceneDocument } from "@engine/scene/legacyRoomLayoutAdapter";
 import type { TransformComponent } from "@engine/scene/components";
+
+/**
+ * Third-person follow camera: sits behind (+z) and above the player, looking
+ * down -z so the world movement frame reads as camera-relative. `RATE` is the
+ * exponential easing speed (per second) the camera uses to track the player.
+ */
+const FOLLOW_CAMERA_CONFIG: FollowCameraConfig = {
+  offset: [0, 1.2, 2.6],
+  lookHeight: 0.5,
+};
+const FOLLOW_CAMERA_RATE = 8;
 
 const DEFAULT_INPUT_BINDINGS: ActionBindings = {
   KeyW: "move-forward",
@@ -84,6 +102,8 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
   private sun: DirectionalLight | null = null;
   private ambientLight: AmbientLight | null = null;
   private cameraViewTouched = false;
+  private playerObject: Object3D | null = null;
+  private followPose: FollowCameraPose | null = null;
 
   onFrame: ((deltaMs: number) => void) | null = null;
 
@@ -132,6 +152,7 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
       const deltaMs = Math.min(now - this.lastTime, 100);
       this.lastTime = now;
       this.engineApp.update(deltaMs / 1000);
+      this.updateFollowCamera(deltaMs / 1000);
       this.renderer.render(this.scene, this.camera);
       this.onFrame?.(deltaMs);
     };
@@ -212,8 +233,25 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
     character.userData.characterIndex = index;
     this.scene.add(character);
     this.characterObjects.push(character);
+    // The first input-driven character is the player the runtime camera follows;
+    // taking over the view stops the responsive resize handler from resetting it.
+    if (!this.playerObject && placement.behavior?.script === "input-move") {
+      this.playerObject = character;
+      this.cameraViewTouched = true;
+    }
     const mixer = createSceneCharacterMixer(character, gltf, placement.animation);
     if (mixer) this.animationSubsystem.add(mixer);
+  }
+
+  private updateFollowCamera(deltaSeconds: number): void {
+    const player = this.playerObject;
+    if (!player) return;
+    const playerPos: Vec3 = [player.position.x, player.position.y, player.position.z];
+    const t = smoothingFactor(FOLLOW_CAMERA_RATE, deltaSeconds);
+    this.followPose = stepFollowCamera(this.followPose, playerPos, FOLLOW_CAMERA_CONFIG, t);
+    const { position, target } = this.followPose;
+    this.camera.position.set(position[0], position[1], position[2]);
+    this.camera.lookAt(target[0], target[1], target[2]);
   }
 
   private addLight(actor: LayoutLightActor): void {

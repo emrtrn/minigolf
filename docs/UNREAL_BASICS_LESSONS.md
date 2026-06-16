@@ -101,7 +101,7 @@ tutkalı shell'lerde ince kalır.
 | G1 | Oyuncu hareket çekirdeği (normalize + yön) | — | §3 | `[x]` |
 | G2 | Yerçekimi, zemin & zıplama | G1 | §3, §4 | `[ ]` |
 | G3 | Çarpışma yanıtı (duvardan geçmeyi durdur) | G1 | §3 | `[ ]` |
-| G4 | 3. şahıs takip kamerası + kameraya-göreli hareket | G1 | §5 | `[ ]` |
+| G4 | 3. şahıs takip kamerası + kameraya-göreli hareket | G1 | §5 | `[x]` |
 | G5 | Harekete bağlı animasyon durumları | G1, G2 | §3 | `[ ]` |
 | G6 | Authored oynanabilir örnek sahne | G1–G5 | §4, §5 | `[ ]` |
 
@@ -183,7 +183,7 @@ chime hâlâ çalar.
 **Açık soru.** Saf AABB resolve (test/determinizm için önce bu) vs. Rapier KCC
 (zengin, sonra). Önce A, gerekirse B.
 
-### G4 — 3. şahıs takip kamerası + kameraya-göreli hareket  `[ ]`
+### G4 — 3. şahıs takip kamerası + kameraya-göreli hareket  `[x]`
 
 **Problem.** Kamera sabit; hareket dünya-eksen. Oynanabilir örnek için oyuncuyu
 takip eden ve baktığı yöne göre hareket veren bir kamera gerekir.
@@ -264,6 +264,22 @@ Yürütme track'i bittikçe buradan çekilir; detaylar yukarıdaki ilgili §'de.
 Yeni kayıtları en üste ekle. Kaydet: tarih, madde #, ne değişti, nerede durdu,
 alınan karar (sonraki oturum yeniden tartışmasın).
 
+- *2026-06-16* — **G4 bitti (3. şahıs takip kamerası).** Yeni saf helper
+  `src/game/followCamera.ts`: `desiredFollowPose(playerPos, {offset, lookHeight})`,
+  `smoothingFactor(rate, dt)` (framerate-bağımsız `1-e^(-rate*dt)`, dejenere
+  girişte 0), `lerpVec3` (t∈[0,1] clamp) ve `stepFollowCamera(prev, playerPos,
+  config, t)` (prev null → ilk frame'de snap, sonra position+target ease).
+  `RuntimeSceneApp` (runtime shell) frame loop'una bağlandı: `input-move`'lu ilk
+  karakter = oyuncu, kamera her tick onu pürüzsüz takip eder (offset `[0,1.2,2.6]`,
+  rate 8); editör `SceneApp` kamerası dokunulmadı (boundary). Kamera sabit
+  yönelimli ve dünya eksenlerine hizalı (−z'ye bakar) → mevcut dünya-eksen WASD
+  **kameraya-göreli** okunur (W = ekrana doğru); davranış kodu değişmedi.
+  Headless testler eklendi (tools/engine-tests.ts: 65 → 69 check). `npm run
+  build:verify` yeşil (build + 69 check + strict dist scan). **Karar:** bağımsız
+  kamera yaw'ı (mouse-orbit) + yaw'ı G1'e geri besleme bilinçli olarak ertelendi;
+  kamera dönmediği için şu an gerekmiyor. Orbit eklenince devreye girecek — bu,
+  sıradaki **"(G1'i kameraya-göreli yap)"** adımı. Sonraki yürütme: **G2**
+  (yerçekimi, zemin & zıplama).
 - *2026-06-16* — **G1 bitti (oyuncu hareket çekirdeği).** Yeni saf helper
   `src/game/playerMovement.ts`: `planarMoveStep({forward,back,left,right}, speed,
   dt) -> {dx,dz}` (raw yön normalize edilip `speed*dt` ile ölçeklenir → diagonal
