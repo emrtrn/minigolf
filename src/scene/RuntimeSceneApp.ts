@@ -57,6 +57,8 @@ import {
   roomLayoutToSceneDocument,
   type ColliderTransformSource,
 } from "@engine/scene/legacyRoomLayoutAdapter";
+import { loadAssetCollision } from "@/scene/assetCollisionLoader";
+import type { AssetCollisionDef } from "@engine/scene/collision";
 import type { TransformComponent } from "@engine/scene/components";
 
 const DEFAULT_INPUT_BINDINGS: ActionBindings = {
@@ -95,6 +97,7 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
   private activeProject: ActiveProject | null = null;
   private assetLoader: AssetLoader | null = null;
   private layout: RoomLayout | null = null;
+  private collisionDefs = new Map<string, AssetCollisionDef>();
   private models = new Map<string, GLTF>();
   private instanceGroups = new Map<string, Group>();
   private instanceMeshes = new Map<string, InstancedMesh[]>();
@@ -240,9 +243,11 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
       }),
     );
 
+    await this.loadCollisionDefs();
     await startSceneRuntime({
       sceneDocument: roomLayoutToSceneDocument(this.layout, {
         colliderBox: (assetId, source) => this.colliderBoxFor(assetId, source),
+        collisionDefs: this.collisionDefs,
       }),
       physics: this.physicsSubsystem,
       behavior: this.behaviorSubsystem,
@@ -297,6 +302,29 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
   private colliderBoxFor(assetId: string, source: ColliderTransformSource) {
     const bounds = this.localBounds.get(assetId);
     return bounds ? colliderBoxFromBounds(bounds, source) : undefined;
+  }
+
+  /**
+   * Loads authored collision sidecars for the layout's assets so the runtime
+   * physics collider uses the compound shapes (not the auto bounding box). Only
+   * definitions with primitives are kept; missing sidecars fall back silently.
+   */
+  private async loadCollisionDefs(): Promise<void> {
+    if (!this.assetLoader || !this.layout) return;
+    const manifest = await this.assetLoader.loadManifest();
+    const assetIds = new Set<string>();
+    for (const instance of this.layout.instances) assetIds.add(instance.assetId);
+    for (const character of this.layout.characters) assetIds.add(character.assetId);
+    const defs = new Map<string, AssetCollisionDef>();
+    await Promise.all(
+      [...assetIds].map(async (assetId) => {
+        const file = manifest.assets.find((entry) => entry.id === assetId)?.file;
+        if (!file) return;
+        const def = await loadAssetCollision(file);
+        if (def.primitives.length > 0) defs.set(assetId, def);
+      }),
+    );
+    this.collisionDefs = defs;
   }
 
   private async loadMissingSceneModels(): Promise<void> {

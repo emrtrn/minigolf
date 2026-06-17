@@ -15,6 +15,8 @@ import {
   LineBasicMaterial,
   LineSegments,
   Matrix4,
+  Mesh,
+  MeshStandardMaterial,
   Object3D,
   Plane,
   Raycaster,
@@ -115,7 +117,7 @@ import type {
   Vec3,
 } from "@engine/scene/layout";
 import type { AssetCollisionDef, CollisionPresetId } from "@engine/scene/collision";
-import { loadAssetCollision } from "@/editor/assetCollisionStore";
+import { loadAssetCollision } from "@/scene/assetCollisionLoader";
 import {
   lightEntity,
   roomLayoutToSceneDocument,
@@ -350,7 +352,18 @@ export class SceneApp {
     rotateEnabled: true,
     scaleEnabled: true,
   };
-  private pendingAssetId: string | null = null;
+  /** Live drag-and-drop placement ghost (a translucent clone of the dragged
+   *  asset shown in the viewport before the drop commits). */
+  private dragPreview: {
+    assetId: string;
+    group: Object3D;
+    material: MeshStandardMaterial;
+  } | null = null;
+  /** Asset id currently being dragged from the Content Browser. */
+  private dragPreviewAssetId: string | null = null;
+  /** Last viewport client coords seen during a drag (so a lazily-loaded ghost
+   *  can snap to the cursor as soon as its model finishes loading). */
+  private dragPreviewClient: { x: number; y: number } | null = null;
   private pointerDrag: GizmoPointerDrag | null = null;
   private readonly editorSceneController: EditorSceneController;
   private unbindEditorInput: (() => void) | null = null;
@@ -409,7 +422,7 @@ export class SceneApp {
       getOrbitTarget: () => this.getCameraOrbitTarget(),
       onInteractionStart: () => {
         this.pointerDrag = null;
-        this.pendingAssetId = null;
+        this.endAssetDragPreview();
       },
       onStatus: (message, tone) => this.onStatus?.(message, tone),
     });
@@ -563,6 +576,7 @@ export class SceneApp {
     if (!this.layout) throw new Error("Layout is not loaded yet.");
     return roomLayoutToSceneDocument(this.layout, {
       colliderBox: (assetId, source) => this.colliderBoxFor(assetId, source),
+      collisionDefs: this.collisionDefs,
     });
   }
 
@@ -651,7 +665,7 @@ export class SceneApp {
 
   setEditorTool(tool: EditorTool): void {
     this.activeTool = tool;
-    this.pendingAssetId = null;
+    this.endAssetDragPreview();
     // Switching transform tool leaves pivot-edit mode so tools behave normally.
     if (this.pivotEditMode) this.setPivotEditMode(false);
     this.updateGizmo();
@@ -927,21 +941,93 @@ export class SceneApp {
     return this.assetPlacements.get(assetId)?.surface === "room";
   }
 
-  beginAssetPlacement(assetId: string): void {
+  /**
+   * Begin a drag-and-drop placement: builds a translucent ghost of the dragged
+   * asset so the viewport shows where it will land before the drop. The Content
+   * Browser lists every manifest asset but only loadGroups are loaded up front,
+   * so a ghost for an unloaded asset is built once its model lazy-loads.
+   * Characters are skinned meshes and skip the ghost (they still drop fine).
+   */
+  beginAssetDragPreview(assetId: string): void {
+    this.endAssetDragPreview();
+    this.dragPreviewAssetId = assetId;
+    this.dragPreviewClient = null;
+
+    const asset = this.manifest?.assets.find((entry) => entry.id === assetId);
+    if (asset?.category === "customer-character") return;
+
     if (this.models.has(assetId)) {
-      this.pendingAssetId = assetId;
-      this.onStatus?.(`Placement armed: ${assetId}`, "info");
+      this.createDragPreview(assetId);
       return;
     }
-    // The Content Browser lists every manifest asset, but only the layout's
-    // loadGroups are loaded up front. Lazy-load on demand so any registered
-    // asset can be placed regardless of its loadGroup.
-    this.onStatus?.(`Loading ${assetId}…`, "info");
     void this.ensureAssetLoaded(assetId).then((ok) => {
-      if (!ok) return;
-      this.pendingAssetId = assetId;
-      this.onStatus?.(`Placement armed: ${assetId}`, "info");
+      // Bail if the drag was cancelled or moved on while we were loading.
+      if (!ok || this.dragPreviewAssetId !== assetId || this.dragPreview) return;
+      this.createDragPreview(assetId);
+      if (this.dragPreviewClient) {
+        this.updateAssetDragPreview(this.dragPreviewClient.x, this.dragPreviewClient.y);
+      }
     });
+  }
+
+  private createDragPreview(assetId: string): void {
+    const gltf = this.models.get(assetId);
+    if (!gltf) return;
+    // clone(true) shares geometries with the source gltf (Mesh.clone keeps the
+    // geometry/material by reference), so only the override material we add here
+    // needs disposing on cleanup — never the shared geometries.
+    const group = gltf.scene.clone(true);
+    const material = new MeshStandardMaterial({
+      color: 0xf59e2c,
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false,
+      roughness: 0.6,
+      metalness: 0,
+    });
+    group.traverse((object) => {
+      if (object instanceof Mesh) {
+        object.material = material;
+        object.castShadow = false;
+        object.receiveShadow = false;
+      }
+    });
+    group.visible = false;
+    this.dragPreview = { assetId, group, material };
+    this.scene.add(group);
+  }
+
+  /** Position the drag ghost under the cursor (snapped/wall-mounted exactly as
+   *  the drop will land). No-op for assets without a ghost (e.g. characters). */
+  updateAssetDragPreview(clientX: number, clientY: number): void {
+    this.dragPreviewClient = { x: clientX, y: clientY };
+    const preview = this.dragPreview;
+    if (!preview) return;
+    const transform = this.computeInstanceDropTransform(preview.assetId, clientX, clientY);
+    if (!transform) {
+      preview.group.visible = false;
+      return;
+    }
+    preview.group.position.set(...transform.position);
+    applyEulerDegrees(preview.group, [0, transform.rotationYDeg, 0]);
+    preview.group.visible = true;
+  }
+
+  /** Hide the drag ghost while the cursor is off the viewport (kept alive so it
+   *  reappears if the cursor returns before the drop). */
+  hideAssetDragPreview(): void {
+    if (this.dragPreview) this.dragPreview.group.visible = false;
+  }
+
+  /** Tear down the drag ghost (drop committed, drag cancelled, or interrupted). */
+  endAssetDragPreview(): void {
+    this.dragPreviewAssetId = null;
+    this.dragPreviewClient = null;
+    const preview = this.dragPreview;
+    if (!preview) return;
+    this.dragPreview = null;
+    this.scene.remove(preview.group);
+    preview.material.dispose();
   }
 
   /**
@@ -1219,6 +1305,41 @@ export class SceneApp {
     });
   }
 
+  /**
+   * Resolve the snapped world transform for dropping an instance asset under the
+   * cursor. Shared by the live drag ghost and the committed drop so the preview
+   * lands exactly where the asset will. Returns null when the cursor isn't over
+   * a placeable surface.
+   */
+  private computeInstanceDropTransform(
+    assetId: string,
+    clientX: number,
+    clientY: number,
+  ): { position: [number, number, number]; rotationYDeg: number } | null {
+    const hit = this.picker.clientToSurface(clientX, clientY);
+    if (!hit) return null;
+    const bounds = this.localBounds.get(assetId);
+    // Rest the model's base on the surface; bounds.min.y is the offset from the
+    // model origin down to its lowest point (y is unaffected by Y rotation).
+    let position: [number, number, number] = [
+      snapValue(hit.x, this.snapSettings.move, this.snapSettings.moveEnabled),
+      round(hit.y - (bounds ? bounds.min.y : 0)),
+      snapValue(hit.z, this.snapSettings.move, this.snapSettings.moveEnabled),
+    ];
+    let rotationYDeg = snapValue(0, this.snapSettings.rotate, this.snapSettings.rotateEnabled);
+
+    // Wall assets dropped near a wall mount flush against it, facing the room.
+    if (this.isWallAsset(assetId)) {
+      const room = this.getRoomBounds();
+      if (bounds && room) {
+        const snap = computeWallSnap(bounds, room, position, rotationYDeg, 1);
+        position = snap.position;
+        rotationYDeg = snap.rotationYDeg;
+      }
+    }
+    return { position, rotationYDeg };
+  }
+
   addAssetAt(assetId: string, clientX: number, clientY: number): void {
     if (!this.layout) return;
     // Drag-and-drop can target an asset whose loadGroup wasn't loaded up front;
@@ -1229,24 +1350,23 @@ export class SceneApp {
       });
       return;
     }
-    const hit = this.picker.clientToSurface(clientX, clientY);
-    if (!hit) return;
-
-    const x = snapValue(hit.x, this.snapSettings.move, this.snapSettings.moveEnabled);
-    const z = snapValue(hit.z, this.snapSettings.move, this.snapSettings.moveEnabled);
-    const bounds = this.localBounds.get(assetId);
-    // Rest the model's base on the surface; bounds.min.y * scale is the offset
-    // from the model origin down to its lowest point (y is unaffected by Y rotation).
-    const baseY = (scale: number): number =>
-      round(hit.y - (bounds ? bounds.min.y * scale : 0));
-
     const asset = this.manifest?.assets.find((entry) => entry.id === assetId);
     if (asset?.category === "customer-character") {
+      const hit = this.picker.clientToSurface(clientX, clientY);
+      if (!hit) return;
       const characterScale = 0.42;
+      const bounds = this.localBounds.get(assetId);
+      // Rest the model's base on the surface; bounds.min.y * scale is the offset
+      // from the model origin down to its lowest point.
+      const baseY = round(hit.y - (bounds ? bounds.min.y * characterScale : 0));
       const character: LayoutCharacter = {
         assetId,
         name: assetId,
-        position: [x, baseY(characterScale), z],
+        position: [
+          snapValue(hit.x, this.snapSettings.move, this.snapSettings.moveEnabled),
+          baseY,
+          snapValue(hit.z, this.snapSettings.move, this.snapSettings.moveEnabled),
+        ],
         rotationYDeg: snapValue(0, this.snapSettings.rotate, this.snapSettings.rotateEnabled),
         scale: characterScale,
         animation: "idle",
@@ -1267,22 +1387,13 @@ export class SceneApp {
       return;
     }
 
+    const transform = this.computeInstanceDropTransform(assetId, clientX, clientY);
+    if (!transform) return;
     const placement: LayoutPlacement = {
-      position: [x, baseY(1), z],
-      rotationYDeg: snapValue(0, this.snapSettings.rotate, this.snapSettings.rotateEnabled),
+      position: transform.position,
+      rotationYDeg: transform.rotationYDeg,
       scale: 1,
     };
-
-    // Wall assets dropped near a wall mount flush against it, facing the room.
-    if (this.isWallAsset(assetId)) {
-      const bounds = this.localBounds.get(assetId);
-      const room = this.getRoomBounds();
-      if (bounds && room) {
-        const snap = computeWallSnap(bounds, room, placement.position, placement.rotationYDeg ?? 0, 1);
-        placement.position = snap.position;
-        placement.rotationYDeg = snap.rotationYDeg;
-      }
-    }
 
     const instance = this.layout.instances.find((entry) => entry.assetId === assetId);
     const placementIndex = instance?.placements.length ?? 0;
@@ -1394,16 +1505,15 @@ export class SceneApp {
     // back to the rendered objects each tick via syncEntityTransform. The rAF
     // loop's engineApp.update() has been ticking the registry since start();
     // behaviors only have entities to act on from here.
+    // Load authored collision sidecars first so the runtime collider (and the
+    // "Show > Collision" overlay) use the compound shapes, not the auto box.
+    await this.refreshCollisionDefs();
     await startSceneRuntime({
       sceneDocument: this.getSceneDocument(),
       physics: this.physicsSubsystem,
       behavior: this.behaviorSubsystem,
       engineApp: this.engineApp,
     });
-
-    // Warm the authored-collision sidecar cache so the first "Show > Collision"
-    // toggle reflects authored shapes immediately.
-    void this.refreshCollisionDefs();
   }
 
   /** Register synthetic models for any `shape:<type>` instances in the layout. */
@@ -1889,12 +1999,6 @@ export class SceneApp {
   private bindEditorInput(): void {
     this.unbindEditorInput = bindEditorInputEvents(this.canvas, {
       hasSelection: () => Boolean(this.selection),
-      consumePendingAsset: (clientX, clientY) => {
-        if (!this.pendingAssetId) return false;
-        this.addAssetAt(this.pendingAssetId, clientX, clientY);
-        this.pendingAssetId = null;
-        return true;
-      },
       pickGizmoHandle: (clientX, clientY) => this.picker.pickGizmoHandle(clientX, clientY),
       startGizmoDrag: (handle, event) => this.startGizmoDrag(handle, event),
       beginAltCameraDrag: (event) => this.cameraController.beginAltDrag(event),
@@ -1924,7 +2028,12 @@ export class SceneApp {
       updateScaleDrag: (event) => this.updateScaleDrag(event),
       commitPointerDrag: (drag) => this.commitPointerDrag(drag),
       updateGizmo: () => this.updateGizmo(),
-      onAssetDrop: (assetId, clientX, clientY) => this.addAssetAt(assetId, clientX, clientY),
+      onAssetDragOver: (clientX, clientY) => this.updateAssetDragPreview(clientX, clientY),
+      onAssetDragLeave: () => this.hideAssetDragPreview(),
+      onAssetDrop: (assetId, clientX, clientY) => {
+        this.endAssetDragPreview();
+        this.addAssetAt(assetId, clientX, clientY);
+      },
       onWheel: (event) => this.cameraController.handleWheel(event),
       addPressedKey: (code) => this.cameraController.addPressedKey(code),
       deletePressedKey: (code) => this.cameraController.deletePressedKey(code),
