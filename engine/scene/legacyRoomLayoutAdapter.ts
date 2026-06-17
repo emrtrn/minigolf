@@ -42,7 +42,12 @@ import {
   type RoomLayout,
   type Vec3,
 } from "./layout";
-import { resolveCollisionProfile, type CollisionPresetId } from "./collision";
+import {
+  resolveCollisionProfile,
+  type AssetCollisionDef,
+  type CollisionPresetId,
+  type CollisionPrimitive,
+} from "./collision";
 import { readRotation, readScale } from "./transform";
 import type { Entity, EntityComponentData, EntityComponentMap, SceneJsonValue } from "./entity";
 import {
@@ -56,6 +61,8 @@ import {
   type AudioComponent,
   type BehaviorComponent,
   type ColliderComponent,
+  type ColliderPrimitive,
+  type ColliderShape,
   type LightComponent,
   type MeshRendererComponent,
   type MetadataComponent,
@@ -89,6 +96,8 @@ export type ColliderBoxResolver = (
 
 export interface RoomLayoutAdapterOptions {
   colliderBox?: ColliderBoxResolver;
+  /** Authored asset collision definitions (sidecars) keyed by asset id. */
+  collisionDefs?: ReadonlyMap<string, AssetCollisionDef>;
 }
 
 /** Mirrors `editor/core/selection.ts#selectionId` for the instance kind. */
@@ -180,7 +189,12 @@ export function roomLayoutToSceneDocument(
         entity: buildEntity(
           id,
           placement.name,
-          instanceComponents(instance.assetId, placement, options.colliderBox),
+          instanceComponents(
+            instance.assetId,
+            placement,
+            options.colliderBox,
+            options.collisionDefs?.get(instance.assetId),
+          ),
           flagTags(placement),
         ),
         legacyParentId: placement.parentId,
@@ -195,7 +209,11 @@ export function roomLayoutToSceneDocument(
       entity: buildEntity(
         id,
         character.name,
-        characterComponents(character, options.colliderBox),
+        characterComponents(
+          character,
+          options.colliderBox,
+          options.collisionDefs?.get(character.assetId),
+        ),
         flagTags(character),
       ),
       legacyParentId: character.parentId,
@@ -248,12 +266,13 @@ function instanceComponents(
   assetId: string,
   placement: LayoutPlacement,
   resolveBox?: ColliderBoxResolver,
+  collisionDef?: AssetCollisionDef,
 ): EntityComponentMap {
   const components: EntityComponentMap = {
     [TRANSFORM_COMPONENT]: toData(transformComponent(placement)),
     [MESH_RENDERER_COMPONENT]: toData(meshRendererComponent(assetId, placement.castShadow)),
   };
-  const collider = colliderComponent(assetId, placement, true, resolveBox);
+  const collider = colliderComponent(assetId, placement, true, resolveBox, collisionDef);
   if (collider) components[COLLIDER_COMPONENT] = toData(collider);
   const metadata = metadataComponent(placement.metadata);
   if (metadata) components[METADATA_COMPONENT] = toData(metadata);
@@ -267,12 +286,13 @@ function instanceComponents(
 function characterComponents(
   character: LayoutCharacter,
   resolveBox?: ColliderBoxResolver,
+  collisionDef?: AssetCollisionDef,
 ): EntityComponentMap {
   const components: EntityComponentMap = {
     [TRANSFORM_COMPONENT]: toData(transformComponent(character)),
     [MESH_RENDERER_COMPONENT]: toData(meshRendererComponent(character.assetId, character.castShadow)),
   };
-  const collider = colliderComponent(character.assetId, character, false, resolveBox);
+  const collider = colliderComponent(character.assetId, character, false, resolveBox, collisionDef);
   if (collider) components[COLLIDER_COMPONENT] = toData(collider);
   const metadata = metadataComponent(character.metadata);
   if (metadata) components[METADATA_COMPONENT] = toData(metadata);
@@ -345,6 +365,7 @@ function colliderComponent(
   },
   isStatic: boolean,
   resolveBox: ColliderBoxResolver | undefined,
+  collisionDef?: AssetCollisionDef,
 ): ColliderComponent | null {
   const simulatePhysics = source.simulatePhysics === true;
   if (source.collision === false && !simulatePhysics) return null;
@@ -356,22 +377,95 @@ function colliderComponent(
     ? resolveCollisionProfile(source.collisionPreset)
     : null;
   if (profile?.collisionEnabled === "none" && !simulatePhysics) return null;
-  const presetSensor = profile?.collisionEnabled === "query";
-  // World-aligned footprint from the model's bounds when the host can supply
-  // them; otherwise a scaled unit box. Rotation intentionally does not resize
-  // the collider; placement scale is baked into `size`, since the physics layer
-  // no longer rescales.
-  const box = resolveBox?.(assetId, source);
-  const component: ColliderComponent = {
-    shape: "box",
-    size: box?.size ?? readScale(source),
-    isStatic: isStatic && !simulatePhysics,
-    isSensor: source.sensor === true || presetSensor,
-  };
-  if (box && !isZeroVec3(box.center)) component.center = box.center;
+  const isSensor = source.sensor === true || profile?.collisionEnabled === "query";
+  const isStaticFinal = isStatic && !simulatePhysics;
+
+  let component: ColliderComponent;
+  // Authored simple-collision primitives (Static Mesh editor sidecar) drive a
+  // compound collider; placement scale is baked into each primitive, and the
+  // top-level size/center is the encompassing AABB (broad-phase + movement).
+  const primitives =
+    collisionDef && collisionDef.primitives.length > 0
+      ? bakeColliderPrimitives(collisionDef.primitives, readScale(source))
+      : null;
+  if (primitives && primitives.length > 0) {
+    const aabb = encompassingAabb(primitives);
+    component = { shape: "box", size: aabb.size, isStatic: isStaticFinal, isSensor, primitives };
+    if (!isZeroVec3(aabb.center)) component.center = aabb.center;
+  } else {
+    // World-aligned footprint from the model's bounds when the host can supply
+    // them; otherwise a scaled unit box. Rotation intentionally does not resize
+    // the collider; placement scale is baked into `size`, since the physics
+    // layer no longer rescales.
+    const box = resolveBox?.(assetId, source);
+    component = {
+      shape: "box",
+      size: box?.size ?? readScale(source),
+      isStatic: isStaticFinal,
+      isSensor,
+    };
+    if (box && !isZeroVec3(box.center)) component.center = box.center;
+  }
   if (simulatePhysics) component.simulatePhysics = true;
   copyPhysicsSettings(component, source.physics);
   return component;
+}
+
+/** Bakes authored local primitives into world-scaled collider primitives. */
+function bakeColliderPrimitives(
+  primitives: readonly CollisionPrimitive[],
+  scale: Vec3,
+): ColliderPrimitive[] {
+  return primitives.map((primitive) => {
+    // `convex` has no runtime collider yet; approximate with its bounding box.
+    const shape: ColliderShape = primitive.shape === "convex" ? "box" : primitive.shape;
+    const baked: ColliderPrimitive = {
+      shape,
+      size: [
+        primitive.size[0] * scale[0],
+        primitive.size[1] * scale[1],
+        primitive.size[2] * scale[2],
+      ],
+    };
+    if (primitive.center) {
+      const center: Vec3 = [
+        primitive.center[0] * scale[0],
+        primitive.center[1] * scale[1],
+        primitive.center[2] * scale[2],
+      ];
+      if (!isZeroVec3(center)) baked.center = center;
+    }
+    if (primitive.rotation && !isZeroVec3(primitive.rotation)) {
+      baked.rotation = [...primitive.rotation];
+    }
+    return baked;
+  });
+}
+
+/** Encompassing AABB (size + center) of a set of baked primitives, ignoring rotation. */
+function encompassingAabb(primitives: readonly ColliderPrimitive[]): { size: Vec3; center: Vec3 } {
+  let minX = Infinity;
+  let minY = Infinity;
+  let minZ = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  let maxZ = -Infinity;
+  for (const primitive of primitives) {
+    const center = primitive.center ?? [0, 0, 0];
+    const hx = primitive.size[0] / 2;
+    const hy = primitive.size[1] / 2;
+    const hz = primitive.size[2] / 2;
+    minX = Math.min(minX, center[0] - hx);
+    maxX = Math.max(maxX, center[0] + hx);
+    minY = Math.min(minY, center[1] - hy);
+    maxY = Math.max(maxY, center[1] + hy);
+    minZ = Math.min(minZ, center[2] - hz);
+    maxZ = Math.max(maxZ, center[2] + hz);
+  }
+  return {
+    size: [maxX - minX, maxY - minY, maxZ - minZ],
+    center: [(minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2],
+  };
 }
 
 function isZeroVec3(vec: Vec3): boolean {

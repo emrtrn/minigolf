@@ -49,6 +49,18 @@ export interface BehaviorComponent {
   params?: Record<string, SceneJsonValue>;
 }
 
+/**
+ * One simple-collision shape of a (possibly compound) collider. Sizes/centers
+ * are world-scaled (placement scale baked in), like {@link ColliderComponent};
+ * `rotation` is a local Euler rotation in degrees for oriented shapes.
+ */
+export interface ColliderPrimitive {
+  shape: ColliderShape;
+  size: Vec3;
+  center?: Vec3;
+  rotation?: Vec3;
+}
+
 export interface ColliderComponent {
   shape: ColliderShape;
   /** World-axis-aligned full size (placement scale already baked in). */
@@ -58,6 +70,12 @@ export interface ColliderComponent {
    * space (placement scale baked in). Absent means centered on the position.
    */
   center?: Vec3;
+  /**
+   * Authored compound collision shapes (Static Mesh editor). When present, the
+   * physics backend builds one collider per primitive; `shape`/`size`/`center`
+   * above describe the encompassing AABB used by the broad-phase / movement.
+   */
+  primitives?: ColliderPrimitive[];
   isStatic: boolean;
   isSensor: boolean;
   simulatePhysics?: boolean;
@@ -140,6 +158,33 @@ export function readBehaviorComponent(entity: Entity): BehaviorComponent | undef
 
 const COLLIDER_SHAPES: readonly ColliderShape[] = ["box", "sphere", "capsule"];
 
+/** Parses the optional compound-collider `primitives` array. */
+function readColliderPrimitives(
+  value: SceneJsonValue | undefined,
+): ColliderPrimitive[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const primitives: ColliderPrimitive[] = [];
+  for (const entry of value) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
+    const record = entry as Record<string, SceneJsonValue>;
+    if (
+      typeof record.shape !== "string" ||
+      !COLLIDER_SHAPES.includes(record.shape as ColliderShape)
+    ) {
+      continue;
+    }
+    const size = readVec3(record.size);
+    if (!size) continue;
+    const primitive: ColliderPrimitive = { shape: record.shape as ColliderShape, size };
+    const center = readVec3(record.center);
+    if (center) primitive.center = center;
+    const rotation = readVec3(record.rotation);
+    if (rotation) primitive.rotation = rotation;
+    primitives.push(primitive);
+  }
+  return primitives.length > 0 ? primitives : undefined;
+}
+
 /** Reads a typed collider from an entity's serializable component data. */
 export function readColliderComponent(entity: Entity): ColliderComponent | undefined {
   const data = entity.components[COLLIDER_COMPONENT];
@@ -158,6 +203,8 @@ export function readColliderComponent(entity: Entity): ColliderComponent | undef
     isSensor: data.isSensor,
   };
   if (center) component.center = center;
+  const primitives = readColliderPrimitives(data.primitives);
+  if (primitives) component.primitives = primitives;
   if (typeof data.simulatePhysics === "boolean") component.simulatePhysics = data.simulatePhysics;
   if (typeof data.massKg === "number") component.massKg = data.massKg;
   if (typeof data.linearDamping === "number") component.linearDamping = data.linearDamping;

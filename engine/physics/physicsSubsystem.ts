@@ -3,6 +3,7 @@ import {
   readColliderComponent,
   readTransformComponent,
   type ColliderComponent,
+  type ColliderPrimitive,
   type TransformComponent,
 } from "../scene/components";
 import type { Entity, EntityId } from "../scene/entity";
@@ -36,7 +37,8 @@ type RapierCollider = ReturnType<RapierWorld["createCollider"]>;
 interface RapierBodyRecord {
   id: EntityId;
   body: RapierRigidBody;
-  collider: RapierCollider;
+  /** One or more colliders (compound when the entity has authored primitives). */
+  colliders: RapierCollider[];
   isSensor: boolean;
 }
 
@@ -220,17 +222,19 @@ export class PhysicsSubsystem implements Subsystem, PhysicsQuery {
       );
       desc.setRotation(quaternionFromEulerDegrees(body.transform.rotation));
       const rigidBody = this.rapierWorld.createRigidBody(desc);
-      const collider = this.rapierWorld.createCollider(
-        colliderDescForBody(RAPIER, body).setSensor(body.collider.isSensor),
-        rigidBody,
+      const colliders = colliderDescsForBody(RAPIER, body).map((colliderDesc) =>
+        this.rapierWorld!.createCollider(
+          colliderDesc.setSensor(body.collider.isSensor),
+          rigidBody,
+        ),
       );
       this.rapierBodies.set(body.id, {
         id: body.id,
         body: rigidBody,
-        collider,
+        colliders,
         isSensor: body.collider.isSensor,
       });
-      this.rapierColliderToEntity.set(collider.handle, body.id);
+      for (const collider of colliders) this.rapierColliderToEntity.set(collider.handle, body.id);
     }
   }
 
@@ -239,12 +243,14 @@ export class PhysicsSubsystem implements Subsystem, PhysicsQuery {
     const contacts: PhysicsContact[] = [];
     const seen = new Set<string>();
     for (const record of this.rapierBodies.values()) {
-      this.rapierWorld.contactPairsWith(record.collider, (other) => {
-        this.addRapierContact(contacts, seen, record, other);
-      });
-      this.rapierWorld.intersectionPairsWith(record.collider, (other) => {
-        this.addRapierContact(contacts, seen, record, other);
-      });
+      for (const collider of record.colliders) {
+        this.rapierWorld.contactPairsWith(collider, (other) => {
+          this.addRapierContact(contacts, seen, record, other);
+        });
+        this.rapierWorld.intersectionPairsWith(collider, (other) => {
+          this.addRapierContact(contacts, seen, record, other);
+        });
+      }
     }
     this.contacts = contacts;
   }
@@ -337,6 +343,7 @@ function cloneCollider(collider: ColliderComponent): ColliderComponent {
     isSensor: collider.isSensor,
   };
   if (collider.center) clone.center = [...collider.center];
+  if (collider.primitives) clone.primitives = collider.primitives.map(clonePrimitive);
   if (collider.simulatePhysics !== undefined) clone.simulatePhysics = collider.simulatePhysics;
   if (collider.massKg !== undefined) clone.massKg = collider.massKg;
   if (collider.linearDamping !== undefined) clone.linearDamping = collider.linearDamping;
@@ -345,6 +352,32 @@ function cloneCollider(collider: ColliderComponent): ColliderComponent {
   if (collider.lockPosition !== undefined) clone.lockPosition = [...collider.lockPosition];
   if (collider.lockRotation !== undefined) clone.lockRotation = [...collider.lockRotation];
   return clone;
+}
+
+function clonePrimitive(primitive: ColliderPrimitive): ColliderPrimitive {
+  const copy: ColliderPrimitive = { shape: primitive.shape, size: [...primitive.size] };
+  if (primitive.center) copy.center = [...primitive.center];
+  if (primitive.rotation) copy.rotation = [...primitive.rotation];
+  return copy;
+}
+
+/**
+ * Collider descriptors for a body: one per authored primitive (a compound
+ * collider) when present, otherwise the single box derived from the collider's
+ * size/center. Each primitive carries its own local translation + rotation.
+ */
+function colliderDescsForBody(RAPIER: RapierModule, body: PhysicsBody) {
+  const primitives = body.collider.primitives;
+  if (!primitives || primitives.length === 0) return [colliderDescForBody(RAPIER, body)];
+  return primitives.map((primitive) => {
+    const center = primitive.center ?? [0, 0, 0];
+    const desc = colliderShapeDesc(RAPIER, primitive.shape, primitive.size)
+      .setTranslation(center[0] ?? 0, center[1] ?? 0, center[2] ?? 0)
+      .setFriction(0.8)
+      .setRestitution(0);
+    if (primitive.rotation) desc.setRotation(quaternionFromEulerDegrees(primitive.rotation));
+    return desc;
+  });
 }
 
 function colliderDescForBody(RAPIER: RapierModule, body: PhysicsBody) {

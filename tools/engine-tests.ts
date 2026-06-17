@@ -1355,6 +1355,66 @@ await checkAsync("rapier simulatePhysics body falls under configured gravity", a
   }
 });
 
+await checkAsync("rapier builds a compound collider per authored primitive (gap is empty)", async () => {
+  const physics = new PhysicsSubsystem({ backend: "rapier" });
+  physics.setGravity([0, 0, 0]);
+  physics.setEntities([
+    {
+      id: "compound",
+      components: {
+        Transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+        Collider: {
+          shape: "box",
+          size: [1, 3, 1], // encompassing AABB spans the gap between the two boxes
+          isStatic: true,
+          isSensor: false,
+          primitives: [
+            { shape: "box", size: [1, 1, 1], center: [0, 1, 0] },
+            { shape: "box", size: [1, 1, 1], center: [0, -1, 0] },
+          ],
+        },
+      },
+    },
+    {
+      id: "hit",
+      components: {
+        Transform: { position: [0.3, 1, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+        Collider: { shape: "box", size: [1, 1, 1], isStatic: false, isSensor: false, simulatePhysics: true },
+      },
+    },
+    {
+      id: "gap",
+      components: {
+        Transform: { position: [0.3, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+        Collider: { shape: "box", size: [0.6, 0.6, 0.6], isStatic: false, isSensor: false, simulatePhysics: true },
+      },
+    },
+  ]);
+  const app = new EngineApp();
+  app.registerSubsystem(physics);
+  const warn = console.warn;
+  console.warn = (...args: unknown[]) => {
+    if (String(args[0] ?? "").includes("deprecated parameters for the initialization function")) return;
+    warn(...args);
+  };
+  try {
+    await app.init();
+    assert.equal(physics.usesRapier(), true);
+    app.update(1 / 60);
+    // The probe overlapping a primitive contacts the compound...
+    assert.ok(
+      physics.contactsForEntity("hit").some((c) => c.a === "compound" || c.b === "compound"),
+      "overlapping probe should contact the compound collider",
+    );
+    // ...but a probe sitting in the gap between the two boxes does not (proving
+    // the per-primitive compound is used rather than the encompassing AABB box).
+    assert.deepEqual(physics.contactsForEntity("gap"), []);
+    await app.dispose();
+  } finally {
+    console.warn = warn;
+  }
+});
+
 await checkAsync("rapier simulatePhysics enableGravity false disables world gravity", async () => {
   const physics = new PhysicsSubsystem({ backend: "rapier" });
   physics.setGravity([0, -10, 0]);
@@ -2865,6 +2925,41 @@ check("collisionPreset maps to runtime collider: trigger=sensor, noCollision=non
   assert.equal(triggerEntity ? readColliderComponent(triggerEntity)?.isSensor : undefined, true);
   assert.equal(noneEntity ? readColliderComponent(noneEntity) : "missing", undefined);
   assert.equal(blockEntity ? readColliderComponent(blockEntity)?.isSensor : undefined, false);
+});
+
+check("adapter bakes authored collision primitives into a compound collider", () => {
+  const compoundLayout: RoomLayout = {
+    schema: 1,
+    name: "compound-fixture",
+    loadGroups: [],
+    instances: [{ assetId: "chair", placements: [{ position: [0, 0, 0], scale: 2 }] }],
+    characters: [],
+    lights: [],
+  };
+  const defs = new Map<string, AssetCollisionDef>([
+    [
+      "chair",
+      {
+        primitives: [
+          { shape: "box", size: [0.2, 0.4, 0.2], center: [0, 0.2, 0] },
+          { shape: "box", size: [0.2, 0.2, 0.2], center: [0, 0.5, 0] },
+        ],
+        complexity: "projectDefault",
+        preset: "blockAll",
+      },
+    ],
+  ]);
+  const doc = roomLayoutToSceneDocument(compoundLayout, { collisionDefs: defs });
+  const entity = doc.entities.find((e) => e.id === instanceEntityId("chair", 0));
+  const collider = entity ? readColliderComponent(entity) : undefined;
+  assert.ok(collider?.primitives, "collider has authored primitives");
+  assert.equal(collider!.primitives!.length, 2);
+  // Placement scale 2 is baked into each primitive's size and center.
+  assert.deepEqual(collider!.primitives![0]!.size, [0.4, 0.8, 0.4]);
+  assert.deepEqual(collider!.primitives![0]!.center, [0, 0.4, 0]);
+  // Top-level box is the encompassing AABB (y spans 0.0..1.2 -> size 1.2, center 0.6).
+  assert.ok(Math.abs(collider!.size[1] - 1.2) < 1e-9, `size.y=${collider!.size[1]}`);
+  assert.ok(Math.abs((collider!.center?.[1] ?? 0) - 0.6) < 1e-9, `center.y=${collider!.center?.[1]}`);
 });
 
 check("collisionWireboxes draws authored primitives over the auto bounding box", () => {
