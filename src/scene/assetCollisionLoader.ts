@@ -107,5 +107,7 @@ export function normalizeAssetCollisionDef(value: unknown): AssetCollisionDef {
     def.physicalMaterialId = input.physicalMaterialId;
   }
   if (input.doubleSided === true) def.doubleSided = true;
+  if (input.generateOverlapEvents === false) def.generateOverlapEvents = false;
+  if (input.simulationGeneratesHitEvents === false) def.simulationGeneratesHitEvents = false;
   return def;
 }

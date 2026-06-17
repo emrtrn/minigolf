@@ -730,6 +730,18 @@ export class StaticMeshEditor {
           <span>Simple Collision Physical Material</span>
           <select data-sm-field="physicalMaterialId">${physMaterialOptions}</select>
         </label>
+        <label class="sm-row sm-toggle">
+          <input type="checkbox" data-sm-field="generateOverlapEvents" ${
+            this.collision.generateOverlapEvents !== false ? "checked" : ""
+          } />
+          <span>Generate Overlap Events</span>
+        </label>
+        <label class="sm-row sm-toggle">
+          <input type="checkbox" data-sm-field="simulationGeneratesHitEvents" ${
+            this.collision.simulationGeneratesHitEvents !== false ? "checked" : ""
+          } />
+          <span>Simulation Generates Hit Events</span>
+        </label>
       </div>
       <div class="sm-section">
         <div class="sm-section-title">Primitives <span class="sm-count">${this.collision.primitives.length}</span></div>
@@ -763,6 +775,8 @@ export class StaticMeshEditor {
         else delete this.collision.physicalMaterialId;
         this.markDirty();
       });
+    this.bindEventFlagToggle("generateOverlapEvents");
+    this.bindEventFlagToggle("simulationGeneratesHitEvents");
     this.detailsHost.querySelectorAll<HTMLElement>("[data-sm-prim]").forEach((row) => {
       row.addEventListener("click", (event) => {
         if ((event.target as HTMLElement).closest("[data-sm-prim-del]")) return;
@@ -778,6 +792,19 @@ export class StaticMeshEditor {
   }
 
   // --- save / status -----------------------------------------------------
+
+  /** Wires a default-on event-flag checkbox (stores only an explicit opt-out). */
+  private bindEventFlagToggle(
+    field: "generateOverlapEvents" | "simulationGeneratesHitEvents",
+  ): void {
+    this.detailsHost
+      .querySelector<HTMLInputElement>(`[data-sm-field="${field}"]`)
+      ?.addEventListener("change", (event) => {
+        if ((event.target as HTMLInputElement).checked) delete this.collision[field];
+        else this.collision[field] = false;
+        this.markDirty();
+      });
+  }
 
   private markDirty(): void {
     const save = this.overlay.querySelector<HTMLButtonElement>("[data-sm-save]");

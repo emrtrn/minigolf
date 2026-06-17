@@ -413,6 +413,11 @@ function colliderComponent(
     component.friction = material.friction;
     component.restitution = material.restitution;
   }
+  // Event flags default to on; only persist an explicit opt-out.
+  if (collisionDef?.generateOverlapEvents === false) component.generateOverlapEvents = false;
+  if (collisionDef?.simulationGeneratesHitEvents === false) {
+    component.simulationGeneratesHitEvents = false;
+  }
   copyPhysicsSettings(component, source.physics);
   return component;
 }

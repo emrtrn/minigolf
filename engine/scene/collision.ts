@@ -161,6 +161,10 @@ export interface AssetCollisionDef {
   physicalMaterialId?: string;
   /** Use complex (per-poly) collision from both triangle sides. */
   doubleSided?: boolean;
+  /** Emit begin/end overlap events for sensors. Absent means true. */
+  generateOverlapEvents?: boolean;
+  /** Emit hit events while simulating physics. Absent means true. */
+  simulationGeneratesHitEvents?: boolean;
 }
 
 export const DEFAULT_COLLISION_PRESET: CollisionPresetId = "blockAll";

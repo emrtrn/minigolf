@@ -1265,6 +1265,89 @@ check("physics subsystem reports deterministic placeholder contacts", () => {
   ]);
 });
 
+check("generateOverlapEvents=false suppresses sensor overlap contacts", () => {
+  const physics = new PhysicsSubsystem();
+  const mover = {
+    id: "mover",
+    components: {
+      Transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+      Collider: { shape: "box", size: [1, 1, 1], isStatic: false, isSensor: false },
+    },
+  } as const;
+  physics.setEntities([
+    mover,
+    {
+      id: "silent",
+      components: {
+        Transform: { position: [0.3, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+        Collider: {
+          shape: "box",
+          size: [1, 1, 1],
+          isStatic: true,
+          isSensor: true,
+          generateOverlapEvents: false,
+        },
+      },
+    },
+  ]);
+  const app = new EngineApp();
+  app.registerSubsystem(physics);
+  app.update(0.016);
+  assert.deepEqual(physics.contactsForEntity("mover"), []);
+
+  // A sensor with events left on (default) still reports the overlap.
+  physics.setEntities([
+    mover,
+    {
+      id: "live",
+      components: {
+        Transform: { position: [0.3, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+        Collider: { shape: "box", size: [1, 1, 1], isStatic: true, isSensor: true },
+      },
+    },
+  ]);
+  app.update(0.016);
+  assert.deepEqual(physics.contactsForEntity("mover"), [
+    { a: "mover", b: "live", isSensor: true },
+  ]);
+});
+
+check("simulationGeneratesHitEvents=false on both bodies suppresses the hit", () => {
+  const physics = new PhysicsSubsystem();
+  physics.setEntities([
+    {
+      id: "a",
+      components: {
+        Transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+        Collider: {
+          shape: "box",
+          size: [1, 1, 1],
+          isStatic: false,
+          isSensor: false,
+          simulationGeneratesHitEvents: false,
+        },
+      },
+    },
+    {
+      id: "b",
+      components: {
+        Transform: { position: [0.3, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+        Collider: {
+          shape: "box",
+          size: [1, 1, 1],
+          isStatic: true,
+          isSensor: false,
+          simulationGeneratesHitEvents: false,
+        },
+      },
+    },
+  ]);
+  const app = new EngineApp();
+  app.registerSubsystem(physics);
+  app.update(0.016);
+  assert.deepEqual(physics.contactsForEntity("a"), []);
+});
+
 await checkAsync("rapier physics backend reports contacts through the same contract", async () => {
   const physics = new PhysicsSubsystem({ backend: "rapier" });
   physics.setEntities([

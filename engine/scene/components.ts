@@ -82,6 +82,10 @@ export interface ColliderComponent {
   friction?: number;
   /** Surface restitution / bounciness (Rapier). Absent uses the backend default. */
   restitution?: number;
+  /** Emit begin/end overlap events for sensors. Absent means true. */
+  generateOverlapEvents?: boolean;
+  /** Emit hit events while simulating physics. Absent means true. */
+  simulationGeneratesHitEvents?: boolean;
   simulatePhysics?: boolean;
   massKg?: number;
   linearDamping?: number;
@@ -211,6 +215,12 @@ export function readColliderComponent(entity: Entity): ColliderComponent | undef
   if (primitives) component.primitives = primitives;
   if (typeof data.friction === "number") component.friction = data.friction;
   if (typeof data.restitution === "number") component.restitution = data.restitution;
+  if (typeof data.generateOverlapEvents === "boolean") {
+    component.generateOverlapEvents = data.generateOverlapEvents;
+  }
+  if (typeof data.simulationGeneratesHitEvents === "boolean") {
+    component.simulationGeneratesHitEvents = data.simulationGeneratesHitEvents;
+  }
   if (typeof data.simulatePhysics === "boolean") component.simulatePhysics = data.simulatePhysics;
   if (typeof data.massKg === "number") component.massKg = data.massKg;
   if (typeof data.linearDamping === "number") component.linearDamping = data.linearDamping;

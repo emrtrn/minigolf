@@ -192,7 +192,31 @@ export class PhysicsSubsystem implements Subsystem, PhysicsQuery {
         });
       }
     }
-    this.contacts = contacts;
+    this.contacts = this.reportableContacts(contacts);
+  }
+
+  /**
+   * Drops contacts whose owners opted out of events: a sensor overlap needs a
+   * sensor with `generateOverlapEvents !== false`, and a solid hit needs a body
+   * with `simulationGeneratesHitEvents !== false`. Both flags default to on
+   * (absent), so unannotated bodies keep reporting every contact.
+   */
+  private reportableContacts(contacts: PhysicsContact[]): PhysicsContact[] {
+    return contacts.filter((contact) => {
+      const a = this.bodies.find((body) => body.id === contact.a);
+      const b = this.bodies.find((body) => body.id === contact.b);
+      if (!a || !b) return true;
+      if (contact.isSensor) {
+        return (
+          (a.collider.isSensor && a.collider.generateOverlapEvents !== false) ||
+          (b.collider.isSensor && b.collider.generateOverlapEvents !== false)
+        );
+      }
+      return (
+        a.collider.simulationGeneratesHitEvents !== false ||
+        b.collider.simulationGeneratesHitEvents !== false
+      );
+    });
   }
 
   clear(): void {
@@ -255,7 +279,7 @@ export class PhysicsSubsystem implements Subsystem, PhysicsQuery {
         });
       }
     }
-    this.contacts = contacts;
+    this.contacts = this.reportableContacts(contacts);
   }
 
   private syncRapierDynamicTransforms(): void {
@@ -349,6 +373,12 @@ function cloneCollider(collider: ColliderComponent): ColliderComponent {
   if (collider.primitives) clone.primitives = collider.primitives.map(clonePrimitive);
   if (collider.friction !== undefined) clone.friction = collider.friction;
   if (collider.restitution !== undefined) clone.restitution = collider.restitution;
+  if (collider.generateOverlapEvents !== undefined) {
+    clone.generateOverlapEvents = collider.generateOverlapEvents;
+  }
+  if (collider.simulationGeneratesHitEvents !== undefined) {
+    clone.simulationGeneratesHitEvents = collider.simulationGeneratesHitEvents;
+  }
   if (collider.simulatePhysics !== undefined) clone.simulatePhysics = collider.simulatePhysics;
   if (collider.massKg !== undefined) clone.massKg = collider.massKg;
   if (collider.linearDamping !== undefined) clone.linearDamping = collider.linearDamping;

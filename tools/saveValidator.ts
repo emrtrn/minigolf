@@ -547,6 +547,19 @@ export function validateAssetCollisionDef(value: unknown): Record<string, unknow
     if (typeof input.doubleSided !== "boolean") throw new Error("collision.doubleSided must be boolean");
     if (input.doubleSided) def.doubleSided = true;
   }
+  // Event flags default to on; only persist an explicit `false`.
+  if (input.generateOverlapEvents !== undefined) {
+    if (typeof input.generateOverlapEvents !== "boolean") {
+      throw new Error("collision.generateOverlapEvents must be boolean");
+    }
+    if (input.generateOverlapEvents === false) def.generateOverlapEvents = false;
+  }
+  if (input.simulationGeneratesHitEvents !== undefined) {
+    if (typeof input.simulationGeneratesHitEvents !== "boolean") {
+      throw new Error("collision.simulationGeneratesHitEvents must be boolean");
+    }
+    if (input.simulationGeneratesHitEvents === false) def.simulationGeneratesHitEvents = false;
+  }
   return def;
 }
 
