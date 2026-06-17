@@ -248,7 +248,9 @@ Durum: `[ ]` yapılmadı · `[~]` kısmi · `[x]` tamam
 ### Faz 4 — Viewport'ta Collision Düzenleme & Görselleştirme
 
 - [x] Eklenen collision primitiflerini wireframe overlay olarak çiz
-- [~] Primitif seçimi (details listesinden) + seçili vurgusu; viewport gizmo ile taşı/ölçekle sonra
+- [x] Primitif seçimi (details listesi **veya** viewport'ta tıkla/raycast) + seçili vurgusu
+- [x] **Move/Rotate/Scale** transform gizmo (three TransformControls), üst barda Select/Move/Rotate/Scale (Q/W/E/R)
+- [x] Birden fazla primitif ekleyip her birini ayrı düzenleme (gizmo seçili olana bağlanır)
 - [ ] "Show Simple/Complex Collision" görünürlük toggle'ı
 - [ ] Sahne viewport'unda da collider görselleştirme tutarlılığı (mevcut `getShowCollision` ile uyum)
 
