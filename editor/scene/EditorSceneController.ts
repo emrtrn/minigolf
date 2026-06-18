@@ -35,6 +35,7 @@ import { SelectionStore } from "@editor/core/selectionStore";
 import { uniqueActorName } from "@engine/scene/lights";
 import type {
   LayoutCharacter,
+  LayoutInteraction,
   LayoutLightActor,
   LayoutMetadata,
   LayoutPlacement,
@@ -61,6 +62,7 @@ type MutableHierarchyTransform = {
   simulatePhysics?: boolean;
   physics?: LayoutPhysics;
   metadata?: LayoutMetadata;
+  interaction?: LayoutInteraction;
   nodeId?: string;
   parentId?: string;
 };
@@ -128,6 +130,27 @@ function physicsSettingsEqual(
   right: LayoutPhysics | undefined,
 ): boolean {
   return JSON.stringify(left ?? {}) === JSON.stringify(right ?? {});
+}
+
+function cloneInteraction(
+  value: LayoutInteraction | undefined,
+): LayoutInteraction | undefined {
+  return value ? { ...value } : undefined;
+}
+
+function interactionsEqual(
+  left: LayoutInteraction | undefined,
+  right: LayoutInteraction | undefined,
+): boolean {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  return (
+    left.action === right.action &&
+    left.prompt === right.prompt &&
+    left.enabled === right.enabled &&
+    left.requires === right.requires &&
+    left.cooldown === right.cooldown
+  );
 }
 
 /**
@@ -747,6 +770,49 @@ export class EditorSceneController {
       redo: () => applyEntries("redo"),
       undo: () => applyEntries("undo"),
     });
+  }
+
+  /** Sets (or clears, when `undefined`) the per-object Interaction component. */
+  setSelectionInteraction(value: LayoutInteraction | undefined): void {
+    if (!this.selection || !this.host.hasSelection(this.selection)) return;
+    if (this.selection.kind === "light") return;
+    const entries = this.getSelectedSelectionsWithTargets((selection) => selection.kind !== "light")
+      .flatMap((selection) => {
+        const target = this.host.getMutableTransform(selection);
+        if (!target || interactionsEqual(target.interaction, value)) return [];
+        return [{ selection: cloneSelection(selection), previous: cloneInteraction(target.interaction) }];
+      });
+    if (entries.length === 0) return;
+
+    const applyEntries = (mode: EditorCommandPhase): void => {
+      for (const entry of entries) {
+        this.applyInteraction(
+          entry.selection,
+          mode === "redo" ? value : entry.previous,
+          { notify: false },
+        );
+      }
+      this.host.emitSelectionChanged();
+    };
+
+    this.executeCommand({
+      label: value ? "Set interaction" : "Remove interaction",
+      redo: () => applyEntries("redo"),
+      undo: () => applyEntries("undo"),
+    });
+  }
+
+  private applyInteraction(
+    selection: Selection,
+    value: LayoutInteraction | undefined,
+    options: { notify?: boolean } = {},
+  ): void {
+    if (selection.kind === "light") return;
+    const target = this.host.getMutableTransform(selection);
+    if (!target) return;
+    if (value === undefined) delete target.interaction;
+    else target.interaction = { ...value };
+    if (options.notify !== false) this.host.emitSelectionChanged();
   }
 
   private duplicateSelection(selection: Selection): Selection | null {

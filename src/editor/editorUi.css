@@ -638,6 +638,19 @@ body.editor-mode #debug-stats {
   color: #9aa4a9;
 }
 
+/* Component section title with an inline action (e.g. Remove Component). */
+.detail-component-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.detail-component-title button {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
 .detail-hint {
   font-size: 11px;
   line-height: 1.4;

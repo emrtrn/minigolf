@@ -160,6 +160,7 @@ export function buildEditableSelection(
       simulatePhysics: placement.simulatePhysics ?? false,
       physics: clonePhysics(placement.physics) ?? {},
       metadata: cloneMetadata(placement.metadata),
+      ...(placement.interaction ? { interaction: { ...placement.interaction } } : {}),
     };
   }
 
@@ -211,6 +212,7 @@ export function buildEditableSelection(
     simulatePhysics: character.simulatePhysics ?? false,
     physics: clonePhysics(character.physics) ?? {},
     metadata: cloneMetadata(character.metadata),
+    ...(character.interaction ? { interaction: { ...character.interaction } } : {}),
   };
 }
 

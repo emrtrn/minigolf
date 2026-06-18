@@ -27,7 +27,7 @@ import {
   type MetadataFieldDef,
   type MetadataSchema,
 } from "@engine/scene/metadataSchema";
-import type { LayoutPhysics, MetadataValue } from "@engine/scene/layout";
+import type { LayoutInteraction, LayoutPhysics, MetadataValue } from "@engine/scene/layout";
 import {
   isShapePrimitiveType,
   PLAYER_START_ASSET_ID,
@@ -1504,6 +1504,7 @@ export class EditorUi {
       </div>
       ${this.renderCollisionSection(selection)}
       ${this.renderPhysicsSection(selection, selection.locked)}
+      ${this.renderInteractionSection(selection)}
       ${this.renderMetadataSections(selection)}
     `;
 
@@ -1586,6 +1587,7 @@ export class EditorUi {
       });
 
     this.bindPhysicsInputs();
+    this.bindInteractionInputs();
     this.bindMetadataInputs();
   }
 
@@ -1668,6 +1670,90 @@ export class EditorUi {
         ${physicsLockRow("Lock Rotation", "rotation", lockRotation, locked)}
       </div>
     `;
+  }
+
+  /**
+   * Per-object Interaction component (§3). Absent → an "Add Interaction" button;
+   * present → editable fields (action/prompt/enabled/cooldown) plus Remove. Each
+   * change routes through `setSelectionInteraction`, so add/remove/edit are
+   * single undo/redo commands. The required Transform component has no remove.
+   */
+  private renderInteractionSection(selection: EditableSelection): string {
+    const interaction = selection.interaction;
+    if (!interaction) {
+      return `
+      <div class="detail-section">
+        <div class="detail-section-title">Interaction</div>
+        <div class="detail-actions-row">
+          <button type="button" data-interaction-add
+            title="Add an Interaction component">Add Interaction</button>
+        </div>
+      </div>`;
+    }
+    return `
+      <div class="detail-section">
+        <div class="detail-section-title detail-component-title">
+          <span>Interaction</span>
+          <button type="button" data-interaction-remove
+            title="Remove the Interaction component">Remove</button>
+        </div>
+        <label class="detail-row">
+          <span>Action</span>
+          <input type="text" data-interaction="action"
+            value="${escapeHtml(interaction.action)}" placeholder="interact" />
+        </label>
+        <label class="detail-row">
+          <span>Prompt</span>
+          <input type="text" data-interaction="prompt"
+            value="${escapeHtml(interaction.prompt ?? "")}" placeholder="(none)" />
+        </label>
+        <label class="detail-toggle">
+          <input type="checkbox" data-interaction="enabled" ${
+            interaction.enabled !== false ? "checked" : ""
+          } />
+          <span>Enabled</span>
+        </label>
+        <label class="detail-row">
+          <span>Cooldown (s)</span>
+          <input type="number" data-interaction="cooldown" min="0" max="3600" step="0.1"
+            value="${interaction.cooldown ?? ""}" placeholder="0" />
+        </label>
+      </div>`;
+  }
+
+  private bindInteractionInputs(): void {
+    this.detailsBody
+      .querySelector<HTMLButtonElement>("[data-interaction-add]")
+      ?.addEventListener("click", () => this.app.setSelectionInteraction({ action: "interact" }));
+    this.detailsBody
+      .querySelector<HTMLButtonElement>("[data-interaction-remove]")
+      ?.addEventListener("click", () => this.app.setSelectionInteraction(undefined));
+    this.detailsBody
+      .querySelectorAll<HTMLInputElement>("[data-interaction]")
+      .forEach((input) => {
+        input.addEventListener("change", () => this.commitInteractionInput());
+      });
+  }
+
+  /** Rebuilds the Interaction component from the current inputs and commits it. */
+  private commitInteractionInput(): void {
+    const actionInput = this.detailsBody.querySelector<HTMLInputElement>('[data-interaction="action"]');
+    if (!actionInput) return;
+    const interaction: LayoutInteraction = { action: actionInput.value.trim() || "interact" };
+    const prompt = this.detailsBody
+      .querySelector<HTMLInputElement>('[data-interaction="prompt"]')
+      ?.value.trim();
+    if (prompt) interaction.prompt = prompt;
+    const enabled = this.detailsBody.querySelector<HTMLInputElement>('[data-interaction="enabled"]');
+    if (enabled && !enabled.checked) interaction.enabled = false;
+    const cooldownRaw = this.detailsBody
+      .querySelector<HTMLInputElement>('[data-interaction="cooldown"]')
+      ?.value.trim();
+    if (cooldownRaw) {
+      const cooldown = Number(cooldownRaw);
+      if (Number.isFinite(cooldown) && cooldown > 0) interaction.cooldown = cooldown;
+    }
+    this.app.setSelectionInteraction(interaction);
   }
 
   /**

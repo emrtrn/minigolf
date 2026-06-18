@@ -269,6 +269,31 @@ Yürütme track'i bittikçe buradan çekilir; detaylar yukarıdaki ilgili §'de.
 Yeni kayıtları en üste ekle. Kaydet: tarih, madde #, ne değişti, nerede durdu,
 alınan karar (sonraki oturum yeniden tartışmasın).
 
+- *2026-06-18* — **§3 Track B başladı — Slice B-1: Interaction component'i
+  Details panel'de (Add/Remove/edit + undo).** Component-editör UX'inin ilk
+  dikey dilimi: seçili obje artık Details'te bir **Interaction** bölümü taşıyor —
+  yoksa "Add Interaction" butonu, varsa action/prompt/enabled/cooldown alanları +
+  "Remove". **Add/Remove/edit'in üçü de tek undo/redo command** (mevcut
+  `setSelectionCollisionPreset` kalıbı birebir yeniden kullanıldı). Dikey 5
+  dosya: `EditableSelection.interaction?` (`editor/core/editableScene.ts`),
+  `buildEditableSelection` instance+character için kopyalar
+  (`editor/core/sceneObjects.ts`), `EditorSceneController.setSelectionInteraction`
+  (+ `applyInteraction`/`interactionsEqual`/`cloneInteraction`,
+  `MutableHierarchyTransform.interaction?`), `SceneApp` delegator, `EditorUi`
+  render+bind (`renderInteractionSection`/`bindInteractionInputs`/
+  `commitInteractionInput`) + `.detail-component-title` CSS. **Karar/yaklaşım:**
+  saved format hâlâ legacy düz alanlar; "component" = bir opsiyonel alan-grubunun
+  varlığı (Track C `components[]` göçü gerekmedi). Zorunlu **Transform**'un
+  remove'u yok (silinemez kuralı bu component için yerinde). `npx tsc --noEmit`
+  temiz, `npm run build:verify` yeşil (build, 162 check, strict dist scan PASS;
+  editör dinamik import → game bundle'a sızmıyor). **Test notu:** controller
+  komutu için headless test eklenmedi — mevcut benzer komutlar (collisionPreset/
+  metadata) da unit-test edilmiyor (controller host mock'u yok); veri yolu
+  (validator round-trip + adapter + runtime) Steps 1–3'te zaten kaplı.
+  **Sıradaki (Track B devamı):** aynı kalıpla Audio/Behavior/Particle
+  component'leri + birleşik "Add Component" menüsü + mevcut Collision/Physics/
+  Metadata bölümlerini component-editör çatısı altına alma. §3 checklist'te
+  Track B maddeleri kısmî → henüz [ ] (B-1 tek component).
 - *2026-06-18* — **§3 Actors & Components — Track A (veri modeli) tamam +
   Interaction runtime.** Eksik iki component eklendi → **resmi component
   listesi (9/9) artık engine'de tanımlı**: `ParticleEmitterComponent` ve

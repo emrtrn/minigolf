@@ -1,4 +1,10 @@
-import type { LayoutLightActor, LayoutMetadata, LayoutPhysics, Vec3 } from "@engine/scene/layout";
+import type {
+  LayoutInteraction,
+  LayoutLightActor,
+  LayoutMetadata,
+  LayoutPhysics,
+  Vec3,
+} from "@engine/scene/layout";
 import type { CollisionPresetId } from "@engine/scene/collision";
 import type { Selection } from "./selection";
 
@@ -36,6 +42,8 @@ export interface EditableSelection {
   physics: LayoutPhysics;
   /** Project-defined gameplay metadata (schema-driven); empty when none set. */
   metadata: LayoutMetadata;
+  /** Authored interaction marker; absent when the object has no Interaction component. */
+  interaction?: LayoutInteraction;
   lightType?: LayoutLightActor["type"];
   color?: string;
   intensity?: number;

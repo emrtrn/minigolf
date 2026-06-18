@@ -113,6 +113,7 @@ import {
 } from "@engine/scene/transform";
 import type {
   LayoutCharacter,
+  LayoutInteraction,
   LayoutLightActor,
   LayoutPlacement,
   LayoutPhysics,
@@ -2050,6 +2051,11 @@ export class SceneApp {
   /** Details Physics section settings for the active selection. */
   setSelectionPhysics(patch: Partial<LayoutPhysics>): void {
     this.editorSceneController.setSelectionPhysics(patch);
+  }
+
+  /** Sets (or clears, when `undefined`) the selection's Interaction component with undo/redo. */
+  setSelectionInteraction(value: LayoutInteraction | undefined): void {
+    this.editorSceneController.setSelectionInteraction(value);
   }
 
   /** Active project's gameplay metadata schema, or null when none is declared. */
