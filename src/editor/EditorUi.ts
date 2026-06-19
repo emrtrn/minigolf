@@ -999,7 +999,8 @@ export class EditorUi {
       "is-selected",
       Boolean(item.editable && item.editable.id === this.selectedAssetId),
     );
-    card.draggable = canPlace || canAssignMaterial;
+    const canPlaceActorClass = isActorScriptItem(item);
+    card.draggable = canPlace || canAssignMaterial || canPlaceActorClass;
     card.dataset.assetPath = item.path;
     if (item.editable) card.dataset.assetId = item.editable.id;
     card.innerHTML = `
@@ -1015,6 +1016,15 @@ export class EditorUi {
       </span>
     `;
     card.addEventListener("dragstart", (event) => {
+      if (canPlaceActorClass) {
+        // Actor Script classes place by reference (classRef = public-relative path),
+        // not by manifest asset id, so they drag even when not manifest-registered.
+        event.dataTransfer?.setData("application/x-forge-actor-class", item.path);
+        event.dataTransfer!.effectAllowed = "copy";
+        event.dataTransfer?.setDragImage(this.getEmptyDragImage(), 0, 0);
+        this.setStatus(`Dragging ${item.label} — drop in the viewport to place.`);
+        return;
+      }
       if (!item.editable || (!canPlace && !canAssignMaterial)) return;
       if (canAssignMaterial) {
         event.dataTransfer?.setData("application/x-forge-material", item.editable.id);
@@ -1998,6 +2008,9 @@ export class EditorUi {
   }
 
   private renderCollisionSection(selection: EditableSelection): string {
+    // Actor instances carry collision/physics on their class, not per-instance
+    // (overrides are a deferred phase), so the instance Details stays transform-only.
+    if (selection.kind === "actor") return "";
     const presetOptions = [
       `<option value="" ${selection.collisionPreset ? "" : "selected"}>Inherit (asset default)</option>`,
     ]
@@ -2028,6 +2041,7 @@ export class EditorUi {
   }
 
   private renderPhysicsSection(selection: EditableSelection, locked: boolean): string {
+    if (selection.kind === "actor") return "";
     const physics = selection.physics;
     const disabled = locked ? "disabled" : "";
     const linearDamping = physics.linearDamping ?? DEFAULT_LINEAR_DAMPING;
@@ -2081,6 +2095,7 @@ export class EditorUi {
    * required Transform component is not listed here (it cannot be removed).
    */
   private renderComponentsSection(selection: EditableSelection): string {
+    if (selection.kind === "actor") return "";
     const cards: string[] = [];
     if (selection.audio) cards.push(this.componentCard("audio", this.renderAudioFields(selection.audio)));
     if (selection.behavior) {

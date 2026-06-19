@@ -2,6 +2,7 @@ import type { EditorCommand, EditorCommandPhase, EditorHistoryState } from "@edi
 import { EditorCommandStore } from "@editor/core/history";
 import { uniqueEditorId } from "@editor/core/ids";
 import {
+  cloneActorInstance,
   cloneBehavior,
   cloneCharacter,
   cloneLightActor,
@@ -9,6 +10,7 @@ import {
   cloneParticle,
   clonePhysics,
   clonePlacement,
+  cloneUngroupedActorInstance,
   cloneUngroupedCharacter,
   cloneUngroupedLightActor,
   cloneUngroupedPlacement,
@@ -19,6 +21,8 @@ import {
   type EditorFlagCommand,
 } from "@editor/core/commandLabels";
 import {
+  compareActorDeletes,
+  compareActorRestores,
   compareCharacterDeletes,
   compareCharacterRestores,
   compareInstanceDeletes,
@@ -28,6 +32,7 @@ import {
   cloneSelection,
   parseSelectionId,
   selectionsEqual,
+  type ActorSelection,
   type CharacterSelection,
   type InstanceSelection,
   type LightSelection,
@@ -36,6 +41,7 @@ import {
 import { SelectionStore } from "@editor/core/selectionStore";
 import { uniqueActorName } from "@engine/scene/lights";
 import type {
+  LayoutActorInstance,
   LayoutAudio,
   LayoutBehavior,
   LayoutCharacter,
@@ -95,10 +101,12 @@ export interface EditorSceneControllerHost {
   getSelectionLabel: (selection: Selection) => string;
   hasSelection: (selection: Selection) => boolean;
   createLightId: (type: LayoutLightActor["type"]) => string;
+  insertActorPlacement: (index: number, actor: LayoutActorInstance) => void;
   insertCharacterPlacement: (index: number, placement: LayoutCharacter) => void;
   insertInstancePlacement: (assetId: string, placementIndex: number, placement: LayoutPlacement) => void;
   insertLightActor: (index: number, actor: LayoutLightActor) => void;
   onStatus: (message: string, tone?: StatusTone) => void;
+  removeActorPlacement: (index: number) => LayoutActorInstance | null;
   removeCharacterPlacement: (index: number) => LayoutCharacter | null;
   removeInstancePlacement: (assetId: string, placementIndex: number) => LayoutPlacement | null;
   removeLightActor: (index: number) => LayoutLightActor | null;
@@ -516,6 +524,7 @@ export class EditorSceneController {
     const instanceDeletes: Array<{ selection: InstanceSelection; snapshot: LayoutPlacement }> = [];
     const characterDeletes: Array<{ selection: CharacterSelection; snapshot: LayoutCharacter }> = [];
     const lightDeletes: Array<{ selection: LightSelection; snapshot: LayoutLightActor }> = [];
+    const actorDeletes: Array<{ selection: ActorSelection; snapshot: LayoutActorInstance }> = [];
     for (const selection of selections) {
       if (selection.kind === "instance") {
         const instance = layout.instances.find((entry) => entry.assetId === selection.assetId);
@@ -539,6 +548,16 @@ export class EditorSceneController {
         continue;
       }
 
+      if (selection.kind === "actor") {
+        const actor = layout.actors?.[selection.index];
+        if (!actor) continue;
+        actorDeletes.push({
+          selection: cloneSelection(selection) as ActorSelection,
+          snapshot: cloneActorInstance(actor),
+        });
+        continue;
+      }
+
       const light = layout.lights?.[selection.index];
       if (light) {
         lightDeletes.push({
@@ -547,7 +566,15 @@ export class EditorSceneController {
         });
       }
     }
-    if (instanceDeletes.length + characterDeletes.length + lightDeletes.length === 0) return;
+    if (
+      instanceDeletes.length +
+        characterDeletes.length +
+        lightDeletes.length +
+        actorDeletes.length ===
+      0
+    ) {
+      return;
+    }
 
     const previousSelections = selections.map(cloneSelection);
     const previousActive = this.selection ? cloneSelection(this.selection) : null;
@@ -566,6 +593,9 @@ export class EditorSceneController {
         for (const entry of [...lightDeletes].sort(compareLightDeletes)) {
           this.host.removeLightActor(entry.selection.index);
         }
+        for (const entry of [...actorDeletes].sort(compareActorDeletes)) {
+          this.host.removeActorPlacement(entry.selection.index);
+        }
         this.select(null);
       },
       undo: () => {
@@ -581,6 +611,9 @@ export class EditorSceneController {
         }
         for (const entry of [...lightDeletes].sort(compareLightRestores)) {
           this.host.insertLightActor(entry.selection.index, entry.snapshot);
+        }
+        for (const entry of [...actorDeletes].sort(compareActorRestores)) {
+          this.host.insertActorPlacement(entry.selection.index, entry.snapshot);
         }
         this.selectMany(previousSelections, previousActive);
       },
@@ -1029,6 +1062,28 @@ export class EditorSceneController {
       return duplicateSelection;
     }
 
+    if (selection.kind === "actor") {
+      const actor = layout.actors?.[selection.index];
+      if (!actor) return null;
+      const snapshot = cloneActorInstance(actor);
+      delete snapshot.groupId;
+      delete snapshot.nodeId;
+      const duplicateIndex = selection.index + 1;
+      const duplicateSelection: Selection = { kind: "actor", index: duplicateIndex };
+      this.executeCommand({
+        label: `Duplicate ${actor.name ?? actor.classRef}`,
+        redo: () => {
+          this.host.insertActorPlacement(duplicateIndex, snapshot);
+          this.select(duplicateSelection);
+        },
+        undo: () => {
+          this.host.removeActorPlacement(duplicateIndex);
+          this.select(selection);
+        },
+      });
+      return duplicateSelection;
+    }
+
     const character = layout.characters[selection.index];
     if (!character) return null;
     const snapshot = cloneCharacter(character);
@@ -1059,7 +1114,7 @@ export class EditorSceneController {
     const inserts: Array<{
       source: Selection;
       selection: Selection;
-      snapshot: LayoutPlacement | LayoutCharacter | LayoutLightActor;
+      snapshot: LayoutPlacement | LayoutCharacter | LayoutLightActor | LayoutActorInstance;
     }> = [];
 
     const instancesByAsset = new Map<string, Selection[]>();
@@ -1124,6 +1179,20 @@ export class EditorSceneController {
       });
     });
 
+    const actorSelections = selections
+      .filter((selection): selection is ActorSelection => selection.kind === "actor")
+      .map((selection) => cloneSelection(selection) as ActorSelection)
+      .sort((left, right) => left.index - right.index);
+    actorSelections.forEach((selection, offset) => {
+      const actor = layout.actors?.[selection.index];
+      if (!actor) return;
+      inserts.push({
+        source: cloneSelection(selection),
+        selection: { kind: "actor", index: selection.index + offset + 1 },
+        snapshot: cloneUngroupedActorInstance(actor),
+      });
+    });
+
     if (inserts.length === 0) return null;
 
     const duplicateSelections = inserts.map((entry) => cloneSelection(entry.selection));
@@ -1148,6 +1217,11 @@ export class EditorSceneController {
               entry.selection.index,
               entry.snapshot as LayoutCharacter,
             );
+          } else if (entry.selection.kind === "actor") {
+            this.host.insertActorPlacement(
+              entry.selection.index,
+              entry.snapshot as LayoutActorInstance,
+            );
           } else {
             this.host.insertLightActor(entry.selection.index, entry.snapshot as LayoutLightActor);
           }
@@ -1163,6 +1237,8 @@ export class EditorSceneController {
             this.host.removeInstancePlacement(entry.selection.assetId, entry.selection.placementIndex);
           } else if (entry.selection.kind === "character") {
             this.host.removeCharacterPlacement(entry.selection.index);
+          } else if (entry.selection.kind === "actor") {
+            this.host.removeActorPlacement(entry.selection.index);
           } else {
             this.host.removeLightActor(entry.selection.index);
           }

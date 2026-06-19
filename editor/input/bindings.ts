@@ -44,6 +44,7 @@ export interface EditorInputBindings {
   onAssetDragOver(clientX: number, clientY: number): void;
   onAssetDragLeave(): void;
   onAssetDrop(assetId: string, clientX: number, clientY: number): void;
+  onActorClassDrop(classRef: string, clientX: number, clientY: number): void;
   onMaterialDrop(materialId: string, clientX: number, clientY: number): void;
   onLightDrop(type: LayoutLightActor["type"], clientX: number, clientY: number): void;
   onWheel(event: WheelEvent): void;
@@ -201,10 +202,12 @@ export function bindEditorInputEvents(
       bindings.onLightDrop(lightType, event.clientX, event.clientY);
       return;
     }
-    if (!assetId) {
-      bindings.onAssetDragLeave();
+    const actorClassRef = event.dataTransfer?.getData("application/x-forge-actor-class");
+    if (actorClassRef) {
+      bindings.onActorClassDrop(actorClassRef, event.clientX, event.clientY);
       return;
     }
+    bindings.onAssetDragLeave();
   });
   on(canvas, "wheel", (event) => bindings.onWheel(event), { passive: false });
 

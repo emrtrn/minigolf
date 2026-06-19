@@ -463,6 +463,8 @@ export class SceneApp {
       getSelectionLabel: (selection) => this.getSelectionLabel(selection),
       hasSelection: (selection) => this.hasSelection(selection),
       createLightId: (type) => this.createLightId(type),
+      insertActorPlacement: (index, actor) => this.insertActorPlacement(index, actor),
+      removeActorPlacement: (index) => this.removeActorPlacement(index),
       insertCharacterPlacement: (index, placement) => this.insertCharacterPlacement(index, placement),
       insertInstancePlacement: (assetId, placementIndex, placement) =>
         this.insertInstancePlacement(assetId, placementIndex, placement),
@@ -2139,13 +2141,14 @@ export class SceneApp {
     return mesh;
   }
 
-  private insertActorPlacement(
-    index: number,
-    instance: LayoutActorInstance,
-    def: ActorScriptDef,
-  ): void {
+  private insertActorPlacement(index: number, instance: LayoutActorInstance): void {
     if (!this.layout) return;
     if (!this.layout.actors) this.layout.actors = [];
+    // The class is resolved + cached (and its mesh loaded) before any placement
+    // command runs, so a cache hit is expected here; fall back to an empty class.
+    const def =
+      this.actorClassCache.get(instance.classRef) ??
+      normalizeActorScriptDef({}, instance.classRef);
     const insertionIndex = clampIndex(index, this.layout.actors.length);
     const entity = actorInstanceToEntity(def, instance, insertionIndex);
     const object = this.buildActorObject(entity);
@@ -2198,7 +2201,7 @@ export class SceneApp {
     this.executeCommand({
       label: `Place ${actorClassName(classRef)}`,
       redo: () => {
-        this.insertActorPlacement(index, instance, def);
+        this.insertActorPlacement(index, instance);
         this.select(selection);
       },
       undo: () => {
@@ -2661,6 +2664,10 @@ export class SceneApp {
       onAssetDrop: (assetId, clientX, clientY) => {
         this.endAssetDragPreview();
         this.addAssetAt(assetId, clientX, clientY);
+      },
+      onActorClassDrop: (classRef, clientX, clientY) => {
+        this.endAssetDragPreview();
+        void this.addActorAt(classRef, clientX, clientY);
       },
       onMaterialDrop: (materialId, clientX, clientY) => {
         this.endAssetDragPreview();
