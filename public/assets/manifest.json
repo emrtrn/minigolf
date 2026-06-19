@@ -110,10 +110,9 @@
       "id": "character-a",
       "name": "Character A",
       "assetType": "skeletalMesh",
-      "category": "customer-character",
+      "category": "characters",
       "path": "assets/models/characters/character-a.glb",
       "tags": [
-        "customer-character",
         "characters",
         "character",
         "a"
@@ -180,7 +179,6 @@
       "category": "models",
       "path": "assets/models/doorway.glb",
       "tags": [
-        "room-shell",
         "core",
         "doorway"
       ],
@@ -213,7 +211,6 @@
       "category": "models",
       "path": "assets/models/floorFull.glb",
       "tags": [
-        "room-shell",
         "core",
         "floor",
         "full"
@@ -452,7 +449,6 @@
       "category": "models",
       "path": "assets/models/wall.glb",
       "tags": [
-        "room-shell",
         "core",
         "wall"
       ],
@@ -485,7 +481,6 @@
       "category": "models",
       "path": "assets/models/wallCorner.glb",
       "tags": [
-        "room-shell",
         "core",
         "wall",
         "corner"
@@ -519,7 +514,6 @@
       "category": "models",
       "path": "assets/models/wallWindow.glb",
       "tags": [
-        "room-shell",
         "core",
         "wall",
         "window"

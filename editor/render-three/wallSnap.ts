@@ -11,9 +11,9 @@ export interface WallSnapResult {
 
 /**
  * Snaps an instance flush against the nearest of the room's four bounding walls
- * (derived from the room-shell world AABB) and orients it to face the room
+ * (derived from the room world AABB) and orients it to face the room
  * interior. Pure geometry: `bounds` is the asset's local AABB and `room` the
- * room-shell world AABB; the caller supplies both and the current transform.
+ * room world AABB; the caller supplies both and the current transform.
  *
  * The asset front is assumed to face +Z; the returned `rotationYDeg` turns it
  * toward the interior, and `position` slides it so its back face sits flush

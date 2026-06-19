@@ -1044,7 +1044,7 @@ export class SceneApp {
     this.ensureShapeModel(assetId);
 
     const asset = this.manifest?.assets.find((entry) => entry.id === assetId);
-    if (asset?.category === "customer-character") return;
+    if (asset && assetType(asset) === "skeletalMesh") return;
 
     if (this.models.has(assetId)) {
       this.createDragPreview(assetId);
@@ -1606,7 +1606,7 @@ export class SceneApp {
       return;
     }
     const asset = this.manifest?.assets.find((entry) => entry.id === assetId);
-    if (asset?.category === "customer-character") {
+    if (asset && assetType(asset) === "skeletalMesh") {
       const hit = this.picker.clientToSurface(clientX, clientY);
       if (!hit) return;
       const characterScale = 0.42;

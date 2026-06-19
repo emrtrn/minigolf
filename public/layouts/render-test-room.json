@@ -134,7 +134,7 @@
         1.64
       ],
       "animation": "idle",
-      "name": "customer-character-a",
+      "name": "character-a",
       "scaleLocked": true,
       "behavior": {
         "script": "input-move",

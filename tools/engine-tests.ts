@@ -270,8 +270,8 @@ check("asset manifest helpers expose canonical path, load group, and byte size",
   const sofa = assetManifest.assets.find((asset) => asset.id === "lounge-sofa");
   assert.ok(sofa);
   assert.equal(assetType(sofa), "staticMesh");
-  assert.equal(assetPath(sofa), "assets/models/furniture-seating/loungeSofa.glb");
-  assert.equal(assetLoadGroup(sofa), "furniture-seating");
+  assert.equal(assetPath(sofa), "assets/models/loungeSofa.glb");
+  assert.equal(assetLoadGroup(sofa), "models");
   assert.equal(assetByteSize(sofa), 4588);
 });
 check("asset manifest classifies authored characters as skeletal meshes", () => {

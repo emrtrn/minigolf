@@ -19,7 +19,7 @@ import {
   type CollisionChannel,
 } from "../engine/scene/collision";
 import {
-  defaultPlacementForCategory,
+  defaultPlacementForAsset,
   inferAssetTypeFromPath,
   isModelAssetType,
   type AssetRecord,
@@ -958,7 +958,7 @@ export function buildImportedAssetRecord(
     path,
     tags: [],
     placeable,
-    placement: defaultPlacementForCategory(category),
+    placement: defaultPlacementForAsset(type),
     runtime: {
       loadGroup: category,
       castShadow: true,

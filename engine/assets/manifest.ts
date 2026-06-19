@@ -217,24 +217,20 @@ export function editableAssetsFromManifest(
         displayName: catalogAsset?.name ?? asset.name ?? asset.id,
         catalogCategory: catalogAsset?.category ?? asset.category,
         placement:
-          catalogAsset?.placement ?? asset.placement ?? defaultPlacementForCategory(asset.category),
+          catalogAsset?.placement ?? asset.placement ?? defaultPlacementForAsset(assetType(asset)),
         tags: catalogAsset?.tags ?? asset.tags ?? [],
       };
     });
 }
 
-export function defaultPlacementForCategory(
-  category: string,
-): AssetPlacementRules {
-  if (category === "room-shell") {
-    return {
-      surface: "room",
-      snapToWall: false,
-      allowRotation: true,
-      allowScale: false,
-    };
-  }
-  if (category === "customer-character") {
+/**
+ * Fallback placement affordances for an asset with no explicit `placement`
+ * (e.g. a freshly imported file). Driven by asset *type*, not by folder/category,
+ * so the template stays generic: skinned characters get a character surface,
+ * everything else rests on the floor. Folder organization is the user's concern.
+ */
+export function defaultPlacementForAsset(type: AssetType): AssetPlacementRules {
+  if (type === "skeletalMesh") {
     return {
       surface: "character",
       snapToWall: false,
