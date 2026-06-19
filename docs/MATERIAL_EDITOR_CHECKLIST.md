@@ -136,6 +136,37 @@ Ilk surumde acilmamasi gereken alanlar:
 - `displacementMap`, `bumpMap`, `aoMap`, `lightMap`
 - custom blending / stencil / clipping
 
+### C.4 Material Instance karari
+
+2026-06-19 karari: Forge'un yakin vadede Unreal'daki tam Material Instance
+sistemini kopyalamasina gerek yok. Node/material graph olmadigi icin ilk ihtiyac
+parent material + alan override mantigiyla calisan hafif bir **Material Instance
+Lite / Material Variant** sistemidir.
+
+Ilk onerilen veri sekli:
+
+```json
+{
+  "schema": 1,
+  "type": "materialInstance",
+  "name": "Blue Painted Metal",
+  "parentMaterial": "starter-metal",
+  "overrides": {
+    "baseColor": "#2b6cff",
+    "roughness": 0.45
+  }
+}
+```
+
+Kurallar:
+
+- Parent normal canonical `.material.json` olur.
+- Instance sadece degisen alanlari `overrides` icinde tutar.
+- Runtime parent + overrides resolve edip yine normal Three.js material uretir.
+- Ilk surum shader sistemi, node graph veya Material Function eklemez.
+- Bu is, mevcut Material Editor kalan maddeleri kapandiktan sonra ayri faz olarak
+  ele alinmalidir.
+
 ---
 
 ## Bolum D - Mimari Plan
@@ -362,7 +393,12 @@ Kabul kriteri:
   - anisotropy
 - Environment map / HDRI secimi.
 - ORM texture channel editor.
-- Material instance / parent material sistemi.
+- Material Instance Lite / Material Variant:
+  - parent canonical `.material.json`;
+  - `type: "materialInstance"` asset;
+  - `parentMaterial` asset id;
+  - sadece degisen alanlari tutan `overrides`;
+  - runtime'da parent + overrides resolve edip normal Three.js material uretme.
 - Material library / reusable presets.
 - Node graph / shader graph.
 - Custom GLSL / TSL tabanli shader authoring.

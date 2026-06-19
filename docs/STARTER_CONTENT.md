@@ -104,6 +104,13 @@ scene material caches, and invalidates Content Browser thumbnails so saved color
 texture, roughness, metalness, opacity, side, alpha, and emissive changes show in
 the asset card.
 
+Future material reuse should prefer a lightweight Material Instance Lite /
+Material Variant model instead of copying Unreal's full Material Instance stack.
+The intended shape is parent canonical `.material.json` plus a
+`type: "materialInstance"` asset that stores `parentMaterial` and only the
+overridden fields. Resolve parent + overrides at load time and still emit a
+normal Three.js material.
+
 ## Needs User Replacement
 
 These generated files are functional placeholders. Replace them with authored or

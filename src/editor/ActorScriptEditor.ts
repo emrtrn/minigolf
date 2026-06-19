@@ -30,6 +30,7 @@ import {
 } from "@engine/scene/actorScript";
 import type { MetadataFieldDef, MetadataFieldType } from "@engine/scene/metadataSchema";
 import type { SceneJsonValue } from "@engine/scene/entity";
+import type { Vec3 } from "@engine/scene/layout";
 import { isModelAssetType, type AssetType } from "@engine/assets/manifest";
 import { loadActorScript, saveActorScript } from "@/editor/actorScriptStore";
 import { ActorScriptViewport } from "@/editor/ActorScriptViewport";
@@ -45,8 +46,8 @@ export interface ActorScriptEditorOptions {
   behaviorScriptIds?: readonly string[];
   /** Manifest asset ids offered for MeshRenderer convenience. */
   assetIds?: readonly string[];
-  /** Manifest assets (id/type/path) used to resolve MeshRenderer previews in the viewport. */
-  assets?: ReadonlyArray<{ id: string; assetType: string; path: string }>;
+  /** Manifest assets (id/name/type/path): the MeshRenderer mesh picker + viewport previews. */
+  assets?: ReadonlyArray<{ id: string; name: string; assetType: string; path: string }>;
   onStatus?: (message: string, tone?: StatusTone) => void;
   /** Reveal this asset in the Content Browser (Toolbar → Browse). */
   onBrowse?: () => void;
@@ -414,6 +415,14 @@ export class ActorScriptEditor {
     return this.modelPathById.get(assetId);
   }
 
+  /** Model assets ({id,name}) offered by the MeshRenderer mesh picker, name-sorted. */
+  private modelAssets(): Array<{ id: string; name: string }> {
+    return (this.options.assets ?? [])
+      .filter((asset) => isModelAssetType(asset.assetType as AssetType))
+      .map((asset) => ({ id: asset.id, name: asset.name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
   // --- details forms ------------------------------------------------------
 
   private renderDetails(): void {
@@ -495,10 +504,10 @@ export class ActorScriptEditor {
             `<option value="${escapeHtml(other.id)}" ${other.id === node.parent ? "selected" : ""}>${escapeHtml(other.id)}</option>`,
         ),
     ].join("");
-    const assetHint =
-      node.component === "MeshRenderer" && this.options.assetIds && this.options.assetIds.length > 0
-        ? `<small>— e.g. {"assetId": "${escapeHtml(this.options.assetIds[0] ?? "")}"}</small>`
-        : "";
+    const meshField = node.component === "MeshRenderer" ? this.meshPickerField(node) : "";
+    const pos = readVec3Prop(node.props.position, [0, 0, 0]);
+    const rot = readVec3Prop(node.props.rotation, [0, 0, 0]);
+    const scl = readVec3Prop(node.props.scale, [1, 1, 1]);
     return `
       <div class="as-details-head">Component · ${escapeHtml(node.component)}</div>
       <label class="as-field">
@@ -513,11 +522,40 @@ export class ActorScriptEditor {
         <span>Parent</span>
         <select data-as-node-parent ${isRoot ? "disabled" : ""}>${parentOptions}</select>
       </label>
+      ${meshField}
+      <div class="as-section-label">Transform <small>(preview)</small></div>
+      ${vec3Row("position", "Position", pos)}
+      ${vec3Row("rotation", "Rotation°", rot)}
+      ${vec3Row("scale", "Scale", scl)}
+      <details class="as-advanced">
+        <summary>Advanced · raw props (JSON)</summary>
+        <textarea data-as-node-props rows="7">${escapeHtml(JSON.stringify(node.props, null, 2))}</textarea>
+        <div class="as-json-error" data-as-node-props-error></div>
+      </details>
+    `;
+  }
+
+  /** The MeshRenderer "Mesh" dropdown: model assets by name → sets props.assetId. */
+  private meshPickerField(node: ComponentTemplateNode): string {
+    const current = typeof node.props.assetId === "string" ? node.props.assetId : "";
+    const assets = this.modelAssets();
+    const known = assets.some((asset) => asset.id === current);
+    const options = [
+      `<option value="" ${current ? "" : "selected"}>— none —</option>`,
+      ...assets.map(
+        (asset) =>
+          `<option value="${escapeHtml(asset.id)}" ${asset.id === current ? "selected" : ""}>${escapeHtml(asset.name)}</option>`,
+      ),
+      // Preserve an unknown/hand-typed id so the picker never silently drops it.
+      ...(current && !known
+        ? [`<option value="${escapeHtml(current)}" selected>${escapeHtml(current)} (unknown)</option>`]
+        : []),
+    ].join("");
+    return `
       <label class="as-field">
-        <span>Props (JSON) ${assetHint}</span>
-        <textarea data-as-node-props rows="8">${escapeHtml(JSON.stringify(node.props, null, 2))}</textarea>
+        <span>Mesh</span>
+        <select data-as-node-mesh>${options}</select>
       </label>
-      <div class="as-json-error" data-as-node-props-error></div>
     `;
   }
 
@@ -565,6 +603,39 @@ export class ActorScriptEditor {
       else delete node.parent;
       this.markDirty();
       this.refreshLists();
+    });
+    const mesh = this.detailsHost.querySelector<HTMLSelectElement>("[data-as-node-mesh]");
+    mesh?.addEventListener("change", () => {
+      if (mesh.value) node.props.assetId = mesh.value;
+      else delete node.props.assetId;
+      this.markDirty();
+      this.render(); // rebuilds tree + viewport + the raw-props view
+    });
+    this.detailsHost.querySelectorAll<HTMLElement>("[data-as-vec]").forEach((rowEl) => {
+      const key = rowEl.dataset.asVec as "position" | "rotation" | "scale";
+      const inputs = Array.from(rowEl.querySelectorAll<HTMLInputElement>("input"));
+      const identity: Vec3 = key === "scale" ? [1, 1, 1] : [0, 0, 0];
+      const collect = (): void => {
+        const value = inputs.map((input) => {
+          const n = Number(input.value);
+          return Number.isFinite(n) ? n : 0;
+        }) as Vec3;
+        if (value.every((axis, i) => axis === identity[i])) delete node.props[key];
+        else node.props[key] = value;
+        this.markDirty();
+      };
+      // Live preview while typing; sync the raw-props view on commit (blur).
+      inputs.forEach((input) => {
+        input.addEventListener("input", () => {
+          collect();
+          this.scheduleViewportSync();
+        });
+        input.addEventListener("change", () => {
+          collect();
+          this.renderDetails();
+          this.syncViewport();
+        });
+      });
     });
     const props = this.detailsHost.querySelector<HTMLTextAreaElement>("[data-as-node-props]");
     const error = this.detailsHost.querySelector<HTMLElement>("[data-as-node-props-error]");
@@ -940,6 +1011,29 @@ function parseJsonObject(
   } catch (error) {
     return { ok: false, error: describeError(error) };
   }
+}
+
+/** Reads a Vec3 from a props value, falling back to `fallback` when absent/malformed. */
+function readVec3Prop(value: SceneJsonValue | undefined, fallback: Vec3): Vec3 {
+  if (Array.isArray(value) && value.length === 3) {
+    const [x, y, z] = value;
+    if (typeof x === "number" && typeof y === "number" && typeof z === "number") return [x, y, z];
+  }
+  return [...fallback] as Vec3;
+}
+
+/** A 3-input (X/Y/Z) numeric row bound by `data-as-vec="<key>"`. */
+function vec3Row(key: string, label: string, value: Vec3): string {
+  const input = (axis: number): string =>
+    `<input type="number" step="0.1" value="${value[axis]}" aria-label="${escapeHtml(label)} ${"XYZ"[axis]}" />`;
+  return `
+    <label class="as-field as-vec-field">
+      <span>${label}</span>
+      <div class="as-vec3" data-as-vec="${escapeHtml(key)}">
+        ${input(0)}${input(1)}${input(2)}
+      </div>
+    </label>
+  `;
 }
 
 function stringifyMetadataDefault(value: MetadataFieldDef["default"]): string {

@@ -287,5 +287,16 @@
       "distance": 8,
       "decay": 2
     }
+  ],
+  "actors": [
+    {
+      "classRef": "assets/starter-content/Script/Script_Lamp.actor.json",
+      "position": [
+        -2.5,
+        0.25,
+        -1.16
+      ],
+      "rotationYDeg": 0
+    }
   ]
 }

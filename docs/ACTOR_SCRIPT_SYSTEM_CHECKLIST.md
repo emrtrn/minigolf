@@ -384,7 +384,9 @@ npm run build           # başarılı
 - [x] Sol panelde component **parent-child ağacı** (root = Transform, silinemez)
 - [x] `+ Add` menüsü: Forge component seti (`MeshRenderer`, `Collider`, `Audio`,
       `ParticleEmitter`, `Light`, `Interaction`, `Behavior`)
-- [x] Component seçimi → Details'ta form (id/parent/kind + **props JSON** editörü)
+- [x] Component seçimi → Details'ta form (id/parent/kind + **Mesh seçici** (model
+      varlık açılır listesi → `assetId`) + **Transform alanları** (position/rotation/
+      scale X/Y/Z) + katlanır **ham props JSON** editörü)
 - [x] Viewport'ta component önizleme (mesh/collider/light gizmo'ları) (**Faz 10.2–10.3**)
 - [ ] (ertele) Add menüsünü roadmap kategorileriyle (Movement/Camera/Spring Arm…)
 

@@ -320,6 +320,9 @@ introduce empty architecture for its own sake.
 - full pnpm/Turborepo migration;
 - node editor;
 - shader graph or material graph;
+- full Unreal-style Material Instance stack; if material reuse needs it later,
+  prefer Material Instance Lite / Material Variant: parent canonical material plus
+  field overrides resolved to a normal Three.js material;
 - physics editor;
 - generic engine marketplace/plugin ecosystem;
 - reviving the Project Browser / external-project system.

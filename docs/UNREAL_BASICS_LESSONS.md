@@ -82,6 +82,16 @@ sahne verisinde yaşar, `engine/` veya `editor/` içine girmez. Game Mode
 headless-test edilebilir çekirdek çıkar (projenin yerleşik ritmi); Three.js/DOM
 tutkalı shell'lerde ince kalır.
 
+## Kalici Mimari Kararlar
+
+- *2026-06-19* — **Material Instance karari.** Forge simdilik Unreal'daki tam
+  Material Instance sistemini kopyalamayacak. Mevcut Material Editor form tabanli
+  canonical `.material.json` uzerinden ilerler; node/material graph ve Material
+  Function kapsam disidir. Ileride ihtiyac dogarsa hedef **Material Instance Lite
+  / Material Variant**: parent canonical material + `type: "materialInstance"` +
+  `parentMaterial` + yalnizca degisen alanlari tutan `overrides`. Runtime bu
+  parent + overrides sonucunu normal Three.js material olarak resolve eder.
+
 ## Mevcut runtime taban çizgisi (kanıt)
 
 - Davranışlar saf game kodu: `src/game/behaviors.ts` — `spin`, `input-move`

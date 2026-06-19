@@ -1876,6 +1876,7 @@ export class EditorUi {
         assetIds: this.editableAssets.map((asset) => asset.id),
         assets: this.editableAssets.map((asset) => ({
           id: asset.id,
+          name: asset.displayName ?? asset.name,
           assetType: assetType(asset),
           path: assetPath(asset),
         })),
