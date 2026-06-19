@@ -7,8 +7,8 @@
       "id": "bed-single",
       "name": "Bed Single",
       "assetType": "staticMesh",
-      "category": "beds",
-      "path": "assets/models/furniture-beds/bedSingle.glb",
+      "category": "models",
+      "path": "assets/models/bedSingle.glb",
       "tags": [
         "beds",
         "furniture-beds",
@@ -23,7 +23,7 @@
         "allowScale": true
       },
       "runtime": {
-        "loadGroup": "furniture-beds",
+        "loadGroup": "models",
         "castShadow": true,
         "receiveShadow": true,
         "collision": true,
@@ -41,8 +41,8 @@
       "id": "bookcase-open",
       "name": "Bookcase Open",
       "assetType": "staticMesh",
-      "category": "storage",
-      "path": "assets/models/furniture-storage/bookcaseOpen.glb",
+      "category": "models",
+      "path": "assets/models/bookcaseOpen.glb",
       "tags": [
         "storage",
         "furniture-storage",
@@ -57,7 +57,7 @@
         "allowScale": true
       },
       "runtime": {
-        "loadGroup": "furniture-storage",
+        "loadGroup": "models",
         "castShadow": true,
         "receiveShadow": true,
         "collision": true,
@@ -75,8 +75,8 @@
       "id": "chair-modern-cushion",
       "name": "Chair Modern Cushion",
       "assetType": "staticMesh",
-      "category": "sofas-chairs",
-      "path": "assets/models/furniture-seating/chairModernCushion.glb",
+      "category": "models",
+      "path": "assets/models/chairModernCushion.glb",
       "tags": [
         "sofas-chairs",
         "furniture-seating",
@@ -92,7 +92,7 @@
         "allowScale": true
       },
       "runtime": {
-        "loadGroup": "furniture-seating",
+        "loadGroup": "models",
         "castShadow": true,
         "receiveShadow": true,
         "collision": true,
@@ -144,8 +144,8 @@
       "id": "desk",
       "name": "Desk",
       "assetType": "staticMesh",
-      "category": "tables-desks",
-      "path": "assets/models/furniture-tables/desk.glb",
+      "category": "models",
+      "path": "assets/models/desk.glb",
       "tags": [
         "tables-desks",
         "furniture-tables",
@@ -159,7 +159,7 @@
         "allowScale": true
       },
       "runtime": {
-        "loadGroup": "furniture-tables",
+        "loadGroup": "models",
         "castShadow": true,
         "receiveShadow": true,
         "collision": true,
@@ -177,8 +177,8 @@
       "id": "doorway",
       "name": "Doorway",
       "assetType": "staticMesh",
-      "category": "room-shell",
-      "path": "assets/models/core/doorway.glb",
+      "category": "models",
+      "path": "assets/models/doorway.glb",
       "tags": [
         "room-shell",
         "core",
@@ -192,7 +192,7 @@
         "allowScale": false
       },
       "runtime": {
-        "loadGroup": "core",
+        "loadGroup": "models",
         "castShadow": true,
         "receiveShadow": true,
         "collision": true,
@@ -210,8 +210,8 @@
       "id": "floor-full",
       "name": "Floor Full",
       "assetType": "staticMesh",
-      "category": "room-shell",
-      "path": "assets/models/core/floorFull.glb",
+      "category": "models",
+      "path": "assets/models/floorFull.glb",
       "tags": [
         "room-shell",
         "core",
@@ -226,7 +226,7 @@
         "allowScale": false
       },
       "runtime": {
-        "loadGroup": "core",
+        "loadGroup": "models",
         "castShadow": true,
         "receiveShadow": true,
         "collision": true,
@@ -244,8 +244,8 @@
       "id": "lamp-round-floor",
       "name": "Lamp Round Floor",
       "assetType": "staticMesh",
-      "category": "lighting",
-      "path": "assets/models/furniture-lighting/lampRoundFloor.glb",
+      "category": "models",
+      "path": "assets/models/lampRoundFloor.glb",
       "tags": [
         "lighting",
         "furniture-lighting",
@@ -261,7 +261,7 @@
         "allowScale": true
       },
       "runtime": {
-        "loadGroup": "furniture-lighting",
+        "loadGroup": "models",
         "castShadow": true,
         "receiveShadow": true,
         "collision": true,
@@ -279,8 +279,8 @@
       "id": "lounge-sofa",
       "name": "Lounge Sofa",
       "assetType": "staticMesh",
-      "category": "sofas-chairs",
-      "path": "assets/models/furniture-seating/loungeSofa.glb",
+      "category": "models",
+      "path": "assets/models/loungeSofa.glb",
       "tags": [
         "sofas-chairs",
         "furniture-seating",
@@ -295,7 +295,7 @@
         "allowScale": true
       },
       "runtime": {
-        "loadGroup": "furniture-seating",
+        "loadGroup": "models",
         "castShadow": true,
         "receiveShadow": true,
         "collision": true,
@@ -313,8 +313,8 @@
       "id": "potted-plant",
       "name": "Potted Plant",
       "assetType": "staticMesh",
-      "category": "plants",
-      "path": "assets/models/furniture-plants/pottedPlant.glb",
+      "category": "models",
+      "path": "assets/models/pottedPlant.glb",
       "tags": [
         "plants",
         "furniture-plants",
@@ -329,7 +329,7 @@
         "allowScale": true
       },
       "runtime": {
-        "loadGroup": "furniture-plants",
+        "loadGroup": "models",
         "castShadow": true,
         "receiveShadow": true,
         "collision": true,
@@ -347,8 +347,8 @@
       "id": "rug-rectangle",
       "name": "Rug Rectangle",
       "assetType": "staticMesh",
-      "category": "rugs",
-      "path": "assets/models/furniture-rugs/rugRectangle.glb",
+      "category": "models",
+      "path": "assets/models/rugRectangle.glb",
       "tags": [
         "rugs",
         "furniture-rugs",
@@ -363,7 +363,7 @@
         "allowScale": true
       },
       "runtime": {
-        "loadGroup": "furniture-rugs",
+        "loadGroup": "models",
         "castShadow": true,
         "receiveShadow": true,
         "collision": true,
@@ -381,8 +381,8 @@
       "id": "side-table",
       "name": "Side Table",
       "assetType": "staticMesh",
-      "category": "tables-desks",
-      "path": "assets/models/furniture-tables/sideTable.glb",
+      "category": "models",
+      "path": "assets/models/sideTable.glb",
       "tags": [
         "tables-desks",
         "furniture-tables",
@@ -397,7 +397,7 @@
         "allowScale": true
       },
       "runtime": {
-        "loadGroup": "furniture-tables",
+        "loadGroup": "models",
         "castShadow": true,
         "receiveShadow": true,
         "collision": true,
@@ -415,8 +415,8 @@
       "id": "table-coffee",
       "name": "Table Coffee",
       "assetType": "staticMesh",
-      "category": "tables-desks",
-      "path": "assets/models/furniture-tables/tableCoffee.glb",
+      "category": "models",
+      "path": "assets/models/tableCoffee.glb",
       "tags": [
         "tables-desks",
         "furniture-tables",
@@ -431,7 +431,7 @@
         "allowScale": true
       },
       "runtime": {
-        "loadGroup": "furniture-tables",
+        "loadGroup": "models",
         "castShadow": true,
         "receiveShadow": true,
         "collision": true,
@@ -449,8 +449,8 @@
       "id": "wall",
       "name": "Wall",
       "assetType": "staticMesh",
-      "category": "room-shell",
-      "path": "assets/models/core/wall.glb",
+      "category": "models",
+      "path": "assets/models/wall.glb",
       "tags": [
         "room-shell",
         "core",
@@ -464,7 +464,7 @@
         "allowScale": false
       },
       "runtime": {
-        "loadGroup": "core",
+        "loadGroup": "models",
         "castShadow": true,
         "receiveShadow": true,
         "collision": true,
@@ -482,8 +482,8 @@
       "id": "wall-corner",
       "name": "Wall Corner",
       "assetType": "staticMesh",
-      "category": "room-shell",
-      "path": "assets/models/core/wallCorner.glb",
+      "category": "models",
+      "path": "assets/models/wallCorner.glb",
       "tags": [
         "room-shell",
         "core",
@@ -498,7 +498,7 @@
         "allowScale": false
       },
       "runtime": {
-        "loadGroup": "core",
+        "loadGroup": "models",
         "castShadow": true,
         "receiveShadow": true,
         "collision": true,
@@ -516,8 +516,8 @@
       "id": "wall-window",
       "name": "Wall Window",
       "assetType": "staticMesh",
-      "category": "room-shell",
-      "path": "assets/models/core/wallWindow.glb",
+      "category": "models",
+      "path": "assets/models/wallWindow.glb",
       "tags": [
         "room-shell",
         "core",
@@ -532,7 +532,7 @@
         "allowScale": false
       },
       "runtime": {
-        "loadGroup": "core",
+        "loadGroup": "models",
         "castShadow": true,
         "receiveShadow": true,
         "collision": true,

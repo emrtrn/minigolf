@@ -8,8 +8,8 @@ extensions do not become ad hoc when that moment arrives.
 
 ## Trigger
 
-Do not implement plugin loading until at least one non-Home-Makeover project
-needs a custom asset type, panel, tool, or runtime hook that cannot be expressed
+Do not implement plugin loading until at least one real project built on this
+template needs a custom asset type, panel, tool, or runtime hook that cannot be expressed
 with `project.3dgame.json`, asset catalog metadata, layouts, prefabs, or normal
 project runtime code.
 

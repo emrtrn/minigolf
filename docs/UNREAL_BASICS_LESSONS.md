@@ -255,8 +255,8 @@ Yürütme track'i bittikçe buradan çekilir; detaylar yukarıdaki ilgili §'de.
 
 - **B1 — Asset katalog / Content Browser UI** → §2 checklist (thumbnail,
   arama/kategori, placement-rule affordance, health-check).
-- **B2 — `home-makeover`'ı template kopyası olarak yeniden kur** → §1 checklist
-  (+ ileride `tools/create-project.mjs`).
+- **B2 — Yeni proje bootstrap** → §1 checklist: template'i kopyalayıp yeni bir
+  proje üretme akışı (+ ileride `tools/create-project.mjs`).
 - **B3 — Performans & araçlar** → §6 (perf overlay zenginleştirme,
   `dist-report.json`, `tools/cook-assets.mjs`).
 - **B4 — Mimari evrim:** tam component-model (§3 — Actor `components[]`,
@@ -640,7 +640,7 @@ ForgeTemplate/
   builder/
   package.json
 
-HomeMakeover/
+MyGame/
   aynı kod tabanı
   farklı project.3dgame.json
   farklı assets/layouts
@@ -1253,10 +1253,10 @@ Level / Layout şunları temsil eder:
 ```json
 {
   "schema": 2,
-  "id": "level.main_house",
-  "name": "Main House",
+  "id": "level.main",
+  "name": "Main Level",
   "world": {
-    "gameMode": "homeMakeover.default",
+    "gameMode": "myGame.default",
     "background": {
       "type": "color",
       "color": "#b8d7ff"

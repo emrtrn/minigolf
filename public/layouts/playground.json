@@ -79,91 +79,7 @@
     },
     {
       "assetId": "shape:cube",
-      "placements": [
-        {
-          "position": [
-            -2.06,
-            1.66,
-            2.25
-          ],
-          "name": "Cube",
-          "materialSlot": "starter-mat-brick-clay-beveled",
-          "simulatePhysics": true,
-          "rotationYDeg": 0,
-          "scale": 1
-        },
-        {
-          "position": [
-            -2.06,
-            1.66,
-            1.52
-          ],
-          "name": "Cube",
-          "materialSlot": "starter-mat-grass",
-          "simulatePhysics": true,
-          "rotationYDeg": 0,
-          "scale": 1
-        },
-        {
-          "position": [
-            -2.06,
-            2.54,
-            2.06
-          ],
-          "name": "Cube",
-          "materialSlot": "starter-mat-concrete",
-          "simulatePhysics": true,
-          "rotationYDeg": 0,
-          "scale": 1
-        },
-        {
-          "position": [
-            -2.06,
-            1.66,
-            0.64
-          ],
-          "name": "Cube",
-          "materialSlot": "starter-mat-concrete",
-          "simulatePhysics": true,
-          "rotationYDeg": 0,
-          "scale": 1
-        },
-        {
-          "position": [
-            -2.06,
-            2.54,
-            1.18
-          ],
-          "name": "Cube",
-          "materialSlot": "starter-mat-glass",
-          "simulatePhysics": true,
-          "rotationYDeg": 0,
-          "scale": 1
-        },
-        {
-          "position": [
-            -2.06,
-            1.66,
-            -0.38
-          ],
-          "name": "Cube",
-          "materialSlot": "starter-mat-metal",
-          "simulatePhysics": true,
-          "rotationYDeg": 0,
-          "scale": 1
-        },
-        {
-          "position": [
-            -2.06,
-            2.54,
-            0.16
-          ],
-          "name": "Cube",
-          "simulatePhysics": true,
-          "rotationYDeg": 0,
-          "scale": 1
-        }
-      ]
+      "placements": []
     },
     {
       "assetId": "marker:playerStart",
@@ -200,32 +116,68 @@
     },
     {
       "assetId": "floor-full",
-      "placements": [
-        {
-          "position": [
-            -3.43,
-            0.28,
-            3.58
-          ],
-          "materialSlot": "starter-mat-prototype-grid",
-          "rotationYDeg": 0,
-          "scale": [
-            2.42,
-            1,
-            2.42
-          ]
-        }
-      ]
+      "placements": []
     },
     {
       "assetId": "starter-sm-crate",
       "placements": []
+    },
+    {
+      "assetId": "wall-2",
+      "placements": []
+    },
+    {
+      "assetId": "cardboardboxclosed",
+      "placements": [
+        {
+          "position": [
+            0.93,
+            0,
+            -0.68
+          ],
+          "rotationYDeg": 0,
+          "scale": 1
+        }
+      ]
+    },
+    {
+      "assetId": "bedbunk",
+      "placements": [
+        {
+          "position": [
+            2.05,
+            0,
+            0.34
+          ],
+          "rotationYDeg": 0,
+          "scale": 1
+        }
+      ]
+    },
+    {
+      "assetId": "laptop",
+      "placements": [
+        {
+          "position": [
+            0.4,
+            0.24,
+            0.11
+          ],
+          "rotationYDeg": 0,
+          "rotation": [
+            0,
+            180,
+            0
+          ],
+          "scale": 1
+        }
+      ]
     }
   ],
   "characters": [],
   "worldSettings": {
     "staticObjectsCastShadow": true,
-    "backgroundColor": "#b8e0ff",
+    "backgroundColor": "#add8ff",
     "ambientIntensity": 1,
     "gameMode": "forge.tpsCharacter"
   },
@@ -247,36 +199,6 @@
       "color": "#ffffff",
       "intensity": 1,
       "castShadow": true
-    },
-    {
-      "id": "point-light-mqki39ei-5kj",
-      "type": "point",
-      "position": [
-        -1.08,
-        2.06,
-        2.2
-      ],
-      "name": "Point Light",
-      "color": "#ffffff",
-      "intensity": 2.5,
-      "castShadow": false,
-      "distance": 8,
-      "decay": 2
-    },
-    {
-      "id": "point-light-mqki6c31-5qn",
-      "type": "point",
-      "position": [
-        -1.08,
-        2.06,
-        0.65
-      ],
-      "name": "Point Light 3",
-      "color": "#ffffff",
-      "intensity": 2.5,
-      "castShadow": false,
-      "distance": 8,
-      "decay": 2
     }
   ]
 }

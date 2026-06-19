@@ -1,8 +1,10 @@
 # Forge
 
-**Forge** is a reusable Three.js **game template** whose editor is a built-in
-mode of the game (`?editor`), not a separate app. One `SceneApp` renders both
-the game and the editor viewport; the engine/editor/builder/game module
+**Forge** is a general-purpose, reusable Three.js **game/app platform template**
+whose editor is a built-in mode of the runtime (`?editor`), not a separate app.
+It is not tied to any single project — each concrete project is a copy of this
+template with its own data, assets, and game rules. One `SceneApp` renders both
+the runtime and the editor viewport; the engine/editor/builder/game module
 boundaries are extracted under `engine/`, `editor/`, `builder/`, and `game/`.
 The architecture is Unreal-inspired (viewport gizmos, outliner, details,
 content browser, undo/redo, snapping, Play mode) but web-first and lightweight.
@@ -12,9 +14,10 @@ reference repo is `C:\Users\emret\Desktop\3DGameDev`; do not edit it from this
 workspace. Do not rewrite from scratch — preserve working behavior and move
 code in small, build-passing steps.
 
-`home-makeover` (`C:\Users\emret\Desktop\home-makeover`) is a separate project
-for now; it will later be rebuilt as a copy of this template. This codebase no
-longer edits it.
+Concrete projects are produced by copying this template and swapping the project
+data (`project.3dgame.json`, layouts, assets, game rules/UI). Keep the template
+generic — never hard-code rules or assumptions for one specific project into the
+engine/editor.
 
 ## Modes (routes)
 
@@ -79,4 +82,5 @@ longer edits it.
    ships gizmo/authoring code in the game chunk).
 2. Smoke tests around load/save and the game/editor mode split.
 3. Improve asset catalog UI with previews and placement-rule affordances.
-4. Later: migrate `home-makeover` onto a copy of this template.
+4. Later: a `tools/create-project.mjs` scaffold that stamps out a new project
+   from the template (copy + rename + reset project data).

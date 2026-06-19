@@ -2,14 +2,7 @@
   "schema": 1,
   "name": "render-test-room",
   "loadGroups": [
-    "core",
-    "furniture-beds",
-    "furniture-seating",
-    "furniture-tables",
-    "furniture-storage",
-    "furniture-lighting",
-    "furniture-rugs",
-    "furniture-plants",
+    "models",
     "characters"
   ],
   "instances": [
