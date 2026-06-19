@@ -25,6 +25,11 @@ import {
   type AssetRecord,
   type AssetType,
 } from "../engine/assets/manifest";
+import {
+  isParentClass,
+  normalizeActorScriptDef,
+  type ParentClass,
+} from "../engine/scene/actorScript";
 
 /** The editor snap/grid settings the save endpoint persists into the manifest. */
 export interface EditorSettingsPatch {
@@ -675,6 +680,24 @@ export function validateSaveCollisionPayload(value: unknown): {
   };
 }
 
+/** Validates the `/__save-actor` payload (`{ path, actor }`). */
+export function validateSaveActorPayload(value: unknown): {
+  path: string;
+  actor: Record<string, unknown>;
+} {
+  if (!value || typeof value !== "object") throw new Error("actor payload must be an object");
+  const input = value as Record<string, unknown>;
+  if (typeof input.path !== "string" || !input.path.endsWith(".actor.json")) {
+    throw new Error("actor payload path must end with .actor.json");
+  }
+  if (input.path.includes("..")) throw new Error("actor payload path must not contain ..");
+  // Normalize defensively so malformed authoring data never lands on disk.
+  return {
+    path: input.path,
+    actor: normalizeActorScriptDef(input.actor) as unknown as Record<string, unknown>,
+  };
+}
+
 export function validateAssetMaterialSlotsDef(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("material slots def must be an object");
@@ -769,6 +792,8 @@ export interface ContentNewPayload {
   kind: ContentNewKind;
   dir: string;
   name: string;
+  /** For `kind: "script"`, the picked Actor Script parent class. */
+  parentClass?: ParentClass;
 }
 
 function isContentNewKind(value: unknown): value is ContentNewKind {
@@ -799,7 +824,15 @@ export function validateContentNewPayload(value: unknown): ContentNewPayload {
   if (!isContentNewKind(input.kind)) throw new Error(`invalid content kind: ${String(input.kind)}`);
   if (typeof input.dir !== "string") throw new Error("content payload dir must be a string");
   if (input.dir.includes("..")) throw new Error("content payload dir must not contain ..");
-  return { kind: input.kind, dir: input.dir, name: sanitizeContentName(input.name) };
+  const payload: ContentNewPayload = {
+    kind: input.kind,
+    dir: input.dir,
+    name: sanitizeContentName(input.name),
+  };
+  if (input.kind === "script") {
+    payload.parentClass = isParentClass(input.parentClass) ? input.parentClass : "actor";
+  }
+  return payload;
 }
 
 export interface ContentNewFile {
@@ -810,13 +843,19 @@ export interface ContentNewFile {
 }
 
 /** Minimal JSON stub for a typed asset; real editors expand these later. */
-function contentStubJson(kind: Exclude<ContentNewKind, "folder">, name: string): string {
+function contentStubJson(payload: ContentNewPayload): string {
+  const { kind, name } = payload;
   let body: Record<string, unknown>;
   if (kind === "level") {
     // Empty RoomLayout (engine/scene/layout.ts).
     body = { schema: 1, name, loadGroups: [], instances: [], characters: [] };
   } else if (kind === "script") {
-    body = { schema: 1, type: "script", name, graph: {} };
+    // Actor Script class-asset (engine/scene/actorScript.ts), seeded with the
+    // picked parent class and a root Transform component.
+    body = normalizeActorScriptDef(
+      { name, parentClass: payload.parentClass ?? "actor" },
+      name,
+    ) as unknown as Record<string, unknown>;
   } else if (kind === "sound") {
     body = { schema: 1, type: "sound", name, clip: "" };
   } else if (kind === "ui") {
@@ -838,9 +877,11 @@ export function resolveContentNewFile(payload: ContentNewPayload): ContentNewFil
   if (payload.kind === "folder") {
     return { path: join(payload.name), content: null };
   }
+  // A "script" is an Actor Script class-asset, stored as `<name>.actor.json`.
+  const ext = payload.kind === "script" ? "actor" : payload.kind;
   return {
-    path: join(`${payload.name}.${payload.kind}.json`),
-    content: contentStubJson(payload.kind, payload.name),
+    path: join(`${payload.name}.${ext}.json`),
+    content: contentStubJson(payload),
   };
 }
 

@@ -140,10 +140,15 @@ import {
   validateLayout,
   validateLightActor,
   validatePlacement,
+  validateSaveActorPayload,
   validateSaveCollisionPayload,
   validateSaveMaterialSlotsPayload,
   validateSaveUvwPayload,
 } from "./saveValidator";
+import {
+  defaultActorScriptDef,
+  normalizeActorScriptDef,
+} from "../engine/scene/actorScript";
 import {
   assetByteSize,
   assetLoadGroup,
@@ -4508,6 +4513,91 @@ check("content-new resolves to typed stub files and folders", () => {
     instances: [],
     characters: [],
   });
+});
+
+check("content-new 'script' creates a `.actor.json` Actor Script seeded with the parent class", () => {
+  const door = resolveContentNewFile({
+    kind: "script",
+    dir: "assets/blueprints",
+    name: "DoorBP",
+    parentClass: "pawn",
+  });
+  assert.equal(door.path, "assets/blueprints/DoorBP.actor.json");
+  const def = JSON.parse(door.content ?? "");
+  assert.equal(def.type, "actor");
+  assert.equal(def.parentClass, "pawn");
+  assert.equal(def.name, "DoorBP");
+  // Always seeded with a root Transform so the component tree has an anchor.
+  assert.deepEqual(def.components, [{ id: "root", component: "Transform", props: {} }]);
+  assert.deepEqual(def.eventBindings, []);
+  assert.deepEqual(def.variables, []);
+
+  // No parent class picked falls back to "actor".
+  const plain = resolveContentNewFile({ kind: "script", dir: "", name: "Thing" });
+  assert.equal(JSON.parse(plain.content ?? "").parentClass, "actor");
+  // The payload validator defaults the parent class for scripts too.
+  assert.equal(
+    validateContentNewPayload({ kind: "script", dir: "", name: "X" }).parentClass,
+    "actor",
+  );
+});
+
+check("normalizeActorScriptDef coerces malformed/legacy data to a valid class", () => {
+  // Legacy stub (old `type:"script"` with a dead graph) → empty actor class.
+  const legacy = normalizeActorScriptDef({ schema: 1, type: "script", name: "Old", graph: {} });
+  assert.equal(legacy.type, "actor");
+  assert.equal(legacy.parentClass, "actor");
+  assert.equal(legacy.name, "Old");
+  assert.equal(legacy.components.length, 1);
+  assert.equal(legacy.components[0]?.component, "Transform");
+
+  // Junk drops out; valid entries survive; root Transform is injected.
+  const messy = normalizeActorScriptDef({
+    name: "Mix",
+    parentClass: "character",
+    variables: [
+      { key: "hp", label: "Health", type: "number", default: 100 },
+      { key: "", type: "number" }, // dropped (empty key)
+      { key: "bad", type: "bogus" }, // dropped (bad type)
+    ],
+    components: [
+      { id: "mesh", parent: "root", component: "MeshRenderer", props: { assetId: "door" } },
+      { component: "NotAThing", props: {} }, // dropped (bad kind)
+    ],
+    eventBindings: [
+      { event: "tick", scriptId: "spin", params: { speedDeg: 90 } },
+      { event: "tick", scriptId: "" }, // dropped (empty id)
+      { event: "bogus", scriptId: "x" }, // dropped (bad event)
+    ],
+  });
+  assert.equal(messy.parentClass, "character");
+  assert.equal(messy.variables.length, 1);
+  assert.equal(messy.variables[0]?.key, "hp");
+  // root Transform prepended because none of the authored nodes are roots.
+  assert.equal(messy.components[0]?.component, "Transform");
+  assert.equal(messy.components.some((node) => node.component === "MeshRenderer"), true);
+  assert.equal(messy.eventBindings.length, 1);
+  assert.deepEqual(messy.eventBindings[0], {
+    event: "tick",
+    scriptId: "spin",
+    params: { speedDeg: 90 },
+  });
+});
+
+check("actor save payload requires a .actor.json path and normalizes the body", () => {
+  const payload = validateSaveActorPayload({
+    path: "assets/blueprints/DoorBP.actor.json",
+    actor: defaultActorScriptDef("DoorBP", "pawn"),
+  });
+  assert.equal(payload.path, "assets/blueprints/DoorBP.actor.json");
+  assert.equal(payload.actor.type, "actor");
+  assert.equal(payload.actor.parentClass, "pawn");
+  assert.throws(() =>
+    validateSaveActorPayload({ path: "assets/blueprints/DoorBP.json", actor: {} }),
+  );
+  assert.throws(() =>
+    validateSaveActorPayload({ path: "../secret.actor.json", actor: {} }),
+  );
 });
 
 check("import asset meta allowlists extensions and rejects unsafe names/types", () => {

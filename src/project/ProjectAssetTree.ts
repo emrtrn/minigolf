@@ -66,12 +66,22 @@ export type ContentNewKind =
   | "sound"
   | "ui";
 
+/** Parent class picked for a `kind: "script"` Actor Script (Unreal-style). */
+export type ScriptParentClass =
+  | "actor"
+  | "pawn"
+  | "character"
+  | "playerController"
+  | "gameMode";
+
 export interface ContentNewRequest {
   kind: ContentNewKind;
   /** Public-root-relative directory the new folder/file is created inside. */
   dir: string;
   /** User-entered base name (sanitized server-side). */
   name: string;
+  /** For `kind: "script"`, the picked Actor Script parent class. */
+  parentClass?: ScriptParentClass;
 }
 
 /**
