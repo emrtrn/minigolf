@@ -1,5 +1,13 @@
-import { Box3, DirectionalLight, Group, Matrix4, Object3D, TextureLoader } from "three";
-import type { AmbientLight, InstancedMesh, Material, PerspectiveCamera, Scene, WebGLRenderer } from "three";
+import { Box3, DirectionalLight, Group, Matrix4, Object3D, TextureLoader, Vector3 } from "three";
+import type {
+  AmbientLight,
+  InstancedMesh,
+  Material,
+  PerspectiveCamera,
+  Scene,
+  WebGLRenderer,
+  WebGLRenderTarget,
+} from "three";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import { AssetLoader } from "./assetLoader";
@@ -82,6 +90,11 @@ import {
   PostProcessPipeline,
   resolvePostProcess,
 } from "@engine/render-three/postProcess";
+import {
+  applyReflectionEnvironment,
+  captureSkyEnvironment,
+  resolveReflection,
+} from "@engine/render-three/reflection";
 import { readRotation } from "@engine/scene/transform";
 import type { Sky } from "three/examples/jsm/objects/Sky.js";
 import {
@@ -214,6 +227,8 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
   /** Sky Atmosphere dome (singleton); null when no sky actor is in the layout. */
   private skyObject: Sky | null = null;
   private cloudObject: CloudDome | null = null;
+  /** Captured Sky Light environment (PMREM) backing `scene.environment`; null when none. */
+  private reflectionTarget: WebGLRenderTarget | null = null;
   private postProcessPipeline: PostProcessPipeline | null = null;
   private cameraViewTouched = false;
   /** Latest per-entity locomotion snapshot a behavior reported (read by the Game Mode). */
@@ -339,6 +354,7 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
     this.gameModeSession?.dispose();
     this.postProcessPipeline?.dispose();
     this.postProcessPipeline = null;
+    this.disposeReflectionTarget();
     void this.engineApp.dispose();
     this.renderer.dispose();
   }
@@ -402,6 +418,7 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
     this.fitSunShadowToScene();
     this.applyBackgroundAndAmbient();
     this.applyRuntimeSky();
+    this.applyRuntimeReflection(true);
     this.applyRuntimePostProcess();
     this.applyRuntimeFog();
     this.applyRuntimeClouds();
@@ -1047,6 +1064,50 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
     }
     applyCloudUniforms(this.cloudObject, resolved);
     followCameraWithClouds(this.cloudObject, this.camera);
+  }
+
+  /**
+   * Mirrors the editor's Reflection Environment in Play: capture the authored Sky
+   * Atmosphere once and use it as the PBR environment/ambient bounce.
+   */
+  private applyRuntimeReflection(recapture = false): void {
+    const actor = this.layout?.reflection ?? null;
+    if (!actor) {
+      this.disposeReflectionTarget();
+      applyReflectionEnvironment(this.scene, null, null);
+      return;
+    }
+
+    const resolved = resolveReflection(actor);
+    if (resolved.hidden) {
+      this.disposeReflectionTarget();
+      applyReflectionEnvironment(this.scene, null, resolved);
+      return;
+    }
+
+    if (recapture || !this.reflectionTarget) {
+      this.disposeReflectionTarget();
+      const skyActor = this.layout?.skyAtmosphere ?? null;
+      if (skyActor) {
+        const sun = this.sunLightActor();
+        const sunDirection = sun
+          ? sunDirectionFromLightRotation(readRotation(sun))
+          : new Vector3(0, 1, 0);
+        this.reflectionTarget = captureSkyEnvironment(
+          this.renderer,
+          resolveSkyAtmosphere(skyActor),
+          sunDirection,
+        );
+      }
+    }
+
+    applyReflectionEnvironment(this.scene, this.reflectionTarget, resolved);
+  }
+
+  private disposeReflectionTarget(): void {
+    if (!this.reflectionTarget) return;
+    this.reflectionTarget.dispose();
+    this.reflectionTarget = null;
   }
 
   /** Applies global Post Process renderer properties after Sky tone mapping. */

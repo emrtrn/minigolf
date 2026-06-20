@@ -240,7 +240,9 @@
     "vignette": {
       "intensity": 1,
       "offset": 1
-    }
+    },
+    "saturation": 1,
+    "contrast": 1
   },
   "lights": [
     {
