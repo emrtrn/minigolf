@@ -6485,6 +6485,98 @@
         "bytes": 360
       },
       "license": "Unknown"
+    },
+    {
+      "id": "t-metal-aluminum-d",
+      "name": "T Metal Aluminum D",
+      "assetType": "texture",
+      "category": "Textures",
+      "path": "assets/starter-content/Textures/T_Metal_Aluminum_D.png",
+      "tags": [],
+      "placeable": false,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": false,
+        "allowScale": false
+      },
+      "runtime": {
+        "loadGroup": "Textures",
+        "castShadow": false,
+        "receiveShadow": false,
+        "collision": false,
+        "bytes": 549624
+      },
+      "license": "Unknown"
+    },
+    {
+      "id": "t-metal-copper-d",
+      "name": "T Metal Copper D",
+      "assetType": "texture",
+      "category": "Textures",
+      "path": "assets/starter-content/Textures/T_Metal_Copper_D.png",
+      "tags": [],
+      "placeable": false,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": false,
+        "allowScale": false
+      },
+      "runtime": {
+        "loadGroup": "Textures",
+        "castShadow": false,
+        "receiveShadow": false,
+        "collision": false,
+        "bytes": 558854
+      },
+      "license": "Unknown"
+    },
+    {
+      "id": "t-metal-gold-d",
+      "name": "T Metal Gold D",
+      "assetType": "texture",
+      "category": "Textures",
+      "path": "assets/starter-content/Textures/T_Metal_Gold_D.png",
+      "tags": [],
+      "placeable": false,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": false,
+        "allowScale": false
+      },
+      "runtime": {
+        "loadGroup": "Textures",
+        "castShadow": false,
+        "receiveShadow": false,
+        "collision": false,
+        "bytes": 569788
+      },
+      "license": "Unknown"
+    },
+    {
+      "id": "t-metal-gold-n",
+      "name": "T Metal Gold N",
+      "assetType": "texture",
+      "category": "Textures",
+      "path": "assets/starter-content/Textures/T_Metal_Gold_N.png",
+      "tags": [],
+      "placeable": false,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": false,
+        "allowScale": false
+      },
+      "runtime": {
+        "loadGroup": "Textures",
+        "castShadow": false,
+        "receiveShadow": false,
+        "collision": false,
+        "bytes": 223961
+      },
+      "license": "Unknown"
     }
   ]
 }
