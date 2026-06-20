@@ -49,6 +49,22 @@ export interface EditableFog {
   end: number;
 }
 
+/**
+ * Resolved static Cloud Layer fields for the Details panel (singleton actor). A
+ * procedural cloud dome — coverage/density/softness/scale paint the noise,
+ * `speed` drives the optional drift (0 = static).
+ */
+export interface EditableCloud {
+  name: string;
+  hidden: boolean;
+  color: string;
+  coverage: number;
+  density: number;
+  softness: number;
+  scale: number;
+  speed: number;
+}
+
 export interface EditableSelection {
   id: string;
   kind: Selection["kind"];
@@ -96,6 +112,8 @@ export interface EditableSelection {
   sky?: EditableSky;
   /** Resolved Height Fog settings; present only when `kind === "fog"`. */
   fog?: EditableFog;
+  /** Resolved Cloud Layer settings; present only when `kind === "cloud"`. */
+  cloud?: EditableCloud;
 }
 
 export interface EditableSceneObject extends EditableSelection {

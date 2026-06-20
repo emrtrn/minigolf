@@ -67,6 +67,14 @@ import {
   sunDirectionFromLightRotation,
 } from "@engine/render-three/skyAtmosphere";
 import { applySceneFog, resolveHeightFog } from "@engine/render-three/heightFog";
+import {
+  advanceCloudTime,
+  applyCloudUniforms,
+  createCloudObject,
+  followCameraWithClouds,
+  resolveCloudLayer,
+  type CloudDome,
+} from "@engine/render-three/cloudLayer";
 import { readRotation } from "@engine/scene/transform";
 import type { Sky } from "three/examples/jsm/objects/Sky.js";
 import {
@@ -198,6 +206,7 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
   private ambientLight: AmbientLight | null = null;
   /** Sky Atmosphere dome (singleton); null when no sky actor is in the layout. */
   private skyObject: Sky | null = null;
+  private cloudObject: CloudDome | null = null;
   private cameraViewTouched = false;
   /** Latest per-entity locomotion snapshot a behavior reported (read by the Game Mode). */
   private readonly locomotionReports = new Map<string, LocomotionInput>();
@@ -298,6 +307,10 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
       this.gameModeSession?.update(deltaMs / 1000);
       this.updateParticleEffects(deltaMs / 1000);
       if (this.skyObject) followCameraWithSky(this.skyObject, this.camera);
+      if (this.cloudObject) {
+        followCameraWithClouds(this.cloudObject, this.camera);
+        advanceCloudTime(this.cloudObject, deltaMs / 1000);
+      }
       this.renderer.render(this.scene, this.camera);
       this.onFrame?.(deltaMs);
     };
@@ -379,6 +392,7 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
     this.applyBackgroundAndAmbient();
     this.applyRuntimeSky();
     this.applyRuntimeFog();
+    this.applyRuntimeClouds();
 
     const bytes = await this.assetLoader.totalBytesForGroups(this.layout.loadGroups);
     const materialStats = collectMaterialStats(this.models);
@@ -1004,6 +1018,23 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
   private applyRuntimeFog(): void {
     const actor = this.layout?.heightFog ?? null;
     applySceneFog(this.scene, actor ? resolveHeightFog(actor) : null);
+  }
+
+  /**
+   * Builds the static Cloud Layer dome at runtime (mirrors the editor's
+   * applyCloudLayer) so Play shows the same procedural clouds. Absent/hidden
+   * clouds leave the scene without the dome.
+   */
+  private applyRuntimeClouds(): void {
+    const actor = this.layout?.cloudLayer ?? null;
+    if (!actor) return;
+    const resolved = resolveCloudLayer(actor);
+    if (!this.cloudObject) {
+      this.cloudObject = createCloudObject();
+      this.scene.add(this.cloudObject);
+    }
+    applyCloudUniforms(this.cloudObject, resolved);
+    followCameraWithClouds(this.cloudObject, this.camera);
   }
 
   /** The scene's Sun light actor (preferred id, else the first directional light). */

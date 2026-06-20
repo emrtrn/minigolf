@@ -53,10 +53,11 @@ engine/editor.
   type-checking.
 - **Save-validator allowlist gotcha:** any new `LayoutPlacement` /
   `LayoutCharacter` / `LayoutLightActor` field — or any new field on a singleton
-  environment actor (`LayoutSkyAtmosphere`, `LayoutHeightFog`) — must be added to
-  the `tools/saveValidator.ts` allowlist (`applyTransformFields` /
-  `validateLightActor` / `validateSkyAtmosphere` / `validateHeightFog`, imported
-  by `vite.config.ts`) or it is silently dropped on save.
+  environment actor (`LayoutSkyAtmosphere`, `LayoutHeightFog`, `LayoutCloudLayer`)
+  — must be added to the `tools/saveValidator.ts` allowlist
+  (`applyTransformFields` / `validateLightActor` / `validateSkyAtmosphere` /
+  `validateHeightFog` / `validateCloudLayer`, imported by `vite.config.ts`) or it
+  is silently dropped on save.
 
 ## Authoring Data Flow
 

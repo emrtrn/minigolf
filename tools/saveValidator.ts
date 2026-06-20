@@ -586,6 +586,43 @@ export function validateHeightFog(value: unknown): Record<string, unknown> | nul
   return fog;
 }
 
+/**
+ * Allowlist validator for the singleton static Cloud Layer actor. Mirrors
+ * {@link validateHeightFog}: every surviving field is copied explicitly;
+ * omitted/out-of-range values are dropped so the runtime falls back to
+ * {@link resolveCloudLayer} defaults. Returns null only when no cloud actor is
+ * present (`undefined`); a placed cloud at all-defaults still round-trips as an
+ * empty object so its existence is never lost on save.
+ */
+export function validateCloudLayer(value: unknown): Record<string, unknown> | null {
+  if (value === undefined) return null;
+  if (!value || typeof value !== "object") throw new Error("cloudLayer must be an object");
+  const input = value as Record<string, unknown>;
+  const cloud: Record<string, unknown> = {};
+
+  if (typeof input.name === "string" && input.name.length > 0) cloud.name = input.name;
+  if (input.hidden === true) cloud.hidden = true;
+  if (typeof input.color === "string" && /^#[0-9a-fA-F]{6}$/.test(input.color)) {
+    cloud.color = input.color;
+  }
+
+  const numeric: Array<[keyof typeof input, number, number]> = [
+    ["coverage", 0, 1],
+    ["density", 0, 1],
+    ["softness", 0, 1],
+    ["scale", 0.1, 20],
+    ["speed", 0, 5],
+  ];
+  for (const [key, min, max] of numeric) {
+    const resolved = validateOptionalNumber(input[key], `cloudLayer.${String(key)}`, min, max);
+    if (resolved !== undefined) cloud[key as string] = resolved;
+  }
+
+  // A present (placed) cloud always round-trips — even an all-defaults `{}` — so
+  // the actor's existence survives the save; only `undefined` returns null.
+  return cloud;
+}
+
 export function validateLayout(value: unknown): unknown {
   if (!value || typeof value !== "object") throw new Error("layout must be an object");
   const layout = value as Record<string, unknown>;
@@ -603,6 +640,7 @@ export function validateLayout(value: unknown): unknown {
   const worldSettings = validateWorldSettings(layout.worldSettings);
   const skyAtmosphere = validateSkyAtmosphere(layout.skyAtmosphere);
   const heightFog = validateHeightFog(layout.heightFog);
+  const cloudLayer = validateCloudLayer(layout.cloudLayer);
   const lights = layout.lights === undefined
     ? null
     : Array.isArray(layout.lights)
@@ -665,6 +703,7 @@ export function validateLayout(value: unknown): unknown {
   if (worldSettings) output.worldSettings = worldSettings;
   if (skyAtmosphere) output.skyAtmosphere = skyAtmosphere;
   if (heightFog) output.heightFog = heightFog;
+  if (cloudLayer) output.cloudLayer = cloudLayer;
   if (lights) output.lights = lights;
   if (actors) output.actors = actors;
   return output;

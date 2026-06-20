@@ -1,8 +1,10 @@
 import { defaultLightIntensity } from "@engine/scene/lights";
 import { resolveSkyAtmosphere } from "@engine/scene/skyAtmosphere";
 import { resolveHeightFog } from "@engine/scene/heightFog";
+import { resolveCloudLayer } from "@engine/scene/cloudLayer";
 import { readPivot, readRotation, readScale } from "@engine/scene/transform";
 import type {
+  LayoutCloudLayer,
   LayoutHeightFog,
   LayoutLightActor,
   LayoutSkyAtmosphere,
@@ -23,6 +25,9 @@ export const SKY_ATMOSPHERE_ASSET_ID = "sky-atmosphere";
 
 /** Stable Outliner/Details asset id shown for the singleton Height Fog. */
 export const HEIGHT_FOG_ASSET_ID = "height-fog";
+
+/** Stable Outliner/Details asset id shown for the singleton Cloud Layer. */
+export const CLOUD_LAYER_ASSET_ID = "cloud-layer";
 
 /**
  * Builds the transform-less Details/Outliner view-model for the Sky Atmosphere
@@ -77,6 +82,35 @@ function buildFogEditableSelection(fog: LayoutHeightFog): EditableSelection {
     simulatePhysics: false,
     physics: {},
     fog: { ...resolved },
+    metadata: {},
+  };
+}
+
+/**
+ * Builds the transform-less Details/Outliner view-model for the static Cloud
+ * Layer singleton. Like the sky/fog it has no position/scale, so transform fields
+ * are zeroed and the resolved cloud settings ride along in
+ * {@link EditableSelection.cloud}.
+ */
+function buildCloudEditableSelection(cloud: LayoutCloudLayer): EditableSelection {
+  const resolved = resolveCloudLayer(cloud);
+  return {
+    id: "cloud",
+    kind: "cloud",
+    assetId: CLOUD_LAYER_ASSET_ID,
+    category: "visual-effects",
+    label: resolved.name,
+    position: [0, 0, 0],
+    rotation: [0, 0, 0],
+    scale: [1, 1, 1],
+    pivot: [0, 0, 0],
+    scaleLocked: true,
+    locked: false,
+    castShadow: false,
+    collision: false,
+    simulatePhysics: false,
+    physics: {},
+    cloud: { ...resolved },
     metadata: {},
   };
 }
@@ -215,6 +249,16 @@ export function buildSceneObjects(
     });
   }
 
+  if (layout.cloudLayer) {
+    const selection: Selection = { kind: "cloud" };
+    objects.push({
+      ...buildCloudEditableSelection(layout.cloudLayer),
+      selected: deps.isSelected(selection),
+      hidden: layout.cloudLayer.hidden ?? false,
+      locked: false,
+    });
+  }
+
   layout.actors?.forEach((actor, index) => {
     const selection: Selection = { kind: "actor", index };
     objects.push({
@@ -328,6 +372,11 @@ export function buildEditableSelection(
   if (selection.kind === "fog") {
     if (!layout.heightFog) return null;
     return buildFogEditableSelection(layout.heightFog);
+  }
+
+  if (selection.kind === "cloud") {
+    if (!layout.cloudLayer) return null;
+    return buildCloudEditableSelection(layout.cloudLayer);
   }
 
   if (selection.kind === "actor") {

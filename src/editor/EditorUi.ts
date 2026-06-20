@@ -31,6 +31,7 @@ import {
 import type {
   LayoutAudio,
   LayoutBehavior,
+  LayoutCloudLayer,
   LayoutInteraction,
   LayoutHeightFog,
   LayoutParticleEmitter,
@@ -307,6 +308,7 @@ export class EditorUi {
               <div class="add-actor-section-title">Visual Effects</div>
               <button type="button" data-add-sky-atmosphere>Sky Atmosphere</button>
               <button type="button" data-add-height-fog>Exponential Height Fog</button>
+              <button type="button" data-add-cloud-layer>Cloud Layer</button>
               <div class="add-actor-section-title">Gameplay</div>
               <button type="button" data-add-player-start>Player Start</button>
             </div>
@@ -580,6 +582,14 @@ export class EditorUi {
       .querySelector<HTMLButtonElement>("[data-add-height-fog]")
       ?.addEventListener("click", () => {
         this.app.addHeightFog();
+      });
+
+    // Cloud Layer is a transform-less singleton environment actor: click to add
+    // (or select the existing one) rather than drag-to-place.
+    this.root
+      .querySelector<HTMLButtonElement>("[data-add-cloud-layer]")
+      ?.addEventListener("click", () => {
+        this.app.addCloudLayer();
       });
 
     this.root.querySelectorAll<HTMLButtonElement>("[data-inspector-tab]").forEach((button) => {
@@ -2188,6 +2198,10 @@ export class EditorUi {
       this.renderFogDetails(selection);
       return;
     }
+    if (selection.kind === "cloud" && selection.cloud) {
+      this.renderCloudDetails(selection);
+      return;
+    }
 
     this.detailsScale = [...selection.scale];
 
@@ -2757,8 +2771,10 @@ export class EditorUi {
    * core stays generic: groups/fields come from the project's metadata schema.
    */
   private renderMetadataSections(selection: EditableSelection): string {
-    // The Sky Atmosphere + Height Fog carry no schema-driven gameplay metadata.
-    if (selection.kind === "sky" || selection.kind === "fog") return "";
+    // The Sky Atmosphere + Height Fog + Cloud Layer carry no schema-driven gameplay metadata.
+    if (selection.kind === "sky" || selection.kind === "fog" || selection.kind === "cloud") {
+      return "";
+    }
     const groups = metadataGroupsForTarget(this.metadataSchema, {
       kind: selection.kind,
       category: selection.category,
@@ -2931,7 +2947,14 @@ export class EditorUi {
   }
 
   private metadataFieldFor(key: string): MetadataFieldDef | null {
-    if (!this.selected || this.selected.kind === "sky" || this.selected.kind === "fog") return null;
+    if (
+      !this.selected ||
+      this.selected.kind === "sky" ||
+      this.selected.kind === "fog" ||
+      this.selected.kind === "cloud"
+    ) {
+      return null;
+    }
     const groups = metadataGroupsForTarget(this.metadataSchema, {
       kind: this.selected.kind,
       category: this.selected.category,
@@ -3232,6 +3255,83 @@ export class EditorUi {
           { [key]: value } as Partial<LayoutHeightFog>,
           "Edit Exponential Height Fog",
         );
+      });
+    });
+  }
+
+  /**
+   * Details panel for the singleton static Cloud Layer (procedural cloud dome).
+   * Coverage/density/softness/scale paint the noise; Wind drives the optional
+   * drift (0 = static). Not volumetric — a flat camera-following dome backdrop.
+   */
+  private renderCloudDetails(selection: EditableSelection): void {
+    const cloud = selection.cloud;
+    if (!cloud) return;
+    this.detailsScale = [1, 1, 1];
+    this.detailsBody.innerHTML = `
+      <div class="detail-heading">
+        <strong>${escapeHtml(selection.label)}</strong>
+        <span>visual effect / cloud layer</span>
+      </div>
+      <label class="detail-row">
+        <span>Name</span>
+        <input data-cloud-name type="text" value="${escapeHtml(cloud.name)}" placeholder="Cloud Layer" />
+      </label>
+      <div class="detail-section">
+        <div class="detail-section-title">Clouds</div>
+        <label class="detail-row">
+          <span>Color</span>
+          <input data-cloud-color type="color" value="${escapeHtml(cloud.color)}" />
+        </label>
+        <label class="detail-row">
+          <span>Coverage</span>
+          <input data-cloud-number="coverage" type="number" step="0.05" min="0" max="1"
+            value="${cloud.coverage}" />
+        </label>
+        <label class="detail-row">
+          <span>Density</span>
+          <input data-cloud-number="density" type="number" step="0.05" min="0" max="1"
+            value="${cloud.density}" />
+        </label>
+        <label class="detail-row">
+          <span>Softness</span>
+          <input data-cloud-number="softness" type="number" step="0.05" min="0" max="1"
+            value="${cloud.softness}" />
+        </label>
+        <label class="detail-row">
+          <span>Scale</span>
+          <input data-cloud-number="scale" type="number" step="0.25" min="0.1" max="20"
+            value="${cloud.scale}" />
+        </label>
+        <label class="detail-row">
+          <span>Wind</span>
+          <input data-cloud-number="speed" type="number" step="0.05" min="0" max="5"
+            value="${cloud.speed}" />
+        </label>
+        <div class="detail-hint">Static procedural cloud dome. Wind 0 keeps it frozen; not volumetric.</div>
+      </div>
+    `;
+
+    const nameInput = this.detailsBody.querySelector<HTMLInputElement>("[data-cloud-name]");
+    nameInput?.addEventListener("change", () => {
+      const value = nameInput.value.trim();
+      this.app.setCloudLayer({ name: value.length > 0 ? value : undefined }, "Rename Cloud Layer");
+    });
+
+    this.detailsBody.querySelector<HTMLInputElement>("[data-cloud-color]")?.addEventListener(
+      "change",
+      (event) => {
+        const value = (event.currentTarget as HTMLInputElement).value;
+        this.app.setCloudLayer({ color: value }, "Edit Cloud Layer");
+      },
+    );
+
+    this.detailsBody.querySelectorAll<HTMLInputElement>("[data-cloud-number]").forEach((input) => {
+      input.addEventListener("change", () => {
+        const key = input.dataset.cloudNumber as keyof LayoutCloudLayer | undefined;
+        const value = Number(input.value);
+        if (!key || !Number.isFinite(value)) return;
+        this.app.setCloudLayer({ [key]: value } as Partial<LayoutCloudLayer>, "Edit Cloud Layer");
       });
     });
   }
@@ -3595,6 +3695,7 @@ function outlinerKindLabel(kind: EditableSceneObject["kind"]): string {
   if (kind === "light") return "L";
   if (kind === "sky") return "S";
   if (kind === "fog") return "F";
+  if (kind === "cloud") return "K";
   return "I";
 }
 

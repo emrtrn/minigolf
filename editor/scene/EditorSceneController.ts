@@ -558,8 +558,10 @@ export class EditorSceneController {
         continue;
       }
 
-      // The Sky Atmosphere + Height Fog singletons are deleted via their own dedicated commands.
-      if (selection.kind === "sky" || selection.kind === "fog") continue;
+      // The Sky Atmosphere + Height Fog + Cloud Layer singletons are deleted via their own dedicated commands.
+      if (selection.kind === "sky" || selection.kind === "fog" || selection.kind === "cloud") {
+        continue;
+      }
 
       const light = layout.lights?.[selection.index];
       if (light) {
@@ -1014,8 +1016,10 @@ export class EditorSceneController {
   private duplicateSelection(selection: Selection): Selection | null {
     const layout = this.host.getMutableLayout();
     if (!layout) return null;
-    // The Sky Atmosphere + Height Fog are singletons: never duplicated.
-    if (selection.kind === "sky" || selection.kind === "fog") return null;
+    // The Sky Atmosphere + Height Fog + Cloud Layer are singletons: never duplicated.
+    if (selection.kind === "sky" || selection.kind === "fog" || selection.kind === "cloud") {
+      return null;
+    }
     if (selection.kind === "instance") {
       const instance = layout.instances.find((entry) => entry.assetId === selection.assetId);
       const transform = instance?.placements[selection.placementIndex];

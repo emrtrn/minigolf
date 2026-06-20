@@ -82,6 +82,14 @@ import {
   sunDirectionFromLightRotation,
 } from "@engine/render-three/skyAtmosphere";
 import { applySceneFog, resolveHeightFog } from "@engine/render-three/heightFog";
+import {
+  advanceCloudTime,
+  applyCloudUniforms,
+  createCloudObject,
+  followCameraWithClouds,
+  resolveCloudLayer,
+  type CloudDome,
+} from "@engine/render-three/cloudLayer";
 import type { Sky } from "three/examples/jsm/objects/Sky.js";
 import {
   applySceneBackgroundAndAmbient,
@@ -138,6 +146,7 @@ import type {
   LayoutAudio,
   LayoutBehavior,
   LayoutCharacter,
+  LayoutCloudLayer,
   LayoutInteraction,
   LayoutLightActor,
   LayoutHeightFog,
@@ -320,6 +329,7 @@ export class SceneApp {
   private ambientLight: AmbientLight | null = null;
   /** Sky Atmosphere dome (singleton); null when no sky actor is placed. */
   private skyObject: Sky | null = null;
+  private cloudObject: CloudDome | null = null;
   private autoSaveTimer = 0;
   private frameHandle = 0;
   private lastTime = 0;
@@ -598,6 +608,10 @@ export class SceneApp {
       this.cameraController.update(deltaSeconds);
       this.updateGizmoScreenScale();
       if (this.skyObject) followCameraWithSky(this.skyObject, this.camera);
+      if (this.cloudObject) {
+        followCameraWithClouds(this.cloudObject, this.camera);
+        advanceCloudTime(this.cloudObject, deltaSeconds);
+      }
 
       if (this.selectionOutline) this.selectionOutline.render(deltaSeconds);
       else this.renderer.render(this.scene, this.camera);
@@ -755,6 +769,11 @@ export class SceneApp {
       );
       return;
     }
+    if (selection.kind === "cloud") {
+      const next = name.trim();
+      this.setCloudLayer({ name: next.length > 0 ? next : undefined }, "Rename Cloud Layer");
+      return;
+    }
     this.renameSelection(selection, name);
   }
 
@@ -770,6 +789,10 @@ export class SceneApp {
         { hidden },
         hidden ? "Hide Exponential Height Fog" : "Show Exponential Height Fog",
       );
+      return;
+    }
+    if (selection.kind === "cloud") {
+      this.setCloudLayer({ hidden }, hidden ? "Hide Cloud Layer" : "Show Cloud Layer");
       return;
     }
     if (this.editorSceneController.selectedCount > 1 && this.isSelectionSelected(selection)) {
@@ -1398,6 +1421,10 @@ export class SceneApp {
       this.removeHeightFog();
       return;
     }
+    if (this.selection?.kind === "cloud" && this.editorSceneController.selectedCount <= 1) {
+      this.removeCloudLayer();
+      return;
+    }
     this.editorSceneController.deleteSelected();
   }
 
@@ -1843,6 +1870,7 @@ export class SceneApp {
     this.applyBackgroundAndAmbient();
     this.applySkyAtmosphere();
     this.applyHeightFog();
+    this.applyCloudLayer();
     this.emitSceneObjectsChanged();
     this.emitWorldSettingsChanged();
     this.emitHistoryChanged();
@@ -2055,8 +2083,8 @@ export class SceneApp {
       this.rebuildInstanceGroup(selection.assetId);
       return;
     }
-    // The Sky Atmosphere + Height Fog have no scene object to re-sync from a transform.
-    if (selection.kind === "sky" || selection.kind === "fog") return;
+    // The Sky Atmosphere + Height Fog + Cloud Layer have no scene object to re-sync from a transform.
+    if (selection.kind === "sky" || selection.kind === "fog" || selection.kind === "cloud") return;
 
     if (selection.kind === "light") {
       this.refreshLightObject(selection.index);
@@ -2789,6 +2817,96 @@ export class SceneApp {
   }
 
   /**
+   * Builds/updates/removes the static Cloud Layer dome to match
+   * `layout.cloudLayer` and pushes the procedural uniforms. A hidden/absent cloud
+   * removes the dome from the scene.
+   */
+  private applyCloudLayer(): void {
+    const actor = this.layout?.cloudLayer ?? null;
+    if (!actor) {
+      if (this.cloudObject) {
+        this.scene.remove(this.cloudObject);
+        this.cloudObject.material.dispose();
+        this.cloudObject.geometry.dispose();
+        this.cloudObject = null;
+      }
+      return;
+    }
+
+    const resolved = resolveCloudLayer(actor);
+    if (!this.cloudObject) {
+      this.cloudObject = createCloudObject();
+      this.scene.add(this.cloudObject);
+    }
+    applyCloudUniforms(this.cloudObject, resolved);
+    followCameraWithClouds(this.cloudObject, this.camera);
+  }
+
+  /** Adds the singleton Cloud Layer (or selects the existing one). */
+  addCloudLayer(): void {
+    if (!this.layout) return;
+    if (this.layout.cloudLayer) {
+      this.select({ kind: "cloud" });
+      this.onStatus?.("Cloud Layer already exists - selected it.", "info");
+      return;
+    }
+    this.commitCloud({}, "Add Cloud Layer");
+    this.select({ kind: "cloud" });
+    this.onStatus?.("Added Cloud Layer.", "info");
+  }
+
+  /** Removes the singleton Cloud Layer (undoable). */
+  removeCloudLayer(): void {
+    if (!this.layout?.cloudLayer) return;
+    this.commitCloud(undefined, "Delete Cloud Layer");
+  }
+
+  /**
+   * Applies a partial edit to the Cloud Layer as one undoable command. A patch
+   * value of `undefined` clears that field (reverts to its default); any other
+   * value overrides it.
+   */
+  setCloudLayer(
+    patch: { [K in keyof LayoutCloudLayer]?: LayoutCloudLayer[K] | undefined },
+    label = "Edit Cloud Layer",
+  ): void {
+    if (!this.layout?.cloudLayer) return;
+    const next: LayoutCloudLayer = { ...this.layout.cloudLayer };
+    for (const key of Object.keys(patch) as Array<keyof LayoutCloudLayer>) {
+      const value = patch[key];
+      if (value === undefined) delete next[key];
+      else (next as Record<string, unknown>)[key] = value;
+    }
+    this.commitCloud(next, label);
+  }
+
+  /**
+   * Single undoable Cloud Layer mutation: swaps `layout.cloudLayer`, re-renders,
+   * and re-emits panels. Selection is cleared if the cloud disappears while it
+   * was the active selection. Mirrors {@link commitFog}.
+   */
+  private commitCloud(nextCloud: LayoutCloudLayer | undefined, label: string): void {
+    if (!this.layout) return;
+    const previousCloud = this.layout.cloudLayer ? { ...this.layout.cloudLayer } : undefined;
+
+    const apply = (cloud: LayoutCloudLayer | undefined): void => {
+      if (!this.layout) return;
+      if (cloud) this.layout.cloudLayer = { ...cloud };
+      else delete this.layout.cloudLayer;
+      this.applyCloudLayer();
+      if (!this.layout.cloudLayer && this.selection?.kind === "cloud") this.select(null);
+      else this.emitSelectionChanged();
+      this.scheduleAutoSave();
+    };
+
+    this.executeCommand({
+      label,
+      redo: () => apply(nextCloud),
+      undo: () => apply(previousCloud),
+    });
+  }
+
+  /**
    * World-settings edits persist immediately (debounced) so the user never has
    * to press Save for scene rendering tweaks.
    */
@@ -2878,6 +2996,11 @@ export class SceneApp {
     // The Height Fog's visibility is applied through applyHeightFog().
     if (selection.kind === "fog") {
       this.applyHeightFog();
+      return;
+    }
+    // The Cloud Layer's visibility is applied through applyCloudLayer().
+    if (selection.kind === "cloud") {
+      this.applyCloudLayer();
       return;
     }
     const object = this.characterObjects[selection.index];
@@ -3338,6 +3461,9 @@ export class SceneApp {
     if (selection.kind === "fog") {
       return resolveHeightFog(this.layout?.heightFog ?? null).name;
     }
+    if (selection.kind === "cloud") {
+      return resolveCloudLayer(this.layout?.cloudLayer ?? null).name;
+    }
     const transform = this.getMutableTransform(selection);
     if (selection.kind === "instance") {
       return transform?.name ?? selection.assetId;
@@ -3396,8 +3522,10 @@ export class SceneApp {
       const actorObject = this.actorObjects[selection.index];
       return actorObject ? new Box3().setFromObject(actorObject) : null;
     }
-    // The Sky Atmosphere is a backdrop and Height Fog is a scene-wide effect; neither has a bounding box.
-    if (selection.kind === "sky" || selection.kind === "fog") return null;
+    // The Sky Atmosphere + Cloud Layer are backdrops and Height Fog is a scene-wide effect; none has a bounding box.
+    if (selection.kind === "sky" || selection.kind === "fog" || selection.kind === "cloud") {
+      return null;
+    }
     const object = this.characterObjects[selection.index];
     return object ? new Box3().setFromObject(object) : null;
   }
@@ -3420,8 +3548,10 @@ export class SceneApp {
 
   private createSelectionOutlineTarget(selection: Selection): Object3D | null {
     if (!this.selectionOutline || !this.layout) return null;
-    // The Sky Atmosphere is a full-screen backdrop and Height Fog is scene-wide; neither has an outline proxy.
-    if (selection.kind === "sky" || selection.kind === "fog") return null;
+    // The Sky Atmosphere + Cloud Layer are full-screen backdrops and Height Fog is scene-wide; none has an outline proxy.
+    if (selection.kind === "sky" || selection.kind === "fog" || selection.kind === "cloud") {
+      return null;
+    }
 
     if (selection.kind === "instance") {
       const instance = this.layout.instances.find((entry) => entry.assetId === selection.assetId);
@@ -3660,8 +3790,14 @@ export class SceneApp {
   private updateGizmo(): void {
     clearGizmoGroup(this.gizmoGroup, this.gizmoPickables);
     if (!this.selection) return;
-    // The Sky Atmosphere + Height Fog have no transform, so they never show a gizmo.
-    if (this.selection.kind === "sky" || this.selection.kind === "fog") return;
+    // The Sky Atmosphere + Height Fog + Cloud Layer have no transform, so they never show a gizmo.
+    if (
+      this.selection.kind === "sky" ||
+      this.selection.kind === "fog" ||
+      this.selection.kind === "cloud"
+    ) {
+      return;
+    }
 
     const selected = this.getSelected();
     // In pivot-edit mode the move gizmo is shown even under the Select tool.
@@ -3707,8 +3843,10 @@ export class SceneApp {
     }
     if (selection.kind === "light") return this.layout.lights?.[selection.index] ?? null;
     if (selection.kind === "actor") return this.layout.actors?.[selection.index] ?? null;
-    // The Sky Atmosphere + Height Fog are transform-less singletons (no gizmo / move target).
-    if (selection.kind === "sky" || selection.kind === "fog") return null;
+    // The Sky Atmosphere + Height Fog + Cloud Layer are transform-less singletons (no gizmo / move target).
+    if (selection.kind === "sky" || selection.kind === "fog" || selection.kind === "cloud") {
+      return null;
+    }
     return this.layout.characters[selection.index] ?? null;
   }
 
@@ -3866,6 +4004,7 @@ export class SceneApp {
     if (selection.kind === "actor") return Boolean(this.layout.actors?.[selection.index]);
     if (selection.kind === "sky") return Boolean(this.layout.skyAtmosphere);
     if (selection.kind === "fog") return Boolean(this.layout.heightFog);
+    if (selection.kind === "cloud") return Boolean(this.layout.cloudLayer);
     return Boolean(this.layout.characters[selection.index]);
   }
 

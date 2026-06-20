@@ -157,6 +157,7 @@ import {
   validatePlacement,
   validateSkyAtmosphere,
   validateHeightFog,
+  validateCloudLayer,
   validateSaveActorPayload,
   validateNewBehaviorPayload,
   resolveBehaviorStub,
@@ -207,6 +208,12 @@ import {
   resolveHeightFog,
   HEIGHT_FOG_DEFAULTS,
 } from "../engine/render-three/heightFog";
+import {
+  applyCloudUniforms,
+  createCloudObject,
+  resolveCloudLayer,
+  CLOUD_LAYER_DEFAULTS,
+} from "../engine/render-three/cloudLayer";
 import {
   COLLISION_CHANNELS,
   COLLISION_OBJECT_CHANNEL_BITS,
@@ -5321,6 +5328,80 @@ check("validateHeightFog allowlists fields and round-trips through validateLayou
     heightFog: { mode: "exp", density: 0.04 },
   }) as RoomLayout;
   assert.deepEqual(layout.heightFog, { mode: "exp", density: 0.04 });
+  assert.deepEqual(validateLayout(layout), layout);
+});
+
+check("resolveCloudLayer fills defaults and overrides per field", () => {
+  assert.deepEqual(resolveCloudLayer(null), CLOUD_LAYER_DEFAULTS);
+  assert.deepEqual(resolveCloudLayer(undefined), CLOUD_LAYER_DEFAULTS);
+  const resolved = resolveCloudLayer({ coverage: 0.7, color: "#101820", speed: 0.5 });
+  assert.equal(resolved.coverage, 0.7);
+  assert.equal(resolved.color, "#101820");
+  assert.equal(resolved.speed, 0.5);
+  // Unset fields fall back to defaults.
+  assert.equal(resolved.density, CLOUD_LAYER_DEFAULTS.density);
+  assert.equal(resolved.name, CLOUD_LAYER_DEFAULTS.name);
+});
+
+check("applyCloudUniforms pushes resolved settings onto the dome shader", () => {
+  const dome = createCloudObject();
+  applyCloudUniforms(
+    dome,
+    resolveCloudLayer({ color: "#445566", coverage: 0.4, density: 0.6, speed: 0, hidden: false }),
+  );
+  const uniforms = dome.material.uniforms;
+  assert.equal((uniforms.uColor!.value as { getHexString: () => string }).getHexString(), "445566");
+  assert.equal(uniforms.uCoverage!.value, 0.4);
+  assert.equal(uniforms.uDensity!.value, 0.6);
+  // speed 0 → zero-length wind vector (fully static).
+  assert.equal((uniforms.uWind!.value as { length: () => number }).length(), 0);
+  assert.equal(dome.visible, true);
+
+  // A hidden cloud hides the dome and a non-zero speed yields a non-zero wind.
+  applyCloudUniforms(dome, resolveCloudLayer({ hidden: true, speed: 1 }));
+  assert.equal(dome.visible, false);
+  assert.ok((uniforms.uWind!.value as { length: () => number }).length() > 0);
+});
+
+check("validateCloudLayer allowlists fields and round-trips through validateLayout", () => {
+  // A present cloud with all-defaults still round-trips as `{}` so it is never lost.
+  assert.deepEqual(validateCloudLayer({}), {});
+  assert.equal(validateCloudLayer(undefined), null);
+
+  const cloud = validateCloudLayer({
+    name: "Overcast",
+    hidden: true,
+    color: "#aabbcc",
+    coverage: 0.8,
+    density: 0.5,
+    softness: 0.2,
+    scale: 3,
+    speed: 0.25,
+    bogusField: "dropped",
+  });
+  assert.deepEqual(cloud, {
+    name: "Overcast",
+    hidden: true,
+    color: "#aabbcc",
+    coverage: 0.8,
+    density: 0.5,
+    softness: 0.2,
+    scale: 3,
+    speed: 0.25,
+  });
+  // Invalid color is dropped; out-of-range numbers reject the save.
+  assert.deepEqual(validateCloudLayer({ color: "red" }), {});
+  assert.throws(() => validateCloudLayer({ coverage: 5 }));
+
+  const layout = validateLayout({
+    schema: 1,
+    name: "WithClouds",
+    loadGroups: [],
+    instances: [],
+    characters: [],
+    cloudLayer: { coverage: 0.6, density: 0.7 },
+  }) as RoomLayout;
+  assert.deepEqual(layout.cloudLayer, { coverage: 0.6, density: 0.7 });
   assert.deepEqual(validateLayout(layout), layout);
 });
 

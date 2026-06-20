@@ -294,6 +294,33 @@ export interface LayoutHeightFog {
   end?: number;
 }
 
+/**
+ * Singleton environment actor: a **static** Cloud Layer (the non-volumetric
+ * counterpart to Unreal's Volumetric Clouds). A camera-following dome backdrop
+ * whose cloud cover is painted by a procedural fBm-noise shader — no raymarching,
+ * no textures. All fields are optional; absent reads the defaults in
+ * `engine/scene/cloudLayer.ts`. True volumetric clouds are intentionally out of
+ * scope.
+ */
+export interface LayoutCloudLayer {
+  /** Display name in the Outliner. Absent means "Cloud Layer". */
+  name?: string;
+  /** Hidden in the viewport + runtime (no clouds). Absent means false. */
+  hidden?: boolean;
+  /** Cloud tint (hex `#rrggbb`). */
+  color?: string;
+  /** Fraction of the sky covered (0 = clear, 1 = overcast). */
+  coverage?: number;
+  /** Overall cloud opacity (0 = invisible, 1 = solid). */
+  density?: number;
+  /** Edge feathering of the cloud shapes (0 = hard, 1 = very soft). */
+  softness?: number;
+  /** Feature size of the noise — larger = bigger cloud masses. */
+  scale?: number;
+  /** Drift speed (wind). Absent/0 keeps the clouds static. */
+  speed?: number;
+}
+
 export interface LayoutLightActor {
   id: string;
   type: LayoutLightType;
@@ -327,6 +354,8 @@ export interface RoomLayout {
   skyAtmosphere?: LayoutSkyAtmosphere;
   /** Optional singleton Exponential Height Fog environment actor. */
   heightFog?: LayoutHeightFog;
+  /** Optional singleton static Cloud Layer environment actor. */
+  cloudLayer?: LayoutCloudLayer;
   lights?: LayoutLightActor[];
   instances: LayoutModelInstances[];
   characters: LayoutCharacter[];
