@@ -34,9 +34,14 @@ export {
 
 /** Box half-extent the camera sits inside; well within the 100u camera far plane. */
 const SKY_BOX_SCALE = 100;
+export const SKY_ATMOSPHERE_RENDER_EXPOSURE_SCALE = 0.2;
 
 const SKY_LOCAL_TONE_MAPPING_EXPOSURE = "forgeSkyLocalToneMappingExposure";
 const SKY_PREVIOUS_TONE_MAPPING_EXPOSURE = "forgeSkyPreviousToneMappingExposure";
+
+export function skyAtmosphereToneMappingExposure(exposure: number): number {
+  return Math.max(0, exposure * SKY_ATMOSPHERE_RENDER_EXPOSURE_SCALE);
+}
 
 function installSkyLocalToneMappingExposure(sky: Sky): void {
   sky.onBeforeRender = (renderer: WebGLRenderer) => {
@@ -138,7 +143,7 @@ export function applySkyToneMapping(
 ): void {
   if (resolved && !resolved.hidden) {
     renderer.toneMapping = ACESFilmicToneMapping;
-    renderer.toneMappingExposure = resolved.exposure;
+    renderer.toneMappingExposure = skyAtmosphereToneMappingExposure(resolved.exposure);
   } else {
     renderer.toneMapping = NoToneMapping;
     renderer.toneMappingExposure = 1;

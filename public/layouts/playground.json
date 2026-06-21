@@ -29,7 +29,7 @@
         {
           "position": [
             -3.05,
-            0.26,
+            0.24,
             -0.36
           ],
           "name": "Player Start",
@@ -150,7 +150,7 @@
       "placements": [
         {
           "position": [
-            1.26,
+            1.05,
             1,
             0.93
           ],
@@ -160,9 +160,9 @@
         },
         {
           "position": [
-            0.31,
+            -0.87,
             1,
-            2.25
+            0.96
           ],
           "materialSlot": "mirror-material",
           "rotationYDeg": 0,
@@ -180,9 +180,9 @@
         },
         {
           "position": [
-            -0.35,
+            -1.53,
             1,
-            2.24
+            0.95
           ],
           "materialSlot": "starter-mat-metal",
           "rotationYDeg": 0,
@@ -222,6 +222,10 @@
     {
       "assetId": "starter-sm-plane",
       "placements": []
+    },
+    {
+      "assetId": "starter-sm-cone",
+      "placements": []
     }
   ],
   "characters": [],
@@ -235,9 +239,9 @@
     "turbidity": 1,
     "mie": 0.002,
     "mieDirectionalG": 0.8,
-    "exposure": 0.2,
+    "exposure": 1,
     "skyLightCapture": {
-      "intensity": 1
+      "intensity": 0.4
     }
   },
   "cloudLayer": {
@@ -250,11 +254,11 @@
   },
   "postProcess": {
     "toneMapping": "aces",
-    "exposure": 0.2,
+    "exposure": 1,
     "bloom": {
       "enabled": true,
       "threshold": 1,
-      "intensity": 0.8,
+      "intensity": 0.5,
       "radius": 1
     },
     "vignette": {
@@ -288,19 +292,19 @@
     {
       "id": "reflection-plane-1",
       "position": [
-        -3.2,
-        0.27,
-        -3.04
+        0.06,
+        0.76,
+        1.45
       ],
       "name": "Reflection Plane",
       "rotation": [
-        -90,
         0,
-        0
+        0,
+        90
       ],
       "scale": [
-        1.63,
-        1.85,
+        0.91,
+        0.91,
         0.05
       ],
       "color": "#dbdbdb",

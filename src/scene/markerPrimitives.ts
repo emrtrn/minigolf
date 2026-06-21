@@ -2,27 +2,21 @@
  * Procedural geometry for the Player Start marker actor.
  *
  * Like the built-in shapes, the marker persists as an ordinary model instance
- * (synthetic `marker:playerStart` asset) so it flows through the same instanced
- * render / selection / save pipeline. Visually it mimics an engine capsule
- * collision gizmo: an orange capsule drawn as exactly four thin "wires" — two
- * perpendicular vertical profile loops plus a ring at each cap junction — with a
- * thin blue gizmo-style arrow (shaft + cone) showing the spawn facing.
- *
- * The instanced-model builder only renders `Mesh` objects, so the wires are thin
- * solid tube/torus meshes (not `LineSegments`). Emissive `MeshStandardMaterial`
- * keeps them bright without scene lighting and survives the editor's unlit->lit
- * conversion (which only rewrites `MeshBasicMaterial`). The runtime never renders
- * this asset.
+ * (synthetic `marker:playerStart` asset) so it flows through the same selection
+ * and save pipeline. Visually it mimics an Unreal-style editor helper: an orange
+ * capsule drawn as thin line geometry, with the existing blue forward arrow
+ * showing the spawn facing. The runtime never renders this asset.
  */
 import {
-  CatmullRomCurve3,
+  BufferGeometry,
   ConeGeometry,
   CylinderGeometry,
+  Float32BufferAttribute,
   Group,
+  LineBasicMaterial,
+  LineSegments,
   Mesh,
   MeshStandardMaterial,
-  TorusGeometry,
-  TubeGeometry,
   Vector3,
 } from "three";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -31,14 +25,12 @@ import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 const CAPSULE_COLOR = "#f5a623";
 /** Direction arrow colour (gizmo blue). */
 const ARROW_COLOR = "#2b7fff";
-/** Capsule body radius (world units; scene scale ≈ 1 unit per 2 m). */
+/** Capsule body radius (world units; scene scale ~= 1 unit per 2 m). */
 const CAPSULE_RADIUS = 0.18;
 /** Half-length of the capsule's straight (cylindrical) section. */
 const CAPSULE_HALF = 0.25;
-/** Thin tube radius that makes a mesh read as a single wire. */
-const WIRE_RADIUS = 0.008;
 /** Lift so the capsule's base rests on the placement point (the pawn's feet). */
-const CAPSULE_CENTER_Y = CAPSULE_HALF + CAPSULE_RADIUS;
+export const PLAYER_START_CAPSULE_CENTER_Y = CAPSULE_HALF + CAPSULE_RADIUS;
 
 function emissiveMaterial(color: string): MeshStandardMaterial {
   return new MeshStandardMaterial({
@@ -62,8 +54,8 @@ function stadiumLoopPoints(plane: "x" | "z"): Vector3[] {
   const side = 4;
   const point = (across: number, y: number): Vector3 =>
     plane === "x"
-      ? new Vector3(across, y + CAPSULE_CENTER_Y, 0)
-      : new Vector3(0, y + CAPSULE_CENTER_Y, across);
+      ? new Vector3(across, y + PLAYER_START_CAPSULE_CENTER_Y, 0)
+      : new Vector3(0, y + PLAYER_START_CAPSULE_CENTER_Y, across);
 
   const points: Vector3[] = [];
   // Top cap: from +across over the top to -across.
@@ -87,22 +79,44 @@ function stadiumLoopPoints(plane: "x" | "z"): Vector3[] {
   return points;
 }
 
-/** One vertical profile loop as a single thin closed tube ("wire"). */
-function verticalWire(plane: "x" | "z", material: MeshStandardMaterial): Mesh {
-  const curve = new CatmullRomCurve3(stadiumLoopPoints(plane), true, "catmullrom", 0);
-  const mesh = new Mesh(new TubeGeometry(curve, 96, WIRE_RADIUS, 6, true), material);
-  mesh.name = `player-start-wire-${plane}`;
-  return mesh;
+function pushLoopSegments(positions: number[], points: Vector3[]): void {
+  for (let i = 0; i < points.length; i += 1) {
+    const a = points[i]!;
+    const b = points[(i + 1) % points.length]!;
+    positions.push(a.x, a.y, a.z, b.x, b.y, b.z);
+  }
 }
 
-/** One horizontal ring (cap junction) as a thin torus laid flat in the XZ plane. */
-function horizontalWire(y: number, material: MeshStandardMaterial): Mesh {
-  const torus = new TorusGeometry(CAPSULE_RADIUS, WIRE_RADIUS, 6, 40);
-  torus.rotateX(Math.PI / 2);
-  const mesh = new Mesh(torus, material);
-  mesh.position.y = CAPSULE_CENTER_Y + y;
-  mesh.name = "player-start-ring";
-  return mesh;
+function pushHorizontalRingSegments(positions: number[], y: number): void {
+  const segments = 48;
+  const centerY = PLAYER_START_CAPSULE_CENTER_Y + y;
+  for (let i = 0; i < segments; i += 1) {
+    const a0 = (i / segments) * Math.PI * 2;
+    const a1 = ((i + 1) / segments) * Math.PI * 2;
+    positions.push(
+      Math.cos(a0) * CAPSULE_RADIUS,
+      centerY,
+      Math.sin(a0) * CAPSULE_RADIUS,
+      Math.cos(a1) * CAPSULE_RADIUS,
+      centerY,
+      Math.sin(a1) * CAPSULE_RADIUS,
+    );
+  }
+}
+
+/** Capsule helper drawn as real line segments, not shadow-casting tube meshes. */
+function capsuleWire(material: LineBasicMaterial): LineSegments {
+  const positions: number[] = [];
+  pushLoopSegments(positions, stadiumLoopPoints("x"));
+  pushLoopSegments(positions, stadiumLoopPoints("z"));
+  pushHorizontalRingSegments(positions, CAPSULE_HALF);
+  pushHorizontalRingSegments(positions, -CAPSULE_HALF);
+
+  const geometry = new BufferGeometry();
+  geometry.setAttribute("position", new Float32BufferAttribute(positions, 3));
+  const lines = new LineSegments(geometry, material);
+  lines.name = "player-start-capsule-wire";
+  return lines;
 }
 
 /** Thin gizmo-style arrow (shaft + cone) pointing along +Z (the pawn's forward). */
@@ -110,36 +124,39 @@ function forwardArrow(material: MeshStandardMaterial): Mesh[] {
   const shaftGeometry = new CylinderGeometry(0.012, 0.012, 0.3, 8);
   shaftGeometry.rotateX(Math.PI / 2);
   const shaft = new Mesh(shaftGeometry, material);
-  shaft.position.set(0, CAPSULE_CENTER_Y, 0.15);
+  shaft.position.set(0, PLAYER_START_CAPSULE_CENTER_Y, 0.15);
   shaft.name = "player-start-arrow-shaft";
+  shaft.castShadow = false;
+  shaft.receiveShadow = false;
 
   const headGeometry = new ConeGeometry(0.045, 0.12, 12);
   headGeometry.rotateX(Math.PI / 2);
   const head = new Mesh(headGeometry, material);
-  head.position.set(0, CAPSULE_CENTER_Y, 0.36);
+  head.position.set(0, PLAYER_START_CAPSULE_CENTER_Y, 0.36);
   head.name = "player-start-arrow-head";
+  head.castShadow = false;
+  head.receiveShadow = false;
 
   return [shaft, head];
 }
 
 /**
- * Build the Player Start marker as a minimal GLTF-shaped object: the four-wire
- * orange capsule plus a thin blue forward arrow, so the instanced-model builder
- * renders it like any other asset.
+ * Build the Player Start marker as a minimal GLTF-shaped object: the orange
+ * line-capsule plus a thin blue forward arrow, so the editor can clone it per
+ * placed Player Start while keeping the saved asset id unchanged.
  */
 export function createPlayerStartMarkerGltf(): GLTF {
-  const capsuleMaterial = emissiveMaterial(CAPSULE_COLOR);
+  const capsuleMaterial = new LineBasicMaterial({
+    color: CAPSULE_COLOR,
+    transparent: true,
+    opacity: 0.9,
+    depthWrite: false,
+  });
   const arrowMaterial = emissiveMaterial(ARROW_COLOR);
 
   const scene = new Group();
   scene.name = "player-start-marker-root";
-  scene.add(
-    verticalWire("x", capsuleMaterial),
-    verticalWire("z", capsuleMaterial),
-    horizontalWire(CAPSULE_HALF, capsuleMaterial),
-    horizontalWire(-CAPSULE_HALF, capsuleMaterial),
-    ...forwardArrow(arrowMaterial),
-  );
+  scene.add(capsuleWire(capsuleMaterial), ...forwardArrow(arrowMaterial));
 
   return {
     scene,

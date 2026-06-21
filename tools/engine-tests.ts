@@ -225,6 +225,7 @@ import {
   applySkyToneMapping,
   createSkyObject,
   setSkyLocalToneMappingExposure,
+  skyAtmosphereToneMappingExposure,
   sunDirectionFromLightRotation,
 } from "../engine/render-three/skyAtmosphere";
 import {
@@ -241,6 +242,7 @@ import {
 import {
   applyPostProcessToneMapping,
   hasPostProcessEffectPasses,
+  postProcessToneMappingExposure,
   resolvePostProcess,
   POST_PROCESS_DEFAULTS,
 } from "../engine/render-three/postProcess";
@@ -6966,21 +6968,21 @@ check("applyPostProcessToneMapping maps tonemapper enum and ignores hidden/null"
 
   applyPostProcessToneMapping(renderer, resolvePostProcess({ toneMapping: "aces", exposure: 1.25 }));
   assert.equal(renderer.toneMapping, ACESFilmicToneMapping);
-  assert.equal(renderer.toneMappingExposure, 1.25);
+  assert.equal(renderer.toneMappingExposure, 0.25);
 
   applyPostProcessToneMapping(renderer, resolvePostProcess({ toneMapping: "neutral", exposure: 0.8 }));
   assert.equal(renderer.toneMapping, NeutralToneMapping);
-  assert.equal(renderer.toneMappingExposure, 0.8);
+  assert.equal(renderer.toneMappingExposure, 0.16000000000000003);
 
   applyPostProcessToneMapping(renderer, resolvePostProcess({ toneMapping: "none", exposure: 2 }));
   assert.equal(renderer.toneMapping, NoToneMapping);
-  assert.equal(renderer.toneMappingExposure, 2);
+  assert.equal(renderer.toneMappingExposure, 0.4);
 
   applyPostProcessToneMapping(renderer, resolvePostProcess({ hidden: true, exposure: 3 }));
   assert.equal(renderer.toneMapping, NoToneMapping);
-  assert.equal(renderer.toneMappingExposure, 2);
+  assert.equal(renderer.toneMappingExposure, 0.4);
   applyPostProcessToneMapping(renderer, null);
-  assert.equal(renderer.toneMappingExposure, 2);
+  assert.equal(renderer.toneMappingExposure, 0.4);
 });
 
 check("sky local exposure temporarily overrides renderer exposure for its draw call", () => {
@@ -7018,11 +7020,11 @@ check("post process tone mapping can override scene exposure after sky", () => {
     skyLightCapture: { intensity: 1 },
   });
   assert.equal(renderer.toneMapping, ACESFilmicToneMapping);
-  assert.equal(renderer.toneMappingExposure, 0.4);
+  assert.equal(renderer.toneMappingExposure, 0.08000000000000002);
 
   applyPostProcessToneMapping(renderer, resolvePostProcess({ toneMapping: "neutral", exposure: 1.7 }));
   assert.equal(renderer.toneMapping, NeutralToneMapping);
-  assert.equal(renderer.toneMappingExposure, 1.7);
+  assert.equal(renderer.toneMappingExposure, 0.34);
 
   applySkyToneMapping(renderer, {
     name: "Sky",
@@ -7036,7 +7038,13 @@ check("post process tone mapping can override scene exposure after sky", () => {
   });
   applyPostProcessToneMapping(renderer, null);
   assert.equal(renderer.toneMapping, ACESFilmicToneMapping);
-  assert.equal(renderer.toneMappingExposure, 0.6);
+  assert.equal(renderer.toneMappingExposure, 0.12);
+});
+
+check("authored exposure 1 maps to the previous 0.2 renderer exposure", () => {
+  assert.equal(postProcessToneMappingExposure(1), 0.2);
+  assert.equal(skyAtmosphereToneMappingExposure(1), 0.2);
+  assert.equal(postProcessToneMappingExposure(1) * skyAtmosphereToneMappingExposure(1), 0.04000000000000001);
 });
 
 check("hasPostProcessEffectPasses tracks enabled pass effects only", () => {

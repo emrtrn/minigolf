@@ -76,6 +76,7 @@ import {
   followCameraWithSky,
   resolveSkyAtmosphere,
   setSkyLocalToneMappingExposure,
+  skyAtmosphereToneMappingExposure,
   sunDirectionFromLightRotation,
 } from "@engine/render-three/skyAtmosphere";
 import { applySceneFog, resolveHeightFog } from "@engine/render-three/heightFog";
@@ -92,6 +93,7 @@ import {
   createPostProcessEffectPasses,
   hasPostProcessEffectPasses,
   PostProcessPipeline,
+  postProcessToneMappingExposure,
   resolvePostProcess,
   type ResolvedPostProcess,
 } from "@engine/render-three/postProcess";
@@ -1456,7 +1458,10 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
       setSkyLocalToneMappingExposure(this.skyObject, null);
       return;
     }
-    setSkyLocalToneMappingExposure(this.skyObject, post.exposure * sky.exposure);
+    setSkyLocalToneMappingExposure(
+      this.skyObject,
+      postProcessToneMappingExposure(post.exposure) * skyAtmosphereToneMappingExposure(sky.exposure),
+    );
   }
 
   /** The scene's Sun light actor (preferred id, else the first directional light). */

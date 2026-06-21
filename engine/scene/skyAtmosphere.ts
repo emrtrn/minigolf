@@ -34,7 +34,7 @@ export const SKY_ATMOSPHERE_DEFAULTS: ResolvedSkyAtmosphere = {
   turbidity: 10,
   mie: 0.005,
   mieDirectionalG: 0.8,
-  exposure: 0.5,
+  exposure: 1,
   skyLightCapture: {
     intensity: 1,
   },

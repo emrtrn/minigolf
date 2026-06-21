@@ -713,7 +713,7 @@ export function validateSkyAtmosphere(value: unknown): Record<string, unknown> |
     ["turbidity", 1, 20],
     ["mie", 0, 0.1],
     ["mieDirectionalG", 0, 1],
-    ["exposure", 0, 1],
+    ["exposure", 0, 4],
   ];
   for (const [key, min, max] of numeric) {
     const resolved = validateOptionalNumber(input[key], `skyAtmosphere.${String(key)}`, min, max);

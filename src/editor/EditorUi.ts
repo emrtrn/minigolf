@@ -3449,7 +3449,7 @@ export class EditorUi {
         </label>
         <label class="detail-row">
           <span>Exposure</span>
-          <input data-sky-number="exposure" type="number" step="0.05" min="0" max="1"
+          <input data-sky-number="exposure" type="number" step="0.05" min="0" max="4"
             value="${sky.exposure}" />
         </label>
         <div class="detail-hint">Sun direction is set by rotating the Directional Sun light.</div>

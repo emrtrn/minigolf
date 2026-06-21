@@ -277,7 +277,7 @@ export interface LayoutSkyAtmosphere {
   mie?: number;
   /** Mie directional anisotropy — sun halo tightness (0..1). */
   mieDirectionalG?: number;
-  /** Sky exposure / overall brightness, used as the sky-local exposure scale (0..1). */
+  /** Sky exposure / overall brightness, authored as a 1-based multiplier. */
   exposure?: number;
   /** Global sky capture fallback used by PBR reflections when no local probe applies. */
   skyLightCapture?: LayoutSkyLightCapture;
@@ -365,7 +365,7 @@ export interface LayoutPostProcess {
   name?: string;
   /** Hidden/disabled in editor + runtime. Absent means false. */
   hidden?: boolean;
-  /** Manual exposure multiplier mapped to `renderer.toneMappingExposure`. */
+  /** Manual exposure multiplier mapped to calibrated `renderer.toneMappingExposure`. */
   exposure?: number;
   /** Renderer tone mapper. Absent means ACES filmic. */
   toneMapping?: "aces" | "neutral" | "none";

@@ -24,6 +24,12 @@ export {
   type ResolvedPostProcess,
 } from "@engine/scene/postProcess";
 
+export const POST_PROCESS_RENDER_EXPOSURE_SCALE = 0.2;
+
+export function postProcessToneMappingExposure(exposure: number): number {
+  return Math.max(0, exposure * POST_PROCESS_RENDER_EXPOSURE_SCALE);
+}
+
 /** Applies the renderer-property part of the global Post Process singleton. */
 export function applyPostProcessToneMapping(
   renderer: WebGLRenderer,
@@ -37,7 +43,7 @@ export function applyPostProcessToneMapping(
   } else {
     renderer.toneMapping = NoToneMapping;
   }
-  renderer.toneMappingExposure = resolved.exposure;
+  renderer.toneMappingExposure = postProcessToneMappingExposure(resolved.exposure);
 }
 
 const COLOR_GRADING_SHADER = {

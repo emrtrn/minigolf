@@ -92,6 +92,7 @@ import {
   followCameraWithSky,
   resolveSkyAtmosphere,
   setSkyLocalToneMappingExposure,
+  skyAtmosphereToneMappingExposure,
   sunDirectionFromLightRotation,
 } from "@engine/render-three/skyAtmosphere";
 import { applySceneFog, resolveHeightFog } from "@engine/render-three/heightFog";
@@ -107,6 +108,7 @@ import {
   applyPostProcessToneMapping,
   createPostProcessEffectPasses,
   PostProcessPipeline,
+  postProcessToneMappingExposure,
   resolvePostProcess,
   type ResolvedPostProcess,
 } from "@engine/render-three/postProcess";
@@ -190,6 +192,8 @@ import {
   type ShapePrimitiveType,
 } from "@engine/scene/shapes";
 import { createProceduralAssetGltf } from "./shapePrimitives";
+import { PLAYER_START_CAPSULE_CENTER_Y } from "./markerPrimitives";
+import { createPlayerStartIcon } from "./playerStartIcon";
 import { loadForgeMaterial } from "./materialAssets";
 import {
   readPivot,
@@ -460,6 +464,8 @@ export class SceneApp {
   private instanceGroups = new Map<string, Group>();
   private instanceMeshes = new Map<string, InstancedMesh[]>();
   private instanceOverrideObjects = new Map<string, Object3D[]>();
+  /** Player Start editor helpers are line/sprite objects, not InstancedMesh surfaces. */
+  private playerStartObjects = new Map<string, Object3D[]>();
   /** Per-asset materials cloned to carry a probe envMap; disposed on instance-group rebuild. */
   private instanceProbeMaterials = new Map<string, Material[]>();
   private readonly textureLoader = new TextureLoader();
@@ -598,6 +604,9 @@ export class SceneApp {
         const objects: Object3D[] = [];
         for (const meshes of this.instanceMeshes.values()) objects.push(...meshes);
         for (const objectsForAsset of this.instanceOverrideObjects.values()) {
+          objects.push(...objectsForAsset);
+        }
+        for (const objectsForAsset of this.playerStartObjects.values()) {
           objects.push(...objectsForAsset);
         }
         objects.push(...this.characterObjects);
@@ -2082,6 +2091,9 @@ export class SceneApp {
   private createInstancedModel(assetId: string, placements: LayoutPlacement[]): Group {
     const gltf = this.models.get(assetId);
     if (!gltf) throw new Error(`Render test asset missing: ${assetId}`);
+    if (isPlayerStartAssetId(assetId)) {
+      return this.createPlayerStartInstanceGroup(assetId, placements, gltf);
+    }
     const renderedOverrideObjects: Object3D[] = [];
     const clonedMaterials: Material[] = [];
 
@@ -2132,6 +2144,54 @@ export class SceneApp {
     this.instanceMeshes.set(assetId, meshes);
     this.instanceOverrideObjects.set(assetId, renderedOverrideObjects);
     this.instanceProbeMaterials.set(assetId, clonedMaterials);
+    return group;
+  }
+
+  private createPlayerStartInstanceGroup(
+    assetId: string,
+    placements: LayoutPlacement[],
+    gltf: GLTF,
+  ): Group {
+    const group = new Group();
+    const objects: Object3D[] = [];
+    group.name = `instanced-${assetId}`;
+
+    placements.forEach((placement, placementIndex) => {
+      const object = gltf.scene.clone(true);
+      object.name = placement.name ?? `Player Start ${placementIndex + 1}`;
+      object.matrix.copy(composePlacementMatrix(placement));
+      object.matrixAutoUpdate = false;
+      object.visible = !(placement.hidden ?? false);
+      object.userData.assetId = assetId;
+      object.userData.placementIndex = placementIndex;
+
+      object.traverse((child) => {
+        child.userData.assetId = assetId;
+        child.userData.placementIndex = placementIndex;
+        if (child instanceof LineSegments) {
+          child.raycast = () => {};
+          return;
+        }
+        if (!isRenderableMesh(child)) return;
+        child.castShadow = false;
+        child.receiveShadow = false;
+      });
+
+      const icon = createPlayerStartIcon();
+      icon.position.set(0, PLAYER_START_CAPSULE_CENTER_Y, 0);
+      icon.userData.assetId = assetId;
+      icon.userData.placementIndex = placementIndex;
+      object.add(icon);
+
+      group.add(object);
+      objects.push(object);
+    });
+
+    this.instanceGroups.set(assetId, group);
+    this.instanceMeshes.set(assetId, []);
+    this.instanceOverrideObjects.delete(assetId);
+    this.playerStartObjects.set(assetId, objects);
+    this.instanceProbeMaterials.set(assetId, []);
     return group;
   }
 
@@ -2231,6 +2291,7 @@ export class SceneApp {
     this.instanceGroups.delete(assetId);
     this.instanceMeshes.delete(assetId);
     this.instanceOverrideObjects.delete(assetId);
+    this.playerStartObjects.delete(assetId);
 
     const instance = this.layout.instances.find((entry) => entry.assetId === assetId);
     if (!instance) return;
@@ -2297,6 +2358,7 @@ export class SceneApp {
       actorObject.position.set(...actorTransform.position);
       applyEulerDegrees(actorObject, readRotation(actorTransform));
       actorObject.scale.set(...readScale(actorTransform as LayoutActorInstance));
+      actorObject.visible = !(actorTransform.hidden ?? false);
       return;
     }
 
@@ -3826,7 +3888,10 @@ export class SceneApp {
       setSkyLocalToneMappingExposure(this.skyObject, null);
       return;
     }
-    setSkyLocalToneMappingExposure(this.skyObject, post.exposure * sky.exposure);
+    setSkyLocalToneMappingExposure(
+      this.skyObject,
+      postProcessToneMappingExposure(post.exposure) * skyAtmosphereToneMappingExposure(sky.exposure),
+    );
   }
 
   /** Adds the singleton Post Process actor (or selects the existing one). */

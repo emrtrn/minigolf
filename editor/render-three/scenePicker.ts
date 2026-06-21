@@ -68,7 +68,7 @@ export class ScenePicker {
     this.setPointerNdc(clientX, clientY);
     this.raycaster.setFromCamera(this.pointerNdc, this.camera);
 
-    const hits = this.raycaster.intersectObjects(this.getPickables(), true);
+    const hits = this.visibleHits(this.raycaster.intersectObjects(this.getPickables(), true));
     for (const hit of hits) {
       const mesh = findParentInstancedMesh(hit.object);
       if (mesh) {
@@ -135,7 +135,7 @@ export class ScenePicker {
     this.setPointerNdc(clientX, clientY);
     this.raycaster.setFromCamera(this.pointerNdc, this.camera);
 
-    const hits = this.raycaster.intersectObjects(this.getSurfacePickables(), true);
+    const hits = this.visibleHits(this.raycaster.intersectObjects(this.getSurfacePickables(), true));
     if (hits[0]) return hits[0].point.clone();
 
     const floor = this.raycaster.ray.intersectPlane(this.floorPlane, this.floorHit);
@@ -153,7 +153,7 @@ export class ScenePicker {
    *  geometry, and returns the first surface's y (or null when nothing solid). */
   raycastSurfaceBelow(origin: Vector3, exclude: Selection): number | null {
     const ray = new Raycaster(origin, new Vector3(0, -1, 0), 0, 1000);
-    const hits = ray.intersectObjects(this.getPickables(), true);
+    const hits = this.visibleHits(ray.intersectObjects(this.getPickables(), true));
     for (const hit of hits) {
       if (this.isSelfHit(hit, exclude)) continue;
       return hit.point.y;
@@ -203,11 +203,24 @@ export class ScenePicker {
     return character ? Number(character.userData.characterIndex) === selection.index : false;
   }
 
+  private visibleHits(hits: Intersection[]): Intersection[] {
+    return hits.filter((hit) => isVisibleInHierarchy(hit.object));
+  }
+
   private setPointerNdc(clientX: number, clientY: number): void {
     const rect = this.canvas.getBoundingClientRect();
     this.pointerNdc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
     this.pointerNdc.y = -(((clientY - rect.top) / rect.height) * 2 - 1);
   }
+}
+
+function isVisibleInHierarchy(object: Object3D): boolean {
+  let current: Object3D | null = object;
+  while (current) {
+    if (!current.visible) return false;
+    current = current.parent;
+  }
+  return true;
 }
 
 function findParentMaterialOverride(object: Object3D): InstanceSelection | null {
