@@ -51,8 +51,10 @@ export interface SphereReflectionCaptureRenderItem extends ResolvedSphereReflect
   rotation: Vec3;
 }
 
-/** Tint of the influence-sphere wireframe helper. */
+/** Tint of the influence-sphere wireframe helper when its bake is current. */
 const CAPTURE_HELPER_COLOR = "#46c8ff";
+/** Warning tint when the cached bake is stale (probe/near/far changed since capture). */
+const CAPTURE_HELPER_STALE_COLOR = "#ffb020";
 
 /** Builds the wireframe influence-sphere helper; transform via {@link applySphereReflectionCaptureTransform}. */
 export function createSphereReflectionCaptureObject(
@@ -89,6 +91,19 @@ export function applySphereReflectionCaptureTransform(
   mesh.visible = !item.hidden;
 }
 
+/**
+ * Tints the influence-sphere helper to flag a stale bake: amber when the cached
+ * cubemap no longer matches the probe (moved / near-far edited since capture),
+ * the normal blue when current. Debug indicator only — it does not touch the
+ * reflection itself; the user presses Recapture to refresh.
+ */
+export function setSphereReflectionCaptureStale(
+  mesh: SphereReflectionCaptureObject,
+  stale: boolean,
+): void {
+  mesh.material.color.set(stale ? CAPTURE_HELPER_STALE_COLOR : CAPTURE_HELPER_COLOR);
+}
+
 /** Frees the helper's geometry + material. */
 export function disposeSphereReflectionCaptureObject(mesh: SphereReflectionCaptureObject): void {
   mesh.geometry.dispose();
@@ -116,6 +131,10 @@ export interface SphereReflectionCaptureBake {
   resolution: number;
   /** Whether covered surfaces get local sphere parallax correction (Faz 4). */
   parallax: boolean;
+  /** CubeCamera near clip used at bake time (feeds the stale-bake check). */
+  near: number;
+  /** CubeCamera far clip used at bake time (feeds the stale-bake check). */
+  far: number;
 }
 
 /**
@@ -158,12 +177,34 @@ export function bakeSphereReflectionCapture(
     priority: item.priority,
     resolution: item.resolution,
     parallax: item.parallax,
+    near: item.near,
+    far: item.far,
   };
 }
 
 /** Frees a baked probe's PMREM render target. */
 export function disposeSphereReflectionCaptureBake(bake: SphereReflectionCaptureBake): void {
   bake.target.dispose();
+}
+
+/**
+ * True when a cached bake no longer reflects the probe it was taken from: the probe
+ * moved, or its `near`/`far` changed, since the capture. (Radius/intensity/priority
+ * are live-patched onto the cache and resolution forces a re-bake, so none of those
+ * make a bake stale.) Drives the editor's stale-bake indicator; it does not detect
+ * scene-content changes (objects moving), which still need an explicit Recapture.
+ */
+export function isReflectionCaptureBakeStale(
+  bake: SphereReflectionCaptureBake,
+  item: SphereReflectionCaptureRenderItem,
+): boolean {
+  return (
+    bake.position[0] !== item.position[0] ||
+    bake.position[1] !== item.position[1] ||
+    bake.position[2] !== item.position[2] ||
+    bake.near !== item.near ||
+    bake.far !== item.far
+  );
 }
 
 /** A `MeshStandardMaterial` (or subclass) — the only materials that take a probe envMap. */

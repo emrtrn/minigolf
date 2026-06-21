@@ -421,7 +421,14 @@ Kabul:
   küçük `radius` (daha lokal capture büyüğü override eder, büyük daha merkezde olsa bile) →
   düşük `score` → layout sırası. Eski "en düşük score kazanır" davranışı yalnızca eşit
   radius'larda geçerli; mevcut tie-break testleri korunur + small-probe override testleri eklendi.)
-- [ ] Debug show flag: probe radius, selected probe, stale bake indicator.
+- [x] Debug show flag: probe radius, selected probe, stale bake indicator. (Probe radius =
+  mevcut wireframe influence-sphere helper; selected probe = mevcut selection-outline pass;
+  YENİ **stale bake indicator**: `isReflectionCaptureBakeStale` (bake.position/near/far vs
+  güncel item) → helper kehribar (`setSphereReflectionCaptureStale`) + Details panelde uyarı
+  hint'i + Recapture vurgusu. `refreshReflectionCaptureObject` (transform/gizmo) ve (re)bake'te
+  tazelenir; `SceneApp.isSelectedReflectionCaptureBakeStale` paneli besler. Kapsam: probe
+  taşıma + near/far düzenlemesini yakalar — sahne içeriği değişimini (obje taşıma) yakalamaz,
+  o hâlâ explicit Recapture ister.)
 
 ## Riskler
 

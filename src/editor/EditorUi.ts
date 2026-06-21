@@ -3284,6 +3284,9 @@ export class EditorUi {
     this.detailsScale = [...selection.scale];
     const lockedAttr = selection.locked ? "disabled" : "";
     const resolutions = [64, 128, 256, 512, 1024];
+    // Stale = cached cubemap no longer matches the probe (moved / near-far edited);
+    // the helper turns amber and we surface a Recapture prompt here.
+    const bakeStale = this.app.isSelectedReflectionCaptureBakeStale();
     this.detailsBody.innerHTML = `
       <div class="detail-heading">
         <strong>${escapeHtml(selection.label)}</strong>
@@ -3340,7 +3343,14 @@ export class EditorUi {
             ${capture.parallax ? "checked" : ""} ${lockedAttr} />
           <span>Parallax Correction</span>
         </label>
-        <button type="button" data-capture-recapture class="detail-button">Recapture</button>
+        ${
+          bakeStale
+            ? `<div class="detail-hint detail-hint-warning">⚠ Bake is stale — the probe moved or near/far changed since capture. Press Recapture.</div>`
+            : ""
+        }
+        <button type="button" data-capture-recapture class="detail-button${
+          bakeStale ? " detail-button-warning" : ""
+        }">Recapture</button>
         <button type="button" data-capture-recapture-all class="detail-button">Recapture All</button>
         <div class="detail-hint">Static capture: bakes a cubemap from this point — press Recapture after moving the probe or scene.</div>
       </div>

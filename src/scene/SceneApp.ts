@@ -130,8 +130,10 @@ import {
   createSphereReflectionCaptureObject,
   disposeSphereReflectionCaptureBake,
   disposeSphereReflectionCaptureObject,
+  isReflectionCaptureBakeStale,
   resolveSphereReflectionCapture,
   selectNearestReflectionCapture,
+  setSphereReflectionCaptureStale,
   uniqueSphereReflectionCaptureId,
   uniqueSphereReflectionCaptureName,
   type SphereReflectionCaptureBake,
@@ -2828,6 +2830,7 @@ export class SceneApp {
     this.reflectionCaptureBakes[index] = this.withEditorAidsHidden(() =>
       bakeSphereReflectionCapture(this.renderer, this.scene, item),
     );
+    this.refreshReflectionCaptureStaleTint(index);
     this.applyReflectionCaptureEnvMaps();
   }
 
@@ -2947,6 +2950,30 @@ export class SceneApp {
     const helper = this.reflectionCaptureObjects[index];
     if (!actor || !helper) return;
     applySphereReflectionCaptureTransform(helper, this.reflectionCaptureItem(actor));
+    this.refreshReflectionCaptureStaleTint(index);
+  }
+
+  /**
+   * Repaints one probe helper to flag a stale bake (moved / near-far edited since
+   * capture). Cheap pure comparison; an unbaked/hidden probe shows the normal tint.
+   * Driven from transform edits and (re)bakes so the amber warning tracks live drags.
+   */
+  private refreshReflectionCaptureStaleTint(index: number): void {
+    const helper = this.reflectionCaptureObjects[index];
+    if (!helper) return;
+    const bake = this.reflectionCaptureBakes[index];
+    const actor = this.layout?.reflectionCaptures?.[index];
+    const stale = Boolean(bake && actor && isReflectionCaptureBakeStale(bake, this.reflectionCaptureItem(actor)));
+    setSphereReflectionCaptureStale(helper, stale);
+  }
+
+  /** Whether the selected probe's cached bake is stale (drives the Details warning). */
+  isSelectedReflectionCaptureBakeStale(): boolean {
+    if (this.selection?.kind !== "reflectionCapture") return false;
+    const index = this.selection.index;
+    const bake = this.reflectionCaptureBakes[index];
+    const actor = this.layout?.reflectionCaptures?.[index];
+    return Boolean(bake && actor && isReflectionCaptureBakeStale(bake, this.reflectionCaptureItem(actor)));
   }
 
   private refreshReflectionCaptureIndices(): void {

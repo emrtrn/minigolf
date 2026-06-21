@@ -260,12 +260,15 @@ import {
   assignProbeEnvMapMaterial,
   createSphereReflectionCaptureObject,
   disposeSphereReflectionCaptureBake,
+  isReflectionCaptureBakeStale,
   resolveSphereReflectionCapture,
   selectNearestReflectionCapture,
+  setSphereReflectionCaptureStale,
   uniqueSphereReflectionCaptureId,
   uniqueSphereReflectionCaptureName,
   SPHERE_REFLECTION_CAPTURE_DEFAULTS,
   type SphereReflectionCaptureBake,
+  type SphereReflectionCaptureRenderItem,
 } from "../engine/render-three/reflectionCapture";
 import {
   COLLISION_CHANNELS,
@@ -6786,6 +6789,44 @@ check("assignProbeEnvMapMaterial clones standard mats; parallax patches the shad
   a.onBeforeCompile(noAnchors as never, null as never);
   assert.equal(noAnchors.vertexShader, "x");
   assert.equal(Object.keys(noAnchors.uniforms).length, 0);
+});
+
+check("isReflectionCaptureBakeStale flags moved / near-far edits; tint follows", () => {
+  const item: SphereReflectionCaptureRenderItem = {
+    ...resolveSphereReflectionCapture(null),
+    position: [1, 2, 3],
+    rotation: [0, 0, 0],
+  };
+  const bake = {
+    target: { texture: {} },
+    position: [1, 2, 3] as [number, number, number],
+    radius: 5,
+    intensity: 1,
+    priority: 0,
+    resolution: 256,
+    parallax: false,
+    near: item.near,
+    far: item.far,
+  } as unknown as SphereReflectionCaptureBake;
+
+  // Matching position + near + far → fresh.
+  assert.equal(isReflectionCaptureBakeStale(bake, item), false);
+  // Probe moved since the bake → stale.
+  assert.equal(isReflectionCaptureBakeStale(bake, { ...item, position: [1, 2, 3.5] }), true);
+  // near / far edited since the bake → stale.
+  assert.equal(isReflectionCaptureBakeStale(bake, { ...item, near: item.near + 1 }), true);
+  assert.equal(isReflectionCaptureBakeStale(bake, { ...item, far: item.far + 1 }), true);
+  // Radius / intensity / priority are live-patched, never stale.
+  assert.equal(isReflectionCaptureBakeStale(bake, { ...item, radius: 99, intensity: 9, priority: 9 }), false);
+
+  // The tint setter swaps the helper wireframe color between fresh and warning.
+  const helper = createSphereReflectionCaptureObject(item);
+  const fresh = helper.material.color.getHex();
+  setSphereReflectionCaptureStale(helper, true);
+  const stale = helper.material.color.getHex();
+  assert.notEqual(stale, fresh);
+  setSphereReflectionCaptureStale(helper, false);
+  assert.equal(helper.material.color.getHex(), fresh);
 });
 
 check("validateSphereReflectionCapture allowlists fields and round-trips through validateLayout", () => {

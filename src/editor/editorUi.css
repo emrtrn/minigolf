@@ -670,6 +670,16 @@ body.editor-mode #debug-stats {
   color: #9aa4a9;
 }
 
+/* Stale reflection-capture bake warning (matches the amber helper tint). */
+.detail-hint-warning {
+  color: #ffb020;
+}
+
+.editor-shell .detail-button-warning {
+  border-color: #ffb020;
+  color: #ffb020;
+}
+
 .detail-actions-row {
   display: grid;
   grid-auto-flow: column;
