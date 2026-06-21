@@ -7,6 +7,7 @@ import {
   MeshStandardMaterial,
   NoToneMapping,
   PMREMGenerator,
+  ShaderChunk,
   SphereGeometry,
   Vector3,
   WebGLCubeRenderTarget,
@@ -182,14 +183,21 @@ type ShaderPatch = Parameters<MeshStandardMaterial["onBeforeCompile"]>[0];
  */
 const PARALLAX_CACHE_KEY = "forge-reflection-capture-parallax";
 
-/** Vertex-shader anchor after which `worldPosition` is in scope (USE_ENVMAP is set). */
-const PARALLAX_WORLDPOS_ANCHOR = "#include <worldpos_vertex>";
-/** Fragment-shader anchor: `reflectVec` is the world-space reflection dir right here. */
-const PARALLAX_REFLECT_ANCHOR =
-  "reflectVec = inverseTransformDirection( reflectVec, viewMatrix );";
+// onBeforeCompile receives the shader sources with `#include <...>` directives
+// still UNEXPANDED, so we anchor on the raw includes — not on text that only
+// exists after three.js resolves them. The vertex include yields `worldPosition`;
+// the fragment include is the IBL chunk we patch (its `reflectVec` line is what we
+// re-aim, so we expand that chunk inline rather than leaving the directive).
+
+/** Vertex-shader include after which `worldPosition` is in scope (USE_ENVMAP is set). */
+const PARALLAX_WORLDPOS_INCLUDE = "#include <worldpos_vertex>";
+/** Fragment-shader include for the IBL chunk that owns the reflection lookup. */
+const PARALLAX_FRAGMENT_INCLUDE = "#include <envmap_physical_pars_fragment>";
+/** Line inside the IBL chunk where `reflectVec` becomes the world-space reflection dir. */
+const PARALLAX_REFLECT_LINE = "reflectVec = inverseTransformDirection( reflectVec, viewMatrix );";
 
 /** Forwards the fragment world position to the parallax correction. */
-const PARALLAX_VERTEX_ASSIGN = `${PARALLAX_WORLDPOS_ANCHOR}\n\tvCaptureWorldPos = worldPosition.xyz;`;
+const PARALLAX_VERTEX_ASSIGN = `${PARALLAX_WORLDPOS_INCLUDE}\n\tvCaptureWorldPos = worldPosition.xyz;`;
 
 /**
  * Sphere-bounded parallax correction injected after `reflectVec` becomes the
@@ -198,7 +206,7 @@ const PARALLAX_VERTEX_ASSIGN = `${PARALLAX_WORLDPOS_ANCHOR}\n\tvCaptureWorldPos 
  * cubemap is sampled as if infinitely far (flat-looking on planar surfaces); with
  * it the reflection tracks the fragment's position inside the probe sphere.
  */
-const PARALLAX_FRAGMENT_CORRECTION = `${PARALLAX_REFLECT_ANCHOR}
+const PARALLAX_FRAGMENT_CORRECTION = `
 			{
 				vec3 captureToFrag = vCaptureWorldPos - captureProbePosition;
 				float captureB = dot( reflectVec, captureToFrag );
@@ -214,32 +222,41 @@ const PARALLAX_FRAGMENT_CORRECTION = `${PARALLAX_REFLECT_ANCHOR}
 
 /**
  * Installs local sphere parallax correction on a probe-envMap material via
- * `onBeforeCompile`: patches the standard shader so its IBL reflection lookup is
- * re-aimed at the probe sphere using the fragment's world position. The probe
- * `position`/`radius` ride in as uniforms (so all parallax clones share one
- * program), and `customProgramCacheKey` keeps that program separate from the
- * unpatched standard program. If the three.js shader anchors ever move the patch
- * is skipped and the material degrades to a plain (non-parallax) envMap.
+ * `onBeforeCompile`: inlines the IBL fragment chunk with a re-aimed reflection
+ * lookup (toward the probe sphere, using the fragment world position) and forwards
+ * that world position from the vertex stage. The probe `position`/`radius` ride in
+ * as uniforms (so all parallax clones share one program), and `customProgramCacheKey`
+ * keeps that program separate from the unpatched standard program. If the three.js
+ * shader anchors ever move the patch is skipped and the material degrades to a plain
+ * (non-parallax) envMap.
  */
 function installParallaxCorrection(material: MeshStandardMaterial, position: Vec3, radius: number): void {
   const probePosition = new Vector3(position[0], position[1], position[2]);
   const probeRadius = Math.max(radius, 0.001);
   material.onBeforeCompile = (shader: ShaderPatch) => {
+    const iblChunk = ShaderChunk.envmap_physical_pars_fragment;
     if (
-      !shader.vertexShader.includes(PARALLAX_WORLDPOS_ANCHOR) ||
-      !shader.fragmentShader.includes(PARALLAX_REFLECT_ANCHOR)
+      !shader.vertexShader.includes(PARALLAX_WORLDPOS_INCLUDE) ||
+      !shader.fragmentShader.includes(PARALLAX_FRAGMENT_INCLUDE) ||
+      !iblChunk.includes(PARALLAX_REFLECT_LINE)
     ) {
       return;
     }
     shader.uniforms.captureProbePosition = { value: probePosition };
     shader.uniforms.captureProbeRadius = { value: probeRadius };
     shader.vertexShader = `varying vec3 vCaptureWorldPos;\n${shader.vertexShader.replace(
-      PARALLAX_WORLDPOS_ANCHOR,
+      PARALLAX_WORLDPOS_INCLUDE,
       PARALLAX_VERTEX_ASSIGN,
     )}`;
+    // Expand the IBL chunk inline with the correction spliced in after reflectVec,
+    // replacing the directive so three.js does not re-expand the stock chunk over it.
+    const patchedChunk = iblChunk.replace(
+      PARALLAX_REFLECT_LINE,
+      `${PARALLAX_REFLECT_LINE}${PARALLAX_FRAGMENT_CORRECTION}`,
+    );
     shader.fragmentShader = `uniform vec3 captureProbePosition;\nuniform float captureProbeRadius;\nvarying vec3 vCaptureWorldPos;\n${shader.fragmentShader.replace(
-      PARALLAX_REFLECT_ANCHOR,
-      PARALLAX_FRAGMENT_CORRECTION,
+      PARALLAX_FRAGMENT_INCLUDE,
+      patchedChunk,
     )}`;
   };
   material.customProgramCacheKey = () => PARALLAX_CACHE_KEY;

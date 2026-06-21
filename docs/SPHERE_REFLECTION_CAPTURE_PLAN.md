@@ -371,7 +371,11 @@ Kabul:
 - [x] `onBeforeCompile` shader patch prototipi. (`engine/render-three/reflectionCapture.ts`
   `installParallaxCorrection`: standard shader'ın IBL `reflectVec`'ini probe küresiyle
   kesiştirip yeniden yönlendiren ray-sphere düzeltmesi; vertex'te dünya pozisyonu
-  `vCaptureWorldPos` varying'i ile taşınır. Anchor'lar bulunamazsa patch sessizce atlanır.)
+  `vCaptureWorldPos` varying'i ile taşınır. **Önemli:** `onBeforeCompile` shader'ı
+  `#include <...>` direktifleri AÇILMADAN alır, bu yüzden patch ham include'lara tutunur
+  (`#include <worldpos_vertex>` + `#include <envmap_physical_pars_fragment>`) ve IBL chunk'ını
+  `ShaderChunk`'tan alıp düzeltmeyi içine enjekte ederek inline açar. Anchor'lar bulunamazsa
+  patch sessizce atlanır → plain envMap.)
 - [x] Probe uniform'ları: position, radius, intensity. (`captureProbePosition` +
   `captureProbeRadius` custom uniform; intensity stok `envMapIntensity` uniform'undan gelir —
   yön düzeltmesini etkilemez. Tüm parallax klonları aynı programı paylaşsın diye
@@ -380,9 +384,19 @@ Kabul:
   `setSelectedReflectionCapture({ parallax })` → `setReflectionCapture` toggle anında
   cache scalar'ını günceller ve `applyReflectionCaptureEnvMaps` ile materyalleri yeniden
   klonlayıp patch'i ekler/kaldırır.)
-- [ ] Basit düz yüzey ve oda test layout'u ile görsel doğrulama. (Kod + birim testi hazır;
-  WebGL gerektiren görsel doğrulama editörde manuel yapılacak — `?editor`, probe ekle,
-  Parallax'ı aç/kapat.)
+- [x] Basit düz yüzey ve oda test layout'u ile görsel doğrulama. (Playwright + headed Chrome
+  ile `?editor` sürülerek: ayna küre/küp + düz yüzey sahnesinde Parallax aç/kapat, viewport'a
+  kırpılmış ekran görüntüleri pixelmatch ile karşılaştırıldı. Parallax ON↔OFF yansıtıcı
+  yüzeylerde **2672 px (%0.55) lokalize** değişim üretti — düz yüzeyde yansıyan çizgilerin
+  tutarlı kayması + küre yansıma silüetinde kayma; emissive/mat yüzeylerde değişim yok; shader
+  derleme hatası yok; OFF→ON→OFF piksel-mükemmel tersinir.)
+
+> ⚠️ Görsel doğrulama bir bug yakaladı: ilk implementasyon `reflectVec = inverseTransformDirection(...)`
+> satırına (include AÇILDIKTAN sonra var olan metin) tutunuyordu; `onBeforeCompile` shader'ı
+> direktifler açılmadan verdiği için anchor bulunamıyor, guard erken dönüyor ve parallax
+> **sessizce no-op** oluyordu (viewport diff'i 0 px). Düzeltme: ham `#include` direktifine
+> tutunup IBL chunk'ını `ShaderChunk`'tan inline açmak. Birim testi de gerçek (açılmamış)
+> include davranışını yansıtacak şekilde güncellendi.
 
 Kabul:
 

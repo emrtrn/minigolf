@@ -6716,12 +6716,14 @@ check("assignProbeEnvMapMaterial clones standard mats; parallax patches the shad
   assert.notEqual(a.customProgramCacheKey(), plain.customProgramCacheKey());
   assert.equal(a.customProgramCacheKey(), b.customProgramCacheKey());
 
+  // three.js hands onBeforeCompile the sources with `#include <...>` directives
+  // still UNEXPANDED, so the stub mirrors that — the patch must anchor on the raw
+  // includes (not on text that only exists after three resolves them).
   const runPatch = (material: MeshStandardMaterial) => {
     const shader = {
       uniforms: {} as Record<string, { value: unknown }>,
-      vertexShader: "void main() {\n#include <worldpos_vertex>\n}",
-      fragmentShader:
-        "void main() {\nreflectVec = inverseTransformDirection( reflectVec, viewMatrix );\n}",
+      vertexShader: "void main() {\n\t#include <worldpos_vertex>\n}",
+      fragmentShader: "#include <envmap_physical_pars_fragment>\nvoid main() {}",
     };
     material.onBeforeCompile(shader as never, null as never);
     return shader;
@@ -6732,7 +6734,15 @@ check("assignProbeEnvMapMaterial clones standard mats; parallax patches the shad
   assert.equal(shaderA.uniforms.captureProbeRadius?.value, 4);
   assert.ok(shaderA.vertexShader.includes("vCaptureWorldPos = worldPosition.xyz;"));
   assert.ok(shaderA.fragmentShader.includes("uniform vec3 captureProbePosition;"));
-  assert.ok(shaderA.fragmentShader.includes("reflectVec = normalize("));
+  // The IBL include is expanded inline (no leftover directive) and carries the
+  // re-aimed reflection lookup.
+  assert.ok(!shaderA.fragmentShader.includes("#include <envmap_physical_pars_fragment>"));
+  assert.ok(shaderA.fragmentShader.includes("getIBLRadiance"));
+  assert.ok(
+    shaderA.fragmentShader.includes(
+      "reflectVec = normalize( vCaptureWorldPos + reflectVec * captureDist - captureProbePosition )",
+    ),
+  );
 
   const shaderB = runPatch(b);
   assert.equal((shaderB.uniforms.captureProbePosition?.value as { x: number }).x, -5);
