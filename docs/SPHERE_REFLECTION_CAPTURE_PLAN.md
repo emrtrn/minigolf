@@ -416,8 +416,11 @@ Kabul:
 ### Faz 5 - Kalite / Unreal Benzeri Refinement
 
 - [ ] Overlap blend.
-- [ ] Priority/small-probe override kuralını iyileştir.
-- [ ] Box Reflection Capture için ayrı plan çıkar.
+- [x] Priority/small-probe override kuralını iyileştir. (`selectNearestReflectionCapture`
+  artık kapsayan probe'lar arasında Unreal-tarzı öncelik uygular: `priority` (yüksek) →
+  küçük `radius` (daha lokal capture büyüğü override eder, büyük daha merkezde olsa bile) →
+  düşük `score` → layout sırası. Eski "en düşük score kazanır" davranışı yalnızca eşit
+  radius'larda geçerli; mevcut tie-break testleri korunur + small-probe override testleri eklendi.)
 - [ ] Debug show flag: probe radius, selected probe, stale bake indicator.
 
 ## Riskler

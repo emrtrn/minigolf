@@ -6650,6 +6650,36 @@ check("selectNearestReflectionCapture tie-breaks by priority, then radius, then 
   );
 });
 
+check("selectNearestReflectionCapture: smaller probe overrides a larger one (priority first)", () => {
+  // A small local probe wins over a larger, more-centered one (Unreal-style
+  // small-refines-large): point sits dead-center of the big r10 probe (score 0)
+  // yet still inside the small r4 probe (score 0.75) — the small one wins.
+  assert.equal(
+    selectNearestReflectionCapture([3, 0, 0], [
+      { position: [3, 0, 0], radius: 10, priority: 0 },
+      { position: [0, 0, 0], radius: 4, priority: 0 },
+    ]),
+    1,
+  );
+  // Explicit priority outranks the small-probe rule: the larger high-priority
+  // probe wins even though a smaller probe also covers the point.
+  assert.equal(
+    selectNearestReflectionCapture([0, 0, 0], [
+      { position: [0, 0, 0], radius: 2, priority: 0 },
+      { position: [0, 0, 0], radius: 10, priority: 3 },
+    ]),
+    1,
+  );
+  // A probe that does NOT cover the point never wins, however small it is.
+  assert.equal(
+    selectNearestReflectionCapture([6, 0, 0], [
+      { position: [0, 0, 0], radius: 8, priority: 0 },
+      { position: [0, 0, 0], radius: 1, priority: 0 },
+    ]),
+    0,
+  );
+});
+
 check("disposeSphereReflectionCaptureBake frees the cached PMREM target", () => {
   // The bake itself needs a live WebGL renderer (so it is exercised in the editor,
   // like captureSkyEnvironment), but the dispose lifecycle is pure and testable.

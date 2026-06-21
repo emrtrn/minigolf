@@ -87,12 +87,14 @@ export interface ReflectionCaptureProbe {
 }
 
 /**
- * Picks the probe whose influence best covers `point`, returning its index in
- * `probes` (or null when no probe reaches the point). The score is
- * `distance / radius`; a probe covers the point only when `score <= 1`. The lowest
- * score wins; ties break by higher `priority`, then smaller `radius`, then earlier
- * array order (the caller passes probes in layout order). Callers should pass only
- * eligible probes (visible + baked); hidden/unbaked probes are excluded upstream.
+ * Picks the probe that should light `point`, returning its index in `probes` (or
+ * null when no probe reaches the point). A probe covers the point only when its
+ * `score = distance / radius` is `<= 1`. Among covering probes the precedence is
+ * Unreal-style: explicit `priority` (higher wins) first, then the smaller `radius`
+ * — a smaller, more-local capture overrides a larger one even when the larger one
+ * is more centered — then the lower `score` (more centered), then earlier array
+ * order (layout order). Callers pass only eligible probes (visible + baked);
+ * hidden/unbaked probes are excluded upstream.
  */
 export function selectNearestReflectionCapture(
   point: Vec3,
@@ -111,11 +113,14 @@ export function selectNearestReflectionCapture(
     const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
     const score = distance / probe.radius;
     if (score > 1) continue;
+    // Precedence among covering probes: higher priority, then smaller radius
+    // (small-probe override), then lower score, then earlier order (strict
+    // comparisons + in-order iteration keep the first of equal probes).
     const better =
-      score < bestScore ||
-      (score === bestScore &&
-        (probe.priority > bestPriority ||
-          (probe.priority === bestPriority && probe.radius < bestRadius)));
+      probe.priority > bestPriority ||
+      (probe.priority === bestPriority &&
+        (probe.radius < bestRadius ||
+          (probe.radius === bestRadius && score < bestScore)));
     if (better) {
       bestIndex = index;
       bestScore = score;
