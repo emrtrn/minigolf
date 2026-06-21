@@ -55,18 +55,28 @@ const VERTEX_ANCHOR = "#include <project_vertex>";
 /** Fragment anchor: `outgoingLight`, `normal`, `vViewPosition`, `material.roughness` are all in scope just before it. */
 const FRAGMENT_ANCHOR = "#include <opaque_fragment>";
 
-/** Projects the plane's world position into the reflection texture (screen-space) coordinate. */
-const VERTEX_PATCH = `${VERTEX_ANCHOR}\n\tvReflectionUv = reflectionTextureMatrix * modelMatrix * vec4( transformed, 1.0 );`;
+// Projects the plane's LOCAL position into the reflection texture (screen-space) coord.
+// `reflectionTextureMatrix` already bakes in the surface's world matrix (bias * proj *
+// view * matrixWorld), exactly like three.js `Reflector`, so the shader must multiply by
+// the local `transformed` position — applying `modelMatrix` here too would double the
+// world transform and mis-project the reflection.
+const VERTEX_PATCH = `${VERTEX_ANCHOR}\n\tvReflectionUv = reflectionTextureMatrix * vec4( transformed, 1.0 );`;
 
 /**
  * Composites the planar reflection into `outgoingLight` before it is written/tone-mapped:
  * sample the (linear-HDR) reflection RT at the screen-projected coord, nudged by the
- * shading normal for normal-map detail; weight by a fresnel term, the authored strength,
- * and `(1 - roughness)` so glossy reads as a sharp reflection and rough fades it out.
+ * normal-map detail; weight by a fresnel term, the authored strength, and `(1 - roughness)`
+ * so glossy reads as a sharp reflection and rough fades it out.
+ *
+ * The distortion is driven by `normal - normalize(vNormal)` — the normal MAP's deviation
+ * from the flat geometric normal — not the full shading normal. A flat surface's view-space
+ * normal is ~constant across the plane, so using it directly would shift the whole reflection
+ * by a constant amount (it appears to sit too low); the deviation is zero where there's no
+ * normal map, so a plain surface reflects with no offset and only map detail ripples it.
  */
 const FRAGMENT_PATCH = `{
 		vec2 reflProjUv = vReflectionUv.xy / max( vReflectionUv.w, 1e-4 );
-		reflProjUv += normal.xy * reflectionDistortion;
+		reflProjUv += ( normal - normalize( vNormal ) ).xy * reflectionDistortion;
 		vec3 reflectionColor = texture2D( tReflection, reflProjUv ).rgb * reflectionTint;
 		vec3 reflectionViewDir = normalize( vViewPosition );
 		float reflectionFresnel = reflectionFresnelBias + ( 1.0 - reflectionFresnelBias ) *

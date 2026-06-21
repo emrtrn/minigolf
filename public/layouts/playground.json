@@ -294,7 +294,7 @@
       "id": "reflective-surface-1",
       "position": [
         -0.4,
-        0.31,
+        0.26,
         1.87
       ],
       "name": "Reflective Surface",
@@ -309,8 +309,10 @@
         1
       ],
       "material": "concratetile-material",
-      "reflectionStrength": 0.3,
-      "fresnelPower": 4,
+      "reflectionStrength": 0.6,
+      "fresnelPower": 2,
+      "fresnelBias": 0.2,
+      "distortion": 0.2,
       "resolution": 512
     }
   ],
