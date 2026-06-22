@@ -94,6 +94,7 @@ import {
 } from "@engine/render-three/cloudLayer";
 import {
   applyPostProcessToneMapping,
+  createPostProcessAntialiasPass,
   createPostProcessEffectPasses,
   hasPostProcessEffectPasses,
   PostProcessPipeline,
@@ -1720,6 +1721,12 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
       createPostProcessEffectPasses(resolved, {
         scene: this.scene,
         camera: this.camera,
+        width: window.innerWidth,
+        height: window.innerHeight,
+      }),
+    );
+    this.postProcessPipeline.setAntialiasPass(
+      createPostProcessAntialiasPass(resolved, {
         width: window.innerWidth,
         height: window.innerHeight,
       }),

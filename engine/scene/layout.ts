@@ -369,6 +369,8 @@ export interface LayoutPostProcess {
   exposure?: number;
   /** Renderer tone mapper. Absent means ACES filmic. */
   toneMapping?: "aces" | "neutral" | "none";
+  /** Post-process anti-aliasing. Absent means no AA pass. */
+  antialias?: "none" | "smaa";
   /** Bloom full-screen pass settings. */
   bloom?: {
     enabled?: boolean;

@@ -7985,10 +7985,12 @@ check("resolvePostProcess fills defaults and overrides per field", () => {
   assert.equal(resolved.toneMapping, "neutral");
   assert.equal(resolved.bloom.enabled, POST_PROCESS_DEFAULTS.bloom.enabled);
   assert.equal(resolved.vignette.intensity, POST_PROCESS_DEFAULTS.vignette.intensity);
+  assert.equal(resolved.antialias, POST_PROCESS_DEFAULTS.antialias);
   assert.equal(resolved.name, POST_PROCESS_DEFAULTS.name);
   assert.equal(resolved.hidden, POST_PROCESS_DEFAULTS.hidden);
 
   const effects = resolvePostProcess({
+    antialias: "smaa",
     bloom: { enabled: true, intensity: 1.2 },
     vignette: { enabled: true, offset: 0.8 },
     chromaticAberration: { enabled: true, amount: 0.4 },
@@ -8000,6 +8002,7 @@ check("resolvePostProcess fills defaults and overrides per field", () => {
     temperature: 0.3,
     tint: -0.2,
   });
+  assert.equal(effects.antialias, "smaa");
   assert.equal(effects.bloom.enabled, true);
   assert.equal(effects.bloom.intensity, 1.2);
   assert.equal(effects.bloom.threshold, POST_PROCESS_DEFAULTS.bloom.threshold);
@@ -8121,6 +8124,7 @@ check("hasPostProcessEffectPasses tracks enabled pass effects only", () => {
   assert.equal(hasPostProcessEffectPasses(resolvePostProcess({ grain: { enabled: true } })), true);
   assert.equal(hasPostProcessEffectPasses(resolvePostProcess({ dof: { enabled: true } })), true);
   assert.equal(hasPostProcessEffectPasses(resolvePostProcess({ ao: { enabled: true } })), true);
+  assert.equal(hasPostProcessEffectPasses(resolvePostProcess({ antialias: "smaa" })), true);
   assert.equal(hasPostProcessEffectPasses(resolvePostProcess({ temperature: 0.5 })), true);
   assert.equal(hasPostProcessEffectPasses(resolvePostProcess({ tint: -0.5 })), true);
   // Disabled DoF/CA/grain plus neutral white balance leave the chain empty.
@@ -8132,6 +8136,7 @@ check("hasPostProcessEffectPasses tracks enabled pass effects only", () => {
 
 check("validatePostProcess allowlists fields and round-trips through validateLayout", () => {
   assert.deepEqual(validatePostProcess({}), {});
+  assert.deepEqual(validatePostProcess({ antialias: "none" }), {});
   assert.equal(validatePostProcess(undefined), null);
 
   const post = validatePostProcess({
@@ -8139,6 +8144,7 @@ check("validatePostProcess allowlists fields and round-trips through validateLay
     hidden: true,
     exposure: 1.35,
     toneMapping: "neutral",
+    antialias: "smaa",
     bloom: { enabled: true, threshold: 0.7, intensity: 1.1, radius: 0.3 },
     vignette: { enabled: true, intensity: 0.45, offset: 0.9 },
     chromaticAberration: { enabled: true, amount: 0.6 },
@@ -8156,6 +8162,7 @@ check("validatePostProcess allowlists fields and round-trips through validateLay
     hidden: true,
     exposure: 1.35,
     toneMapping: "neutral",
+    antialias: "smaa",
     bloom: { enabled: true, threshold: 0.7, intensity: 1.1, radius: 0.3 },
     vignette: { enabled: true, intensity: 0.45, offset: 0.9 },
     chromaticAberration: { enabled: true, amount: 0.6 },
@@ -8169,6 +8176,7 @@ check("validatePostProcess allowlists fields and round-trips through validateLay
   });
   assert.throws(() => validatePostProcess({ exposure: 99 }));
   assert.throws(() => validatePostProcess({ toneMapping: "filmic" }));
+  assert.throws(() => validatePostProcess({ antialias: "fxaa" }));
   assert.throws(() => validatePostProcess({ bloom: { enabled: "yes" } }));
   assert.throws(() => validatePostProcess({ vignette: { intensity: 99 } }));
   assert.throws(() => validatePostProcess({ chromaticAberration: { amount: 99 } }));
@@ -8189,6 +8197,7 @@ check("validatePostProcess allowlists fields and round-trips through validateLay
     postProcess: {
       exposure: 1.2,
       toneMapping: "none",
+      antialias: "smaa",
       bloom: { enabled: true, intensity: 0.6 },
       dof: { enabled: true, focusDistance: 15 },
       ao: { enabled: true, radius: 2 },
@@ -8199,6 +8208,7 @@ check("validatePostProcess allowlists fields and round-trips through validateLay
   assert.deepEqual(layout.postProcess, {
     exposure: 1.2,
     toneMapping: "none",
+    antialias: "smaa",
     bloom: { enabled: true, intensity: 0.6 },
     dof: { enabled: true, focusDistance: 15 },
     ao: { enabled: true, radius: 2 },

@@ -1,12 +1,14 @@
 import type { LayoutPostProcess } from "./layout";
 
 export type PostProcessToneMapping = "aces" | "neutral" | "none";
+export type PostProcessAntialias = "none" | "smaa";
 
 export interface ResolvedPostProcess {
   name: string;
   hidden: boolean;
   exposure: number;
   toneMapping: PostProcessToneMapping;
+  antialias: PostProcessAntialias;
   bloom: {
     enabled: boolean;
     threshold: number;
@@ -50,6 +52,7 @@ export const POST_PROCESS_DEFAULTS: ResolvedPostProcess = {
   hidden: false,
   exposure: 1,
   toneMapping: "aces",
+  antialias: "none",
   bloom: {
     enabled: false,
     threshold: 1,
@@ -97,6 +100,7 @@ export function resolvePostProcess(
     hidden: actor.hidden ?? defaults.hidden,
     exposure: actor.exposure ?? defaults.exposure,
     toneMapping: actor.toneMapping ?? defaults.toneMapping,
+    antialias: actor.antialias ?? defaults.antialias,
     bloom: {
       ...defaults.bloom,
       ...actor.bloom,

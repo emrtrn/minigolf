@@ -138,9 +138,36 @@ OutlinePass, OutputPass). Aynı dizinde hazır gelenler:
   basit **Chromatic Aberration**.
 - `FilmPass` → **Film Grain** (+ tarama/scanline; greni izole kullanırız).
 - `GTAOPass` / `SSAOPass` → **Ambient Occlusion**.
-- `SMAAPass` → kenar yumuşatma (PP toggle olarak faydalı).
+- `SMAAPass` → kenar yumuşatma (PP toggle olarak faydalı; `OutputPass`'tan
+  **önce** çalışmalı).
 - `OutputPass` → tonemapping + sRGB encode (zaten kullanılıyor; PP zincirinin
   **sonunda** kalmalı).
+
+**Anti-alias araştırma notu (2026-06-22):**
+
+- Three.js `EffectComposer` pass'leri sırayla çalıştırır ve render loop'ta
+  `renderer.render()` yerine `composer.render()` kullanılır. Composer kendi read/
+  write render target'larını oluşturur; constructor'a özel `WebGLRenderTarget`
+  verilirse onu ve klonunu buffer olarak kullanır.
+- `SMAAPass`, Three.js dokümantasyonuna göre linear-sRGB uzayında çalışır ve
+  `OutputPass`'tan **önce** olmalıdır. Bu Forge için en düşük riskli ilk AA
+  yoludur: yeni bağımlılık yok, post-process zincirine tek pass eklenir.
+- `OutputPass` tonemapping + color-space conversion'ı en sonda yapar. Bu yüzden
+  FXAA gibi sRGB-input isteyen bir pass seçilirse `OutputPass` sonrası özel sıra
+  gerektirir; Forge'un mevcut zinciri için SMAA daha temizdir.
+- Renderer zaten `antialias: true` ile kuruluyor; bu default framebuffer MSAA'sı
+  düz render yolunda işe yarar. Composer aktifken görüntü ara render target'lara
+  çizildiği için F2.5'te pratik çözüm `SMAAPass`; gerekirse ikinci deney olarak
+  EffectComposer'a multisample-capable özel render target (`samples`) verilebilir,
+  ama ilk hedef değil.
+- Editörde seçim outline'ı da yumuşatılacaksa sıra şu olmalı:
+  `RenderPass → efektler → [OutlinePass] → SMAAPass → OutputPass`. Mevcut
+  pipeline effect pass'leri injected editor pass'lerden önce ekliyor; bu yüzden
+  SMAA ayrı bir "final AA" slot'u olarak tasarlanmalı, sıradan efekt pass'i gibi
+  OutlinePass önüne konmamalı.
+
+Kaynaklar: Three.js `EffectComposer`, `SMAAPass`, `OutputPass`,
+`WebGLRenderer.capabilities.maxSamples` dokümanları.
 
 ### B.4 Ölçek uyarısı
 
@@ -175,9 +202,9 @@ ve bounded-volume karışımı **kapsam dışı**.
 | Chromatic Aberration | `chromaticAberration{enabled,amount}` → `RGBShiftShader` | **Faz 2** |
 | Film Grain | `grain{enabled,intensity}` → `FilmPass` (yalnız gren) | **Faz 2** |
 | Ambient Occlusion | `ao{enabled,radius,intensity}` → `GTAOPass` (GTAO; SSAO/SAO değil, 2026-06-22) | **Faz 2** |
-| Anti-alias (kalite) | `antialias: "none" \| "smaa"` → `SMAAPass` | **Faz 2** |
+| Anti-alias (kalite) | `antialias: "none" \| "smaa"` → `SMAAPass` | **Faz 2 (F2.5)** |
 | White Balance (temp/tint) | grading shader'a temp/tint | **Faz 2 (ops.)** |
-| Shadows/Mid/Highlights grading | bölgesel grading (lift/gamma/gain) | **Ertele (Faz 2 sonu, ops.)** |
+| Shadows/Mid/Highlights grading | bölgesel grading (lift/gamma/gain) | **İPTAL (2026-06-22)** |
 | Auto Exposure / Eye Adaptation | luminance histogram + zamanla uyum | **KAPSAM DIŞI (pahalı)** |
 | Local Exposure | yerel pozlama | **KAPSAM DIŞI** |
 | Motion Blur | velocity buffer gerektirir | **KAPSAM DIŞI (Faz 3)** |
@@ -355,7 +382,9 @@ singleton aktör. Composer **gerekmez** — yalnızca `renderer.toneMapping` /
 
 **Hedef:** Önce paylaşılan composer boru hattı (Bölüm E), ardından Bloom +
 Vignette + temel grading (saturation/contrast); sonra DoF, Chromatic Aberration,
-Film Grain, AO, opsiyonel SMAA. Faz 1 yeşil geçtikten sonra; istenmezse iptal.
+Film Grain, AO ve F2.5'te anti-alias. Bölgesel grading (shadows/midtones/
+highlights lift/gamma/gain) iptal edildi; F2.6 test/doğrulama anti-alias'tan
+sonra yapılacak.
 
 #### F2.0 — Paylaşılan composer boru hattı (Bölüm E — önce bu)
 
@@ -410,8 +439,10 @@ hissini tamamlayan düşük-maliyetli üçlü + en büyük eksik DoF (2026-06-20
 - [ ] Emissive intensity cap'ini yükselt (MaterialEditor slider+input clamp +
       `saveValidator` `material.emissiveIntensity` aralığı) — örn. 0..1000
 - [ ] (ileride, opsiyonel) Selective / per-object bloom layer — yalnızca istenirse
-- [ ] Anti-alias: composer yolunda Play kenarlarını kontrol et; gerekirse
-      `SMAAPass` veya composer `samples`
+- [x] **Bölgesel grading iptal:** Bloom kalitesi kapsamında shadows/midtones/
+      highlights lift/gamma/gain eklenmeyecek; global saturation/contrast +
+      white-balance yeterli kabul edildi.
+- [x] Anti-alias kapsamı ayrı F2.5 fazına taşındı.
 
 #### F2.4 — Kalan opsiyonel pass efektleri
 
@@ -478,10 +509,31 @@ hissini tamamlayan düşük-maliyetli üçlü + en büyük eksik DoF (2026-06-20
       değişmez** (regresyon yok); AO override'ı artık geçerli (smooth) normaller
       okur. `tsc` temiz, 274 engine-test yeşil. Manuel tarayıcı doğrulaması
       (autosave nedeniyle) kullanıcıya bırakıldı.
-- [ ] **Anti-alias** toggle (`SMAAPass`): `antialias: "none" | "smaa"`
-- [ ] Bölgesel grading: shadows/midtones/highlights (lift/gamma/gain)
+- [x] **Bölgesel grading iptal:** shadows/midtones/highlights lift/gamma/gain
+      F2.4'te yapılmayacak. Mevcut global saturation/contrast + temperature/tint
+      grading yüzeyi korunur; ek bölgesel shader/UI/validator alanı açılmaz.
 
-#### F2.5 — Test & doğrulama
+#### F2.5 — Anti-alias (SMAA)
+
+**Karar:** İlk uygulama `SMAAPass`. Composer `samples` / multisampled render
+target yolu yalnızca SMAA yetersiz kalırsa ayrı kalite deneyi olarak ele alınır.
+
+- [x] Model: `LayoutPostProcess.antialias?: "none" | "smaa"` +
+      `ResolvedPostProcess.antialias` default `"none"`
+- [x] `resolvePostProcess` + `POST_PROCESS_DEFAULTS` + `validatePostProcess`
+      allowlist/enum testi
+- [x] Details UI: Post Process altında Anti-alias seçimi (`None` / `SMAA`)
+- [x] Pipeline: `SMAAPass` final AA slot'u olarak eklenir; sıra editörde
+      `RenderPass → efektler → OutlinePass → SMAAPass → OutputPass`, runtime'da
+      `RenderPass → efektler → SMAAPass → OutputPass`
+- [x] Resize/dispose: `SMAAPass.setSize(width,height)` ve `dispose()` pipeline
+      lifecycle'ına bağlı
+- [x] `hasPostProcessEffectPasses` anti-alias açıkken composer yolunu aktif eder;
+      anti-alias kapalı ve diğer pass'ler nötrse runtime düz render yoluna döner
+- [ ] Manuel kontrol: Play + editor kenarları, OutlinePass çizgileri, yüksek
+      kontrastlı mesh kenarları ve performans/draw-call etkisi
+
+#### F2.6 — Test & doğrulama
 
 - [ ] Pass sırası + resize + dispose her efekt için doğrulanmış
 - [ ] `tools/engine-tests.ts`: `applyPostProcess` enabled-set'e göre pass ekleme/
@@ -517,7 +569,7 @@ hissini tamamlayan düşük-maliyetli üçlü + en büyük eksik DoF (2026-06-20
    varken PP sahiplenir. Tek koordinasyon noktası + test ile sabitlenir.
 4. **Faz 1 efekt seti (onaylı):** yalnızca **Exposure + Tonemapper**. **Faz 2**:
    önce composer, sonra Bloom + Vignette + Saturation/Contrast (onaylı set),
-   ardından opsiyonel DoF/CA/Grain/AO/SMAA. **Auto-exposure, motion blur,
+   ardından DoF/CA/Grain/AO ve F2.5 anti-alias/SMAA. **Auto-exposure, motion blur,
    Lumen/RT/Path Tracing, çoklu hacim** kapsam dışı.
 5. **Menü:** `Add Actor → Visual Effects` başlığında, Cloud Layer'ın yanında
    **"Post Process"**; Sky gibi tıkla-ekle (drag yok).
@@ -535,3 +587,9 @@ hissini tamamlayan düşük-maliyetli üçlü + en büyük eksik DoF (2026-06-20
    kullanıcı kapatabilir** (maliyet yüksekse) — o ayarlar UI'si **ayrı/sonraki
    iş**, bu PP entegrasyonunun kapsamında değil. PP işleri başka bir oturumda
    sırayla yapılacak.
+9. **Bölgesel grading (2026-06-22):** shadows/midtones/highlights lift/gamma/gain
+   iptal. Forge tarafında global saturation/contrast + temperature/tint yeterli
+   kapsam olarak korunur.
+10. **Anti-alias (2026-06-22):** sıradaki PP işi F2.5 SMAA toggle'dır. SMAA,
+    editor OutlinePass'tan sonra ve `OutputPass`'tan önce çalışacak ayrı final-AA
+    slot'u olarak tasarlanır; F2.6 test/doğrulama bunun ardından yapılır.

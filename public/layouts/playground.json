@@ -209,6 +209,7 @@
   },
   "postProcess": {
     "toneMapping": "aces",
+    "antialias": "smaa",
     "exposure": 1,
     "bloom": {
       "enabled": true,
@@ -237,7 +238,9 @@
       "intensity": 1
     },
     "saturation": 1,
-    "contrast": 1
+    "contrast": 1,
+    "temperature": 0,
+    "tint": 0
   },
   "lights": [
     {

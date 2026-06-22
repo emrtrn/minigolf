@@ -3956,6 +3956,16 @@ export class EditorUi {
         <div class="detail-hint">Post Process controls scene exposure; Sky Atmosphere scales its own exposure locally.</div>
       </div>
       <div class="detail-section">
+        <div class="detail-section-title">Anti-alias</div>
+        <label class="detail-row">
+          <span>Mode</span>
+          <select data-post-antialias>
+            <option value="none" ${post.antialias === "none" ? "selected" : ""}>None</option>
+            <option value="smaa" ${post.antialias === "smaa" ? "selected" : ""}>SMAA</option>
+          </select>
+        </label>
+      </div>
+      <div class="detail-section">
         <div class="detail-section-title">Bloom</div>
         <label class="detail-toggle">
           <input type="checkbox" data-post-bloom-enabled ${post.bloom.enabled ? "checked" : ""} />
@@ -4108,6 +4118,18 @@ export class EditorUi {
         this.app.setPostProcess(
           { toneMapping: value as LayoutPostProcess["toneMapping"] },
           "Edit Post Process",
+        );
+      },
+    );
+
+    this.detailsBody.querySelector<HTMLSelectElement>("[data-post-antialias]")?.addEventListener(
+      "change",
+      (event) => {
+        const value = (event.currentTarget as HTMLSelectElement).value;
+        if (value !== "none" && value !== "smaa") return;
+        this.app.setPostProcess(
+          { antialias: value as LayoutPostProcess["antialias"] },
+          "Edit Post Process Anti-alias",
         );
       },
     );

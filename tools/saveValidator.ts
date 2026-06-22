@@ -867,6 +867,13 @@ export function validatePostProcess(value: unknown): Record<string, unknown> | n
   } else if (input.toneMapping !== undefined) {
     throw new Error("postProcess.toneMapping must be aces, neutral, or none");
   }
+  if (input.antialias === "smaa") {
+    post.antialias = input.antialias;
+  } else if (input.antialias === "none") {
+    // Default value: accepted for round-trip input but omitted from saved output.
+  } else if (input.antialias !== undefined) {
+    throw new Error("postProcess.antialias must be none or smaa");
+  }
 
   const exposure = validateOptionalNumber(input.exposure, "postProcess.exposure", 0, 4);
   if (exposure !== undefined) post.exposure = exposure;

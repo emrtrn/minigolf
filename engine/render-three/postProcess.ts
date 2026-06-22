@@ -16,6 +16,7 @@ import { GTAOPass } from "three/examples/jsm/postprocessing/GTAOPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
+import { SMAAPass } from "three/examples/jsm/postprocessing/SMAAPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import type { Pass } from "three/examples/jsm/postprocessing/Pass.js";
 import { RGBShiftShader } from "three/examples/jsm/shaders/RGBShiftShader.js";
@@ -27,6 +28,7 @@ export {
   POST_PROCESS_DEFAULTS,
   resolvePostProcess,
   type PostProcessToneMapping,
+  type PostProcessAntialias,
   type ResolvedPostProcess,
 } from "@engine/scene/postProcess";
 
@@ -246,8 +248,22 @@ export function hasPostProcessEffectPasses(resolved: ResolvedPostProcess | null)
         resolved.ao.enabled ||
         resolved.chromaticAberration.enabled ||
         resolved.grain.enabled ||
+        resolved.antialias !== "none" ||
         hasColorGrading(resolved)),
   );
+}
+
+export function createPostProcessAntialiasPass(
+  resolved: ResolvedPostProcess | null,
+  size: { width: number; height: number },
+): Pass | null {
+  if (!resolved || resolved.hidden || resolved.antialias === "none") return null;
+  if (resolved.antialias === "smaa") {
+    const pass = new SMAAPass();
+    pass.setSize(size.width, size.height);
+    return pass;
+  }
+  return null;
 }
 
 /**
@@ -259,6 +275,7 @@ export class PostProcessPipeline {
   private readonly outputPass: OutputPass;
   private readonly injectedPasses: Pass[] = [];
   private effectPasses: Pass[] = [];
+  private antialiasPass: Pass | null = null;
 
   constructor(options: {
     renderer: WebGLRenderer;
@@ -275,8 +292,7 @@ export class PostProcessPipeline {
   }
 
   addPassBeforeOutput(pass: Pass): void {
-    const outputIndex = this.composer.passes.indexOf(this.outputPass);
-    this.composer.insertPass(pass, outputIndex >= 0 ? outputIndex : this.composer.passes.length);
+    this.composer.insertPass(pass, this.finalStageStartIndex());
     this.injectedPasses.push(pass);
   }
 
@@ -286,16 +302,22 @@ export class PostProcessPipeline {
       pass.dispose();
     }
     this.effectPasses = passes;
-    const firstInjectedIndex = this.injectedPasses
-      .map((pass) => this.composer.passes.indexOf(pass))
-      .filter((index) => index >= 0)
-      .sort((a, b) => a - b)[0];
-    const outputIndex = this.composer.passes.indexOf(this.outputPass);
-    const insertIndex =
-      firstInjectedIndex ?? (outputIndex >= 0 ? outputIndex : this.composer.passes.length);
+    const insertIndex = this.finalStageStartIndex();
     passes.forEach((pass, offset) => {
       this.composer.insertPass(pass, insertIndex + offset);
     });
+  }
+
+  setAntialiasPass(pass: Pass | null): void {
+    if (this.antialiasPass) {
+      this.composer.removePass(this.antialiasPass);
+      this.antialiasPass.dispose();
+    }
+    this.antialiasPass = pass;
+    if (pass) {
+      const outputIndex = this.composer.passes.indexOf(this.outputPass);
+      this.composer.insertPass(pass, outputIndex >= 0 ? outputIndex : this.composer.passes.length);
+    }
   }
 
   render(deltaSeconds: number): void {
@@ -309,7 +331,19 @@ export class PostProcessPipeline {
   dispose(): void {
     for (const pass of this.effectPasses) pass.dispose();
     for (const pass of this.injectedPasses) pass.dispose();
+    this.antialiasPass?.dispose();
     this.outputPass.dispose();
     this.composer.dispose();
+  }
+
+  private finalStageStartIndex(): number {
+    const indices = [
+      ...this.injectedPasses.map((pass) => this.composer.passes.indexOf(pass)),
+      this.antialiasPass ? this.composer.passes.indexOf(this.antialiasPass) : -1,
+      this.composer.passes.indexOf(this.outputPass),
+    ].filter((index) => index >= 0);
+    return indices.length > 0
+      ? Math.min(...indices)
+      : this.composer.passes.length;
   }
 }

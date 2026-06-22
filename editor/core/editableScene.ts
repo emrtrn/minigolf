@@ -112,6 +112,7 @@ export interface EditablePostProcess {
   hidden: boolean;
   exposure: number;
   toneMapping: NonNullable<LayoutPostProcess["toneMapping"]>;
+  antialias: NonNullable<LayoutPostProcess["antialias"]>;
   bloom: {
     enabled: boolean;
     threshold: number;

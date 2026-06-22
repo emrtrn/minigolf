@@ -317,7 +317,7 @@ alınan karar (sonraki oturum yeniden tartışmasın).
   yani FOV offset birikmez. **Test:** yeni engine testi FOV/shake blendini kapsar;
   Actor Script sprint locomotion testi artik takip pozunun ustundeki kucuk shake'i
   toleransla dogrular. **Gate:** `npx.cmd tsc --noEmit` temiz; engine **274**
-  check. **Durum:** `docs/PLAYER_CONTROLLER_CHECKLIST.md` Faz 7-9 tum maddeler
+  check. **Durum:** `docs/completed/PLAYER_CONTROLLER_CHECKLIST.md` Faz 7-9 tum maddeler
   `[x]`; bir sonraki kamera isi yeni checklist/faz olarak acilmali.
 
 - *2026-06-22* - **Player Controller Faz 9 - PlayerCameraManager view target/blend
@@ -335,7 +335,7 @@ alınan karar (sonraki oturum yeniden tartışmasın).
   sonraki kayitta kapatildi.
 
 - *2026-06-22* - **Player Controller Faz 9 - Stateful runtime PlayerController
-  (tamam).** `docs/PLAYER_CONTROLLER_CHECKLIST.md` Faz 9'un ilk maddesi kapandi.
+  (tamam).** `docs/completed/PLAYER_CONTROLLER_CHECKLIST.md` Faz 9'un ilk maddesi kapandi.
   Yeni `src/game/playerController.ts` DOM'suz runtime controller katmani oldu:
   `PlayerControllerDefinition` + `GameModeContext` uzerinden input mode,
   pointer-look mode, cursor policy, possess/unpossess state ve controller-owned
