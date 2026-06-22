@@ -5450,6 +5450,42 @@ check("CharacterMovement subsystem only moves the possessed character", () => {
   assert.equal(reports.get("actor:0")?.grounded, true);
 });
 
+check("CharacterMovement subsystem can orient a character to controller yaw", () => {
+  const actions = new ActionMap({});
+  actions.advance();
+  const entity: Entity = {
+    id: "actor:aim",
+    components: {
+      Transform: { position: [0, 0, 0], rotation: [0, 15, 0], scale: [1, 1, 1] },
+      CharacterMovement: {
+        maxWalkSpeed: 4,
+        sprintMultiplier: 2,
+        jumpSpeed: 5,
+        gravityScale: 1,
+        orientRotationToMovement: true,
+        orientRotationToControl: true,
+      },
+    },
+  };
+
+  let transform: TransformComponent | null = null;
+  const movement = new CharacterMovementSubsystem(
+    actions,
+    (_id, next) => {
+      transform = next;
+    },
+    undefined,
+    {
+      getControlYaw: () => Math.PI / 2,
+      isPlayerControlled: () => true,
+    },
+  );
+  movement.setEntities([entity]);
+  movement.update({ deltaSeconds: 0.5, elapsedSeconds: 0.5, frame: 1 });
+  assert.ok(transform);
+  yawApproxEqual(transform.rotation[1], -90);
+});
+
 check("CharacterMovement subsystem applies jump and gravity from component props", () => {
   const actions = new ActionMap({ Space: "jump" });
   actions.handleDown("Space");
@@ -6388,6 +6424,30 @@ check("actor save payload requires a .actor.json path and normalizes the body", 
   );
 });
 
+check("actor save payload preserves CharacterMovement control-orientation props", () => {
+  const payload = validateSaveActorPayload({
+    path: "assets/blueprints/Player.actor.json",
+    actor: {
+      name: "Player",
+      parentClass: "character",
+      components: [
+        { id: "root", component: "Transform", props: {} },
+        {
+          id: "move",
+          parent: "root",
+          component: "CharacterMovement",
+          props: { orientRotationToMovement: false, orientRotationToControl: true },
+        },
+      ],
+    },
+  });
+  const movement = (payload.actor.components as Array<{ component: string; props: Record<string, unknown> }>).find(
+    (node) => node.component === "CharacterMovement",
+  );
+  assert.equal(movement?.props.orientRotationToMovement, false);
+  assert.equal(movement?.props.orientRotationToControl, true);
+});
+
 check("resolveBehaviorStub derives a kebab path + camelCase export + signed source", () => {
   const stub = resolveBehaviorStub("open-door");
   assert.equal(stub.slug, "open-door");
@@ -6434,7 +6494,7 @@ check("actorInstanceToEntity flattens a class + placement into one entity", () =
         id: "move",
         parent: "root",
         component: "CharacterMovement",
-        props: { maxWalkSpeed: 4, jumpSpeed: 6 },
+        props: { maxWalkSpeed: 4, jumpSpeed: 6, orientRotationToControl: true },
       },
       // Second MeshRenderer is ignored: first node of each kind wins (flat entity).
       { id: "mesh2", parent: "root", component: "MeshRenderer", props: { assetId: "ignored" } },
@@ -6475,6 +6535,7 @@ check("actorInstanceToEntity flattens a class + placement into one entity", () =
   const movement = readCharacterMovementComponent(entity);
   assert.equal(movement?.maxWalkSpeed, 4);
   assert.equal(movement?.jumpSpeed, 6);
+  assert.equal(movement?.orientRotationToControl, true);
   // The first event binding compiles to the single Behavior.
   const behavior = readBehaviorComponent(entity);
   assert.equal(behavior?.scriptId, "spin");

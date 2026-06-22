@@ -220,6 +220,7 @@ function defaultCharacterComponents(): ComponentTemplateNode[] {
         brakingDeceleration: 24,
         groundFriction: 8,
         orientRotationToMovement: true,
+        orientRotationToControl: false,
         movementMode: "walking",
         capsuleRadius: 0.3,
         capsuleHalfHeight: 0.9,

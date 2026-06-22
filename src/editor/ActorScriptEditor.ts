@@ -1018,6 +1018,14 @@ export class ActorScriptEditor {
       this.markDirty();
       this.renderDetails();
     });
+    const orientControl = this.detailsHost.querySelector<HTMLInputElement>(
+      "[data-as-character-movement-orient-control]",
+    );
+    orientControl?.addEventListener("change", () => {
+      node.props.orientRotationToControl = orientControl.checked;
+      this.markDirty();
+      this.renderDetails();
+    });
     this.detailsHost
       .querySelectorAll<HTMLInputElement>("[data-as-character-movement-num]")
       .forEach((input) => {
@@ -1727,6 +1735,12 @@ function characterMovementFields(node: ComponentTemplateNode): string {
       } />
       <span>Orient Rotation To Movement</span>
     </label>
+    <label class="as-field as-check">
+      <input type="checkbox" data-as-character-movement-orient-control ${
+        props.orientRotationToControl === true ? "checked" : ""
+      } />
+      <span>Orient Rotation To Control</span>
+    </label>
   `;
 }
 
@@ -1809,6 +1823,7 @@ function defaultComponentProps(kind: ActorComponentKind): Record<string, SceneJs
       brakingDeceleration: 24,
       groundFriction: 8,
       orientRotationToMovement: true,
+      orientRotationToControl: false,
       movementMode: "walking",
       capsuleRadius: 0.3,
       capsuleHalfHeight: 0.9,

@@ -225,6 +225,7 @@ export interface CharacterMovementComponent {
   brakingDeceleration: number;
   groundFriction: number;
   orientRotationToMovement: boolean;
+  orientRotationToControl: boolean;
   movementMode: CharacterMovementMode;
   capsuleRadius: number;
   capsuleHalfHeight: number;
@@ -613,6 +614,7 @@ export function readCharacterMovementComponent(
     brakingDeceleration: readFiniteNumber(data.brakingDeceleration, 24, 0),
     groundFriction: readFiniteNumber(data.groundFriction, 8, 0),
     orientRotationToMovement: data.orientRotationToMovement !== false,
+    orientRotationToControl: data.orientRotationToControl === true,
     movementMode: mode,
     capsuleRadius: readFiniteNumber(data.capsuleRadius, 0.3, 0),
     capsuleHalfHeight: readFiniteNumber(data.capsuleHalfHeight, 0.9, 0),

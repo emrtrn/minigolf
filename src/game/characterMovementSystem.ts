@@ -108,7 +108,15 @@ export class CharacterMovementSubsystem implements Subsystem {
     runtime.transform.position[0] += dx;
     runtime.transform.position[2] += dz;
     const yaw = facingYawFromMove(dx, dz);
-    if (movement.orientRotationToMovement && yaw !== null) runtime.transform.rotation[1] = yaw;
+    if (
+      movement.orientRotationToControl &&
+      typeof controlYaw === "number" &&
+      Number.isFinite(controlYaw)
+    ) {
+      runtime.transform.rotation[1] = controlYawToCharacterYaw(controlYaw);
+    } else if (movement.orientRotationToMovement && yaw !== null) {
+      runtime.transform.rotation[1] = yaw;
+    }
 
     const vertical = this.updateVertical(runtime, engine);
     this.reportLocomotion?.(runtime.id, {
@@ -155,6 +163,10 @@ export class CharacterMovementSubsystem implements Subsystem {
     if (!half) return planar;
     return resolvePlanarMovement(runtime.transform.position, planar, half, blockers);
   }
+}
+
+function controlYawToCharacterYaw(yaw: number): number {
+  return facingYawFromMove(-Math.sin(yaw), -Math.cos(yaw)) ?? 0;
 }
 
 function cloneTransform(transform: TransformComponent): TransformComponent {

@@ -192,7 +192,7 @@ Durum: `[ ]` yapilmadi, `[~]` devam ediyor, `[x]` tamam.
 
 ### Faz 8 - Yonelim ve girdi olgunlugu
 
-- [ ] `orientRotationToControl` (strafe/aim) yonelim modu; CharacterMovement
+- [x] `orientRotationToControl` (strafe/aim) yonelim modu; CharacterMovement
       prop + validator allowlist + Details form.
 - [ ] SpringArm `doCollisionTest`: bom bloklaninca kamerayi iceri cek.
 - [x] Pointer lock + Input Mode (Game/UI), imleci gizle/goster;
