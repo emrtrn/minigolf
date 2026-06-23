@@ -1670,6 +1670,12 @@ export class EditorUi {
         modelPath: item.path,
         ...(item.editable ? { assetId: item.editable.id } : {}),
         label: item.label,
+        assets: this.editableAssets.map((asset) => ({
+          id: asset.id,
+          name: asset.displayName ?? asset.name,
+          assetType: assetType(asset),
+          path: assetPath(asset),
+        })),
         onStatus: (message, tone) => this.setStatus(message, tone),
       });
     } catch (error) {

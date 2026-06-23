@@ -1518,7 +1518,15 @@ function validateSkeletonSocket(value: unknown, label: string): Record<string, u
   if (typeof input.bone !== "string" || input.bone.length === 0) {
     throw new Error(`${label}.bone must be a non-empty string`);
   }
-  return {
+  if (
+    input.previewAssetId !== undefined &&
+    input.previewAssetId !== null &&
+    input.previewAssetId !== "" &&
+    typeof input.previewAssetId !== "string"
+  ) {
+    throw new Error(`${label}.previewAssetId must be an asset id string`);
+  }
+  const socket: Record<string, unknown> = {
     name: input.name,
     bone: input.bone,
     position: validateVec3(input.position, `${label}.position`),
@@ -1530,6 +1538,10 @@ function validateSkeletonSocket(value: unknown, label: string): Record<string, u
       return Number(axis.toFixed(4));
     }),
   };
+  if (typeof input.previewAssetId === "string" && input.previewAssetId.length > 0) {
+    socket.previewAssetId = input.previewAssetId;
+  }
+  return socket;
 }
 
 export function validateAssetSkeletonDef(value: unknown): Record<string, unknown> {

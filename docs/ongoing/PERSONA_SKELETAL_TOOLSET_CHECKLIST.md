@@ -232,7 +232,7 @@ Durum: `[ ]` yapılmadı · `[~]` kısmi · `[x]` tamam
       `animationSet` olarak sidecar'a yaz → locomotion seçicisini besler
 - [x] **Sockets**: kemik seç → offset transform'lu socket ekle, viewport gizmo
       ile düzenle, `sockets[]` sidecar'a yaz
-- [ ] Socket'e preview asset takıp konumlandırma (silah/prop attach önizlemesi)
+- [x] Socket'e preview asset takıp konumlandırma (silah/prop attach önizlemesi)
 - [x] **Morph Target Previewer**: `morphTargetInfluences` slider'ları
 - [ ] **Blend Space (data)**: 1D/2D blend noktaları tanımla (örn. hız →
       idle↔walk↔run sürekli harman) + viewport önizleme; runtime'da `AnimationMixer`

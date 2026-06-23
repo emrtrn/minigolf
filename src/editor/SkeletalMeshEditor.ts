@@ -55,12 +55,21 @@ export interface SkeletalMeshEditorOptions {
   assetId?: string;
   /** Display name shown in the editor header / tab. */
   label: string;
+  /** Content Browser assets available for socket preview attachment. */
+  assets?: AssetPickerItem[];
   /** Optional status sink (surfaces to the host editor's status bar). */
   onStatus?: (message: string, tone?: "info" | "warning" | "error") => void;
 }
 
 type PersonaMode = "skeleton" | "animation";
 type SocketGizmoMode = "translate" | "rotate" | "scale";
+
+interface AssetPickerItem {
+  id: string;
+  name: string;
+  assetType: string;
+  path: string;
+}
 
 interface BoneNode {
   bone: Bone;
@@ -100,6 +109,8 @@ interface SocketOverlay {
   root: Group;
   marker: Mesh;
   socket: AssetSkeletonSocketDef;
+  previewRoot: Object3D | null;
+  previewAssetId: string | null;
 }
 
 export class SkeletalMeshEditor {
@@ -657,6 +668,7 @@ export class SkeletalMeshEditor {
 
   private renderSocketRow(socket: AssetSkeletonSocketDef): string {
     const selected = socket.name === this.selectedSocketName;
+    const previewAsset = this.options.assets?.find((asset) => asset.id === socket.previewAssetId);
     return `
       <div class="sm-socket-row ${selected ? "is-selected" : ""}" data-skel-socket="${escapeHtml(socket.name)}">
         <button type="button" class="sm-socket-main" data-skel-socket-select="${escapeHtml(socket.name)}">
@@ -665,6 +677,23 @@ export class SkeletalMeshEditor {
         </button>
         <button type="button" class="sm-prim-del" data-skel-socket-delete="${escapeHtml(socket.name)}" title="Delete">✕</button>
       </div>
+      ${
+        selected
+          ? `
+            <label class="sm-row sm-socket-preview">
+              <span>Preview Asset</span>
+              <select data-skel-socket-preview="${escapeHtml(socket.name)}">
+                ${this.socketPreviewOptions(socket.previewAssetId ?? "")}
+              </select>
+            </label>
+            ${
+              socket.previewAssetId && !previewAsset
+                ? `<div class="sm-hint">Preview asset not found in the Content Browser manifest.</div>`
+                : ""
+            }
+          `
+          : ""
+      }
     `;
   }
 
@@ -849,6 +878,11 @@ export class SkeletalMeshEditor {
     this.detailsHost.querySelectorAll<HTMLButtonElement>("[data-skel-socket-delete]").forEach((button) => {
       button.addEventListener("click", () => this.deleteSocket(button.dataset.skelSocketDelete ?? ""));
     });
+    this.detailsHost.querySelectorAll<HTMLSelectElement>("[data-skel-socket-preview]").forEach((select) => {
+      select.addEventListener("change", () => {
+        this.setSocketPreviewAsset(select.dataset.skelSocketPreview ?? "", select.value);
+      });
+    });
     this.detailsHost.querySelectorAll<HTMLButtonElement>("[data-skel-clip]").forEach((button) => {
       button.addEventListener("click", () =>
         this.selectClip(button.dataset.skelClip ?? "", { autoplay: true, crossfade: true }),
@@ -933,13 +967,16 @@ export class SkeletalMeshEditor {
       marker.renderOrder = 5;
       root.add(marker);
       bone.add(root);
-      this.socketOverlays.push({ root, marker, socket });
+      const overlay: SocketOverlay = { root, marker, socket, previewRoot: null, previewAssetId: null };
+      this.socketOverlays.push(overlay);
+      void this.attachSocketPreview(overlay);
     }
     this.attachSelectedSocketGizmo();
   }
 
   private disposeSocketOverlays(): void {
     for (const overlay of this.socketOverlays) {
+      this.clearSocketPreview(overlay);
       overlay.root.removeFromParent();
       overlay.marker.geometry.dispose();
       if (Array.isArray(overlay.marker.material)) {
@@ -996,6 +1033,28 @@ export class SkeletalMeshEditor {
     this.setStatus(`Deleted socket ${name}.`);
   }
 
+  private setSocketPreviewAsset(socketName: string, assetId: string): void {
+    if (!socketName) return;
+    const sockets = this.skeleton.sockets.map((socket) => {
+      if (socket.name !== socketName) return socket;
+      if (!assetId) {
+        const next = { ...socket };
+        delete next.previewAssetId;
+        return next;
+      }
+      return { ...socket, previewAssetId: assetId };
+    });
+    this.skeleton = { ...this.skeleton, sockets };
+    const overlay = this.socketOverlays.find((item) => item.socket.name === socketName);
+    const nextSocket = sockets.find((socket) => socket.name === socketName);
+    if (overlay && nextSocket) {
+      overlay.socket = nextSocket;
+      void this.attachSocketPreview(overlay);
+    }
+    this.markDirty();
+    this.renderDetails();
+  }
+
   private attachSelectedSocketGizmo(): void {
     const overlay = this.socketOverlays.find((item) => item.socket.name === this.selectedSocketName);
     if (!overlay) {
@@ -1039,6 +1098,53 @@ export class SkeletalMeshEditor {
     }
   }
 
+  private async attachSocketPreview(overlay: SocketOverlay): Promise<void> {
+    const assetId = overlay.socket.previewAssetId ?? "";
+    this.clearSocketPreview(overlay);
+    if (!assetId) return;
+    const asset = this.previewModelAssets().find((item) => item.id === assetId);
+    if (!asset) {
+      this.setStatus(`Socket preview asset not found: ${assetId}`, "warning");
+      return;
+    }
+    overlay.previewAssetId = asset.id;
+    try {
+      const gltf = await this.loader.loadAsync(projectFileUrl(asset.path));
+      if (
+        this.disposed ||
+        overlay.previewAssetId !== asset.id ||
+        overlay.socket.previewAssetId !== asset.id ||
+        !this.socketOverlays.includes(overlay)
+      ) {
+        disposeObject3D(gltf.scene);
+        return;
+      }
+      gltf.scene.name = `SocketPreview:${asset.name}`;
+      overlay.previewRoot = gltf.scene;
+      overlay.root.add(gltf.scene);
+    } catch (error) {
+      if (!this.disposed) {
+        this.setStatus(`Socket preview failed: ${describeError(error)}`, "warning");
+      }
+      overlay.previewAssetId = null;
+    }
+  }
+
+  private clearSocketPreview(overlay: SocketOverlay): void {
+    if (overlay.previewRoot) {
+      overlay.previewRoot.removeFromParent();
+      disposeObject3D(overlay.previewRoot);
+      overlay.previewRoot = null;
+    }
+    overlay.previewAssetId = null;
+  }
+
+  private previewModelAssets(): AssetPickerItem[] {
+    return (this.options.assets ?? []).filter(
+      (asset) => asset.assetType === "staticMesh" || asset.assetType === "skeletalMesh",
+    );
+  }
+
   private clipOptions(selected: string): string {
     return [`<option value="" ${selected ? "" : "selected"}>None</option>`]
       .concat(
@@ -1047,6 +1153,19 @@ export class SkeletalMeshEditor {
             `<option value="${escapeHtml(clip.name)}" ${
               clip.name === selected ? "selected" : ""
             }>${escapeHtml(clip.name)}</option>`,
+        ),
+      )
+      .join("");
+  }
+
+  private socketPreviewOptions(selected: string): string {
+    return [`<option value="" ${selected ? "" : "selected"}>None</option>`]
+      .concat(
+        this.previewModelAssets().map(
+          (asset) =>
+            `<option value="${escapeHtml(asset.id)}" ${
+              asset.id === selected ? "selected" : ""
+            }>${escapeHtml(asset.name)}</option>`,
         ),
       )
       .join("");
@@ -1253,6 +1372,16 @@ function buildBoneTree(bones: readonly Bone[]): BoneNode[] {
 
 function materialList(material: Mesh["material"]): Material[] {
   return Array.isArray(material) ? material : [material];
+}
+
+function disposeObject3D(root: Object3D): void {
+  root.traverse((object) => {
+    if (!(object instanceof Mesh)) return;
+    object.geometry.dispose();
+    for (const material of materialList(object.material)) {
+      material.dispose();
+    }
+  });
 }
 
 function emptyStats(): MeshStats {

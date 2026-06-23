@@ -1453,6 +1453,13 @@ body.editor-mode #debug-stats {
 .sm-socket-main small {
   color: #8a949a;
 }
+
+.sm-socket-preview {
+  margin-top: -2px;
+  border-radius: 4px;
+  background: #171b20;
+}
+
 .sm-prim-del {
   width: 22px;
   height: 22px;

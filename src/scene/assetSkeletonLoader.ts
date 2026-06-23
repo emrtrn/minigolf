@@ -16,6 +16,7 @@ export interface AssetSkeletonSocketDef {
   position: Vec3;
   rotation: Vec3;
   scale: Vec3;
+  previewAssetId?: string;
 }
 
 export interface AssetSkeletonPreviewPrefs {
@@ -94,13 +95,17 @@ function normalizeSockets(value: unknown): AssetSkeletonSocketDef[] {
     const input = item as Record<string, unknown>;
     if (typeof input.name !== "string" || input.name.length === 0) continue;
     if (typeof input.bone !== "string" || input.bone.length === 0) continue;
-    sockets.push({
+    const socket: AssetSkeletonSocketDef = {
       name: input.name,
       bone: input.bone,
       position: normalizeVec3(input.position, [0, 0, 0]),
       rotation: normalizeVec3(input.rotation, [0, 0, 0]),
       scale: normalizeVec3(input.scale, [1, 1, 1]),
-    });
+    };
+    if (typeof input.previewAssetId === "string" && input.previewAssetId.length > 0) {
+      socket.previewAssetId = input.previewAssetId;
+    }
+    sockets.push(socket);
   }
   return sockets;
 }

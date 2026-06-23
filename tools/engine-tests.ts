@@ -6515,6 +6515,7 @@ check("skeleton save payload requires a .skeleton.json path and canonical metada
           position: [0, 0, 0],
           rotation: [0, 90.12345, 0],
           scale: [1, 1, 1],
+          previewAssetId: "starter-sword",
         },
       ],
       animationSet: { idle: "Idle", walk: "Walk", run: "Run", unknown: "Ignored" },
@@ -6530,6 +6531,7 @@ check("skeleton save payload requires a .skeleton.json path and canonical metada
     walk: "Walk",
     run: "Run",
   });
+  assert.equal(payload.skeleton.sockets[0]?.previewAssetId, "starter-sword");
   assert.deepEqual(payload.skeleton.preview, { selectedClip: "Idle" });
   assert.throws(() =>
     validateSaveSkeletonPayload({ path: "assets/characters/Hero.json", skeleton: {} }),
@@ -6559,6 +6561,7 @@ check("asset skeleton sidecar normalizes animation metadata", () => {
         position: [1.123456, 2, 3],
         rotation: [0, 90, 0],
         scale: [1, 1, 1],
+        previewAssetId: "starter-sword",
       },
       { name: "", bone: "bad" },
     ],
@@ -6571,6 +6574,7 @@ check("asset skeleton sidecar normalizes animation metadata", () => {
   assert.deepEqual(skeleton.animationSet, { idle: "Idle", walk: "Walk" });
   assert.equal(skeleton.sockets.length, 1);
   assert.deepEqual(skeleton.sockets[0]?.position, [1.1235, 2, 3]);
+  assert.equal(skeleton.sockets[0]?.previewAssetId, "starter-sword");
   assert.deepEqual(skeleton.preview, { selectedClip: "Idle" });
 });
 
