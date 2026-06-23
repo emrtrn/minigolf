@@ -290,17 +290,37 @@ Durum: `[ ]` yapılmadı · `[~]` kısmi · `[x]` tamam
       (ad/clip/slot/loop/blendIn/Out CRUD, `fullBody` slot dahil). **Pending:** notify
       yayını, montage canlı önizleme (opsiyonel), kemik-başına yumuşak blend (şu an
       sert ayrım).
-- [x] **Montage → input trigger (data-driven).** Montage'a opsiyonel
-      `trigger: {action, mode:"press"|"hold"}` alanı eklendi; editörde Montage editörünün
-      "Input Trigger" bölümünden yazılır. Runtime `tpsCharacterGameMode.resolveMontageBindings`
-      authored trigger'ı (yoksa aim/fire isim konvansiyonunu) çözer; `hold` montage'lar
-      basılıyken üst gövdeyi sahiplenir (ilki kazanır), `press` montage'lar basış anında
-      tek-atış oynar. `action` → tuş eşlemesi `DEFAULT_INPUT_BINDINGS`'te
-      ([RuntimeSceneApp.ts](../../src/scene/RuntimeSceneApp.ts)); jenerik bir `emote`
-      aksiyonu **KeyQ**'ya bağlandı. Şema+validator+normalize allowlist'te, engine-tests
-      kapsıyor. **Kısıt:** trigger'lar şu an yalnız `upperBody` slot + `upperBodyBone`
-      authored karakterlerde çalışır (layered animator); `fullBody`/non-layered runtime
-      pending. Tuş eşlemesi şimdilik kodda (ileride proje verisine taşınabilir).
+- [~] **Montage → input bağı: KOD katmanında, Player/Character'a ait (yön değişti).**
+      Geçici olarak montage'a sidecar `trigger: {action, mode}` alanı + editör "Input
+      Trigger" UI'ı eklenmişti; **kullanıcı mimari itirazıyla bu yaklaşım supersede
+      edildi.** Gerekçe: input eşlemesi bir Character/kod sorumluluğudur, paylaşılan
+      skeletal-mesh asset'i değil (aynı mesh bir NPC'ye verilirse "emote→Q" bağı
+      anlamsızca taşınır). Forge'da axis mapping (look) ve action mapping (move/jump)
+      zaten **kodda** (`DEFAULT_INPUT_BINDINGS`, key→action); montage→input de aynı
+      desenle kodda çözülür. Unreal eşlemesi: skeletal mesh/AnimBP montage'ı *sağlar*
+      (asset), Character BP input'la `PlayAnimMontage` *çağırır*.
+      - **Korunan:** `tpsCharacterGameMode` genel hold/press montage döngüsü
+        (`resolveMontageBindings`; ilk basılı hold kazanır, press tek-atış);
+        `KeyQ → "emote"`; Skeletal Mesh Editor Montage authoring UI (klip/slot/loop/blend).
+      - **Geri alınacak (ileride):** `*.skeleton.json` montage'ından `trigger` alanı
+        (schema [`assetSkeletonLoader.ts`](../../src/scene/assetSkeletonLoader.ts),
+        validator [`saveValidator.ts`](../../tools/saveValidator.ts), editör "Input
+        Trigger" UI [`SkeletalMeshEditor.ts`](../../src/editor/SkeletalMeshEditor.ts),
+        ilgili engine-tests). `MONTAGE_TRIGGER_MODES`/`MontageTriggerMode` (press/hold)
+        nötr bir yerde tutulabilir (kod-map de aynı mode'u kullanır).
+      - **Yeni hedef (ileride, kullanıcı istedikçe montage-başına):**
+        (1) kod-map `src/game/montageInputBindings.ts` `action → {montage, mode}`;
+        (2) `resolveMontageBindings` action→montage'ı sidecar trigger yerine kod-map'ten
+        okur, klip/slot/blend'i `skeleton.montages`'tan ada göre çözer, aim/fire isim
+        konvansiyonu geriye-dönük varsayılan kalır (kod-map çakışmada kazanır);
+        (3) **Details salt-okunur gösterim:** ActorScriptEditor'da MeshRenderer node'unun
+        altında (assetId bir `skeletalMesh` ise) mesh'in montage'larını + kod-map'i +
+        `DEFAULT_INPUT_BINDINGS`'i okuyup `emote1 → emote → Q` zincirini listeler.
+      - **İş akışı:** kullanıcı Skeletal Mesh Editor'da montage oluşturur → ajana
+        "Player'a şu tuşu ata" der → ajan kod-map'e satır ekler → Details'te görünür.
+      - **Kısıt (bugün):** çalıştırma yalnız `upperBody` slot + `upperBodyBone` authored
+        karakterlerde (layered animator); `fullBody`/non-layered runtime pending.
+      - Plan: `~/.claude/plans/twinkly-discovering-sprout.md`.
 - [ ] (opsiyonel) Montage section'ları / basit branching — Animation Composite
       ihtiyacını da büyük ölçüde karşılar
 
@@ -399,3 +419,14 @@ Blend Space sample'larında çözdüğüm gibi `blendSampleClipOptions` desenini
    genişleme yalnızca **Blend Space (Faz 2, data)** ve **Montage-lite (Faz 3)** —
    ikisi de node-graph değil, data + `AnimationMixer`. Görsel Anim Blueprint editörü
    bilinçli olarak kapsam dışı (Bölüm D). Kalan asset'ler ertelendi/atlandı.
+5. **Montage → input bağı nerede yaşar? → KOD katmanı (Player/Character), asset değil.**
+   (Karar: 2026-06-23.) Forge'da input eşlemesi bir Character/kod sorumluluğudur:
+   axis mapping (look) + action mapping (move) zaten `DEFAULT_INPUT_BINDINGS`'te
+   (kod). Montage→input de aynı desenle kodda çözülür — `*.skeleton.json` sidecar'ına
+   gömülmez (paylaşılan mesh asset'i input intent'i taşımamalı; Unreal'de de Character
+   BP `PlayAnimMontage` çağırır, skeletal mesh çağırmaz). Skeletal mesh yalnız montage
+   **klip tanımı** sağlar; "hangi tuş hangi montajı oynatır" kod-map'te yaşar ve ajan
+   montage-başına atar. Atanan tuşlar Details'te, Player'ın MeshRenderer (skeletal
+   mesh) bileşeni altında salt-okunur gösterilir. Geçici eklenen sidecar `trigger`
+   alanı bu kararla supersede edildi (geri alma + yeni hedef Faz 3'te listelendi).
+   İlgili plan: `~/.claude/plans/twinkly-discovering-sprout.md`.

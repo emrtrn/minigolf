@@ -273,7 +273,8 @@ onBeforeCompile yolunu seçer.
 - [x] Loader: layer1 dokularını yükler; her iki katmana tiling/anisotropy uygular
 - [x] Material Editor: Layer Blend toggle + Layer 1 slotları + driver paneli + preview
 - [x] `maskTexture` sürücüsü (siyah-beyaz blend maskesi)
-- [ ] `vertexColor` sürücüsü (sonraki kademe)
+- [ ] `vertexColor` sürücüsü (sonraki kademe; Mesh Paint Mode araştırma ve planı:
+      [`MESH_PAINT_MODE_RESEARCH_AND_PLAN.md`](../planned/MESH_PAINT_MODE_RESEARCH_AND_PLAN.md))
 - [x] Thumbnail blend'i temsil eder (constant=0.5 veya sürücü default)
 - [x] `engine-tests.ts`: layerBlend normalize/validate round-trip; shader cache key
       ayrışması (blend var/yok ayrı program)

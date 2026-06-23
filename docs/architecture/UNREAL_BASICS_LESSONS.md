@@ -103,7 +103,7 @@ tutkalı shell'lerde ince kalır.
   `maskTexture` driver'lariyla uygulanir. `maskTexture` lineer/skaler maske bekler;
   Material Editor normal/base-color dokularini bu slota baglama durumunda uyarir ve
   preview shader compile hatasinda onceki materyali korur. Takip dokumani:
-  `docs/ongoing/MATERIAL_EDITOR_ENHANCEMENTS_CHECKLIST.md`.
+  `docs/completed/MATERIAL_EDITOR_ENHANCEMENTS_CHECKLIST.md`.
 
 - *2026-06-20* — **Script Communication System kararı.** Forge, Unreal Blueprint
   Communication modelini görsel node VM olarak kopyalamayacak. Actor Script verisi

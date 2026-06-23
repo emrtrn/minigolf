@@ -188,7 +188,7 @@
   "worldSettings": {
     "staticObjectsCastShadow": true,
     "backgroundColor": "#ffffff",
-    "gameMode": "forge.tpsCharacter"
+    "gameMode": "assets/starter-content/Script/MyGameMode.actor.json"
   },
   "skyAtmosphere": {
     "rayleigh": 1,
