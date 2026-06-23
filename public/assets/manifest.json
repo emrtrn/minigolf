@@ -7177,6 +7177,33 @@
       "license": "Unknown"
     },
     {
+      "id": "t-blend-mask-test",
+      "name": "Blend Mask Test",
+      "assetType": "texture",
+      "category": "Textures",
+      "path": "assets/starter-content/Textures/T_Blend_Mask_Test.png",
+      "tags": [
+        "mask",
+        "blend",
+        "test"
+      ],
+      "placeable": false,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": false,
+        "allowScale": false
+      },
+      "runtime": {
+        "loadGroup": "Textures",
+        "castShadow": false,
+        "receiveShadow": false,
+        "collision": false,
+        "bytes": 142970
+      },
+      "license": "Project-local placeholder"
+    },
+    {
       "id": "t-rock-basalt-d",
       "name": "T Rock Basalt D",
       "assetType": "texture",

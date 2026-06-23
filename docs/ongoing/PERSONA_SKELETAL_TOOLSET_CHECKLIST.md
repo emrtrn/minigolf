@@ -211,24 +211,24 @@ Durum: `[ ]` yapılmadı · `[~]` kısmi · `[x]` tamam
 
 - [ ] (refactor) Ortak viewport base'i çıkar: kamera/keyboard/grid/ışık/GLTF
       yükleme/sidecar plumbing (`StaticMeshEditor`'dan, onu bozmadan)
-- [ ] `src/editor/SkeletalMeshEditor.ts` overlay kabuğu (tek aktif instance,
+- [x] `src/editor/SkeletalMeshEditor.ts` overlay kabuğu (tek aktif instance,
       başlık = asset adı, Esc ile kapanır, dinamik import)
-- [ ] Üst barda **mod anahtarı**: `Skeleton` · `Animation` (Physics gri/pasif)
-- [ ] Routing: `skeletalMesh` çift tıklama → SkeletalMeshEditor (EditorUi
+- [x] Üst barda **mod anahtarı**: `Skeleton` · `Animation` (Physics gri/pasif)
+- [x] Routing: `skeletalMesh` çift tıklama → SkeletalMeshEditor (EditorUi
       `createAssetCard` + `assetEditorOpener`); `staticMesh` StaticMeshEditor'da kalır
-- [ ] GLTF yükle, ortala/çerçevele; `SkinnedMesh` / `Skeleton` tespiti
-- [ ] **Skeleton Tree** paneli: kemik hiyerarşisi ağacı + viewport'ta
+- [x] GLTF yükle, ortala/çerçevele; `SkinnedMesh` / `Skeleton` tespiti
+- [x] **Skeleton Tree** paneli: kemik hiyerarşisi ağacı + viewport'ta
       `SkeletonHelper`; kemik seçince highlight
-- [ ] **Mesh Details**: materyaller/section'lar (StaticMesh'ten devşir),
+- [x] **Mesh Details**: materyaller/section'lar (StaticMesh'ten devşir),
       wireframe / bind-pose / normal toggle, vertex/bone/clip sayısı readout
-- [ ] Import classification: skinned/animation içeren GLB → `skeletalMesh`
+- [x] Import classification: skinned/animation içeren GLB → `skeletalMesh`
 
 ### Faz 2 — Animation Mode + Sockets + Morph (authoring)
 
-- [ ] **Animation mode**: `gltf.animations` klip listesi (Asset Browser benzeri)
-- [ ] Oynat / duraklat / **timeline scrub** (`action.time`), play-rate, loop toggle
-- [ ] `CrossfadeAnimator` ile klipler arası geçiş önizlemesi
-- [ ] **Anim-set rol eşlemesi**: klip ismi → semantik rol (idle/walk/run/jump…);
+- [x] **Animation mode**: `gltf.animations` klip listesi (Asset Browser benzeri)
+- [x] Oynat / duraklat / **timeline scrub** (`action.time`), play-rate, loop toggle
+- [x] `CrossfadeAnimator` ile klipler arası geçiş önizlemesi
+- [x] **Anim-set rol eşlemesi**: klip ismi → semantik rol (idle/walk/run/jump…);
       `animationSet` olarak sidecar'a yaz → locomotion seçicisini besler
 - [ ] **Sockets**: kemik seç → offset transform'lu socket ekle, viewport gizmo
       ile düzenle, `sockets[]` sidecar'a yaz
@@ -261,16 +261,16 @@ Durum: `[ ]` yapılmadı · `[~]` kısmi · `[x]` tamam
 
 ### Faz 5 — Persistans & Save Validator
 
-- [ ] `src/editor/assetSkeletonStore.ts` + `*.skeleton.json` formatı
+- [x] `src/editor/assetSkeletonStore.ts` + `*.skeleton.json` formatı
       (`sockets`, `animationSet`, `blendSpaces`, `notifies`, `montages`, preview prefs)
-- [ ] Dev endpoint `/__save-skeleton` (yazma) + `loadAssetSkeleton` (okuma,
+- [x] Dev endpoint `/__save-skeleton` (yazma) + `loadAssetSkeleton` (okuma,
       eksik/bozuk → güvenli default)
 - [ ] `LayoutCharacter` yeni alanlarını `tools/saveValidator.ts` allowlist'ine ekle
 - [ ] CLAUDE.md "save-validator allowlist gotcha" notunu güncelle
 
 ### Faz 6 — Test & Doküman
 
-- [ ] `tools/engine-tests.ts`: skeleton sidecar okuma/yazma + anim-set çözümleme
+- [~] `tools/engine-tests.ts`: skeleton sidecar okuma/yazma + anim-set çözümleme
 - [ ] Save round-trip testi (yeni alanlar düşmüyor)
 - [ ] `npx tsc --noEmit` temiz
 - [ ] `docs/architecture/UNREAL_BASICS_LESSONS.md` Progress Log'a giriş

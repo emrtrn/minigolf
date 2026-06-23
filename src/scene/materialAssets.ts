@@ -18,7 +18,10 @@ export async function loadForgeMaterial(
   if (!materialRecord || assetType(materialRecord) !== "material") {
     throw new Error(`Material asset not found: ${materialId}`);
   }
-  const response = await fetch(projectFileUrl(assetPath(materialRecord)));
+  // Revalidate against the dev server (matches the Material Editor's loader). Without
+  // this the browser can serve a stale heuristic-cached material JSON, so a layer
+  // blend / mask edited and saved in the editor never reaches the scene or Play.
+  const response = await fetch(projectFileUrl(assetPath(materialRecord)), { cache: "no-cache" });
   if (!response.ok) {
     throw new Error(`Material asset failed: ${response.status} ${response.statusText}`);
   }

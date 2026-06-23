@@ -1487,6 +1487,100 @@ export function validateSaveMaterialSlotsPayload(value: unknown): {
   };
 }
 
+const SKELETON_ANIMATION_SET_ROLES = ["idle", "walk", "run", "jump", "fall"] as const;
+
+function validateAnimationSet(value: unknown): Record<string, string> {
+  if (value === undefined || value === null) return {};
+  if (typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("skeleton.animationSet must be an object");
+  }
+  const input = value as Record<string, unknown>;
+  const animationSet: Record<string, string> = {};
+  for (const role of SKELETON_ANIMATION_SET_ROLES) {
+    const clip = input[role];
+    if (clip === undefined || clip === null || clip === "") continue;
+    if (typeof clip !== "string") {
+      throw new Error(`skeleton.animationSet.${role} must be a clip name string`);
+    }
+    animationSet[role] = clip;
+  }
+  return animationSet;
+}
+
+function validateSkeletonSocket(value: unknown, label: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${label} must be an object`);
+  }
+  const input = value as Record<string, unknown>;
+  if (typeof input.name !== "string" || input.name.length === 0) {
+    throw new Error(`${label}.name must be a non-empty string`);
+  }
+  if (typeof input.bone !== "string" || input.bone.length === 0) {
+    throw new Error(`${label}.bone must be a non-empty string`);
+  }
+  return {
+    name: input.name,
+    bone: input.bone,
+    position: validateVec3(input.position, `${label}.position`),
+    rotation: validateVec3(input.rotation, `${label}.rotation`).map((axis) =>
+      Number(axis.toFixed(3)),
+    ),
+    scale: validateVec3(input.scale, `${label}.scale`).map((axis) => {
+      if (axis <= 0 || axis > 1_000_000) throw new Error(`${label}.scale values must be positive`);
+      return Number(axis.toFixed(4));
+    }),
+  };
+}
+
+export function validateAssetSkeletonDef(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("skeleton def must be an object");
+  }
+  const input = value as Record<string, unknown>;
+  const sockets = Array.isArray(input.sockets)
+    ? input.sockets.map((socket, index) => validateSkeletonSocket(socket, `skeleton.sockets[${index}]`))
+    : [];
+  const previewInput =
+    input.preview && typeof input.preview === "object" && !Array.isArray(input.preview)
+      ? (input.preview as Record<string, unknown>)
+      : {};
+  const selectedClip = previewInput.selectedClip;
+  if (selectedClip !== undefined && selectedClip !== null && typeof selectedClip !== "string") {
+    throw new Error("skeleton.preview.selectedClip must be a string or null");
+  }
+  return {
+    schema: 1,
+    sockets,
+    animationSet: validateAnimationSet(input.animationSet),
+    blendSpaces: Array.isArray(input.blendSpaces) ? input.blendSpaces : [],
+    notifies: Array.isArray(input.notifies) ? input.notifies : [],
+    montages: Array.isArray(input.montages) ? input.montages : [],
+    preview: {
+      selectedClip: typeof selectedClip === "string" && selectedClip.length > 0 ? selectedClip : null,
+    },
+  };
+}
+
+export function validateSaveSkeletonPayload(value: unknown): {
+  path: string;
+  skeleton: Record<string, unknown>;
+} {
+  if (!value || typeof value !== "object") {
+    throw new Error("skeleton payload must be an object");
+  }
+  const input = value as Record<string, unknown>;
+  if (typeof input.path !== "string" || !input.path.endsWith(".skeleton.json")) {
+    throw new Error("skeleton payload path must end with .skeleton.json");
+  }
+  if (input.path.includes("..")) {
+    throw new Error("skeleton payload path must not contain ..");
+  }
+  return {
+    path: input.path,
+    skeleton: validateAssetSkeletonDef(input.skeleton),
+  };
+}
+
 function validateColorHex(value: unknown, label: string): string {
   if (typeof value !== "string" || !/^#[0-9a-fA-F]{6}$/.test(value)) {
     throw new Error(`${label} must be a #rrggbb color`);
@@ -1992,8 +2086,10 @@ export function buildImportedAssetRecord(
   path: string,
   bytes: number,
   existingIds: Iterable<string>,
+  detectedType?: AssetType | null,
 ): AssetRecord | null {
-  const type = inferAssetTypeFromPath(path);
+  const inferredType = inferAssetTypeFromPath(path);
+  const type = detectedType ?? inferredType;
   if (!type) return null;
 
   const fileName = path.split("/").at(-1) ?? path;
@@ -2026,6 +2122,64 @@ export function buildImportedAssetRecord(
     },
     license: "Unknown",
   };
+}
+
+/**
+ * Sniffs a freshly uploaded asset's bytes for model features that cannot be
+ * inferred from the extension alone. GLTF/GLB files with skins or embedded
+ * animations are authored as `skeletalMesh`; plain models remain `staticMesh`.
+ */
+export function inferImportedAssetTypeFromContent(
+  path: string,
+  content: Uint8Array | string,
+): AssetType | null {
+  const inferredType = inferAssetTypeFromPath(path);
+  if (inferredType !== "staticMesh") return inferredType;
+  const lower = path.toLowerCase();
+  const jsonText = lower.endsWith(".glb")
+    ? readGlbJsonChunk(content)
+    : lower.endsWith(".gltf")
+      ? decodeText(content)
+      : null;
+  if (!jsonText) return inferredType;
+  try {
+    return gltfJsonHasSkeletalData(JSON.parse(jsonText)) ? "skeletalMesh" : inferredType;
+  } catch {
+    return inferredType;
+  }
+}
+
+function readGlbJsonChunk(content: Uint8Array | string): string | null {
+  if (typeof content === "string") return null;
+  if (content.byteLength < 20) return null;
+  const view = new DataView(content.buffer, content.byteOffset, content.byteLength);
+  if (view.getUint32(0, true) !== 0x46546c67) return null; // "glTF"
+  let offset = 12;
+  while (offset + 8 <= content.byteLength) {
+    const chunkLength = view.getUint32(offset, true);
+    const chunkType = view.getUint32(offset + 4, true);
+    offset += 8;
+    if (offset + chunkLength > content.byteLength) return null;
+    if (chunkType === 0x4e4f534a) {
+      return new TextDecoder().decode(content.subarray(offset, offset + chunkLength));
+    }
+    offset += chunkLength;
+  }
+  return null;
+}
+
+function decodeText(content: Uint8Array | string): string {
+  return typeof content === "string" ? content : new TextDecoder().decode(content);
+}
+
+function gltfJsonHasSkeletalData(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const gltf = value as { skins?: unknown; animations?: unknown };
+  return hasNonEmptyArray(gltf.skins) || hasNonEmptyArray(gltf.animations);
+}
+
+function hasNonEmptyArray(value: unknown): boolean {
+  return Array.isArray(value) && value.length > 0;
 }
 
 export function validateSavePayload(value: unknown): {

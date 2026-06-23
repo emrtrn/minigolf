@@ -93,6 +93,7 @@ export class MaterialEditor {
   private previewMaterial: Material | null = null;
   private dirty = false;
   private disposed = false;
+  private contextLost = false;
   private lastPreviewShaderError: string | null = null;
 
   private constructor(private readonly options: MaterialEditorOptions) {
@@ -151,6 +152,12 @@ export class MaterialEditor {
     };
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.previewHost.append(this.renderer.domElement);
+    // The preview renders on demand (no animation loop), so if the GPU drops this
+    // canvas' WebGL context — e.g. under the memory pressure of regenerating content
+    // thumbnails + rebuilding the scene on Save — nothing repaints it and the sphere
+    // just vanishes. Recover by rebuilding the material once the context is back.
+    this.renderer.domElement.addEventListener("webglcontextlost", this.onContextLost);
+    this.renderer.domElement.addEventListener("webglcontextrestored", this.onContextRestored);
     this.setupPreviewScene();
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = false;
@@ -736,9 +743,23 @@ export class MaterialEditor {
   };
 
   private renderPreview(): void {
-    if (this.disposed) return;
+    if (this.disposed || this.contextLost) return;
     this.renderer.render(this.scene, this.camera);
   }
+
+  private onContextLost = (event: Event): void => {
+    // preventDefault is what lets the browser fire `webglcontextrestored` afterwards.
+    event.preventDefault();
+    this.contextLost = true;
+    this.setStatus("Preview GPU context lost; restoring…", "warning");
+  };
+
+  private onContextRestored = (): void => {
+    if (this.disposed) return;
+    this.contextLost = false;
+    // GPU resources were discarded with the old context; rebuild material + textures.
+    void this.updatePreviewMaterial();
+  };
 
   private async save(): Promise<void> {
     try {
@@ -767,6 +788,8 @@ export class MaterialEditor {
     if (this.dirty && !window.confirm("Close Material Editor without saving?")) return;
     this.disposed = true;
     window.removeEventListener("resize", this.resize);
+    this.renderer.domElement.removeEventListener("webglcontextlost", this.onContextLost);
+    this.renderer.domElement.removeEventListener("webglcontextrestored", this.onContextRestored);
     this.resizeObserver.disconnect();
     this.controls.dispose();
     this.disposePreviewMaterial();

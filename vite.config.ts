@@ -6,6 +6,7 @@ import { extname, resolve, sep } from "node:path";
 import { fileURLToPath, URL } from "node:url";
 import {
   buildImportedAssetRecord,
+  inferImportedAssetTypeFromContent,
   resolveContentNewFile,
   resolveContentRenameTarget,
   resolveImportPath,
@@ -21,6 +22,7 @@ import {
   validateSaveMaterialPayload,
   validateSaveMaterialSlotsPayload,
   validateSavePayload,
+  validateSaveSkeletonPayload,
   validateSaveUvwPayload,
 } from "./tools/saveValidator";
 
@@ -188,7 +190,11 @@ async function readRawBody(req: IncomingMessage, maxBytes: number): Promise<Buff
  * or the path is already registered. Errors propagate to the caller, which keeps
  * the imported file even if registration fails.
  */
-async function registerImportedAsset(rel: string, bytes: number): Promise<string | null> {
+async function registerImportedAsset(
+  rel: string,
+  bytes: number,
+  detectedType?: ReturnType<typeof inferImportedAssetTypeFromContent>,
+): Promise<string | null> {
   const project = await readProjectManifest();
   const manifestAbs = resolvePublicPath(project.editor.assetManifest);
   const manifest = JSON.parse(await readFile(manifestAbs, "utf8")) as {
@@ -212,7 +218,7 @@ async function registerImportedAsset(rel: string, bytes: number): Promise<string
   const existingIds = entries
     .map((asset) => asset.id)
     .filter((id): id is string => typeof id === "string");
-  const record = buildImportedAssetRecord(rel, bytes, existingIds);
+  const record = buildImportedAssetRecord(rel, bytes, existingIds, detectedType);
   if (!record) return null;
 
   manifest.assets.push(record);
@@ -223,7 +229,7 @@ async function registerImportedAsset(rel: string, bytes: number): Promise<string
 // Model assets carry editor sidecars that share the file's base name. Renaming or
 // deleting the model must move/remove these too, or they orphan.
 const MODEL_EXTS = new Set([".glb", ".gltf"]);
-const MODEL_SIDECAR_SUFFIXES = [".collision.json", ".materials.json", ".uvw.json"];
+const MODEL_SIDECAR_SUFFIXES = [".collision.json", ".materials.json", ".uvw.json", ".skeleton.json"];
 
 async function pathExists(absPath: string): Promise<boolean> {
   return stat(absPath).then(
@@ -310,6 +316,7 @@ const PRIVILEGED_URLS = new Set([
   "/__save-layout",
   "/__save-collision",
   "/__save-material-slots",
+  "/__save-skeleton",
   "/__save-uvw",
   "/__content-new",
   "/__content-rename",
@@ -497,6 +504,30 @@ function layoutEditorPlugin(): Plugin {
           return;
         }
 
+        if (req.url === "/__save-skeleton") {
+          if (req.method !== "POST") {
+            res.statusCode = 405;
+            res.end("Method not allowed");
+            return;
+          }
+          try {
+            const payload = validateSaveSkeletonPayload(await readJsonBody(req));
+            const sidecarPath = resolvePublicPath(payload.path);
+            const previous = await readFile(sidecarPath, "utf8").catch(() => null);
+            const nextSidecar = `${JSON.stringify(payload.skeleton, null, 2)}\n`;
+            await writeFile(sidecarPath, nextSidecar, "utf8");
+            res.setHeader("Content-Type", "application/json; charset=utf-8");
+            res.end(JSON.stringify({ ok: true, path: payload.path, changed: previous !== nextSidecar }));
+          } catch (error) {
+            res.statusCode = 400;
+            res.setHeader("Content-Type", "application/json; charset=utf-8");
+            res.end(
+              JSON.stringify({ ok: false, error: error instanceof Error ? error.message : String(error) }),
+            );
+          }
+          return;
+        }
+
         if (req.url === "/__save-material") {
           if (req.method !== "POST") {
             res.statusCode = 405;
@@ -577,9 +608,11 @@ function layoutEditorPlugin(): Plugin {
             let registeredId: string | null = null;
             if (target.content !== null) {
               try {
+                const contentBytes = Buffer.byteLength(target.content, "utf8");
                 registeredId = await registerImportedAsset(
                   target.path,
-                  Buffer.byteLength(target.content, "utf8"),
+                  contentBytes,
+                  inferImportedAssetTypeFromContent(target.path, target.content),
                 );
               } catch {
                 registeredId = null;
@@ -727,7 +760,11 @@ function layoutEditorPlugin(): Plugin {
             // The import itself still succeeds if registration throws.
             let registeredId: string | null = null;
             try {
-              registeredId = await registerImportedAsset(rel, body.length);
+              registeredId = await registerImportedAsset(
+                rel,
+                body.length,
+                inferImportedAssetTypeFromContent(rel, body),
+              );
             } catch {
               registeredId = null;
             }

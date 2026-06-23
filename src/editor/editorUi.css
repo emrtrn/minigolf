@@ -1391,6 +1391,30 @@ body.editor-mode #debug-stats {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.sm-section-row {
+  display: grid;
+  gap: 2px;
+  padding: 7px 8px;
+  border-radius: 4px;
+  background: #14171a;
+}
+
+.sm-section-row strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sm-section-row small {
+  min-width: 0;
+  overflow: hidden;
+  color: #8a949a;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .sm-prim-del {
   width: 22px;
   height: 22px;
@@ -1405,6 +1429,67 @@ body.editor-mode #debug-stats {
 .sm-empty { padding: 10px; color: #8a949a; }
 
 .sm-hint { padding: 6px 10px; color: #d6a86a; font-size: 12px; line-height: 1.4; }
+
+.sm-bone-tree {
+  max-height: 360px;
+  overflow: auto;
+  padding: 6px;
+}
+
+.sm-bone-row,
+.sm-clip-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 28px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #e6ebee;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sm-bone-row {
+  padding-left: calc(8px + var(--bone-depth, 0) * 14px);
+}
+
+.sm-bone-row:hover,
+.sm-clip-row:hover { background: #252a31; }
+
+.sm-bone-row.is-selected,
+.sm-clip-row.is-selected {
+  outline: 1px solid #ffb648;
+  background: #20242a;
+}
+
+.sm-bone-row span,
+.sm-clip-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sm-bone-row small,
+.sm-clip-row small {
+  color: #8a949a;
+}
+
+.sm-anim-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 4px;
+}
+
+.sm-timeline {
+  width: calc(100% - 20px);
+  margin: 8px 10px 2px;
+}
 
 .sm-editor-status {
   height: 26px;

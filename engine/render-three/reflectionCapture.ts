@@ -296,6 +296,8 @@ function isProbeEnvMaterial(material: Material): material is MeshStandardMateria
 
 /** The shader param object three.js hands `onBeforeCompile` (uniforms + GLSL sources). */
 type ShaderPatch = Parameters<MeshStandardMaterial["onBeforeCompile"]>[0];
+/** A material's `onBeforeCompile` callback (e.g. the Forge layer-blend patch). */
+type MaterialOnBeforeCompile = MeshStandardMaterial["onBeforeCompile"];
 
 /**
  * `customProgramCacheKey` prefix for capture-patched materials. All clones with the
@@ -414,12 +416,28 @@ function installCaptureShaderPatch(
   parallax: boolean,
   globalEnv: Texture | null,
   globalEnvIntensity: number,
+  priorPatch: MaterialOnBeforeCompile | null = null,
+  priorCacheKey: (() => string) | null = null,
 ): void {
   const blend = globalEnv !== null;
-  if (!parallax && !blend) return;
+  if (!parallax && !blend) {
+    // The capture patch itself contributes nothing here, but a forwarded base patch
+    // (e.g. the Forge layer-blend shader) must survive the clone in
+    // `assignProbeEnvMapMaterial` instead of reverting to the stock program.
+    if (priorPatch) {
+      material.onBeforeCompile = priorPatch;
+      if (priorCacheKey) material.customProgramCacheKey = priorCacheKey;
+      material.needsUpdate = true;
+    }
+    return;
+  }
   const probePosition = new Vector3(position[0], position[1], position[2]);
   const probeRadius = Math.max(radius, 0.001);
-  material.onBeforeCompile = (shader: ShaderPatch) => {
+  material.onBeforeCompile = (shader: ShaderPatch, renderer: WebGLRenderer) => {
+    // Run the base material's own patch first (e.g. layer blend), then layer the
+    // capture patch on top. The two anchor on disjoint `#include` directives, so they
+    // compose without clobbering each other.
+    priorPatch?.(shader, renderer);
     const iblChunk = ShaderChunk.envmap_physical_pars_fragment;
     if (
       !shader.vertexShader.includes(CAPTURE_WORLDPOS_INCLUDE) ||
@@ -462,7 +480,7 @@ function installCaptureShaderPatch(
     )}`;
   };
   material.customProgramCacheKey = () =>
-    `${CAPTURE_CACHE_KEY_BASE}-p${parallax ? 1 : 0}b${blend ? 1 : 0}`;
+    `${priorCacheKey ? `${priorCacheKey()}|` : ""}${CAPTURE_CACHE_KEY_BASE}-p${parallax ? 1 : 0}b${blend ? 1 : 0}`;
   material.needsUpdate = true;
 }
 
@@ -484,8 +502,25 @@ export function assignProbeEnvMapMaterial(
 ): Material {
   if (!isProbeEnvMaterial(base)) return base;
   const cloned = base.clone();
+  // `MeshStandardMaterial.copy()` resets `defines` to `{ STANDARD: '' }`, dropping any
+  // custom defines (e.g. the Forge layer-blend `USE_FORGE_LAYER_*` / `USE_UV` flags that
+  // gate the `#ifdef` map/mask samples). Without them the chained layer-blend patch still
+  // injects its code but every gated sample is compiled out — so a texture-driven blend
+  // (mask, layer maps) silently produces no blend inside a reflection-capture probe.
+  cloned.defines = { ...(base.defines ?? {}) };
   cloned.envMap = bake.target.texture;
   cloned.envMapIntensity = bake.intensity;
+  // `Material.clone()` does not carry an instance `onBeforeCompile` /
+  // `customProgramCacheKey`, and the capture patch would overwrite them anyway. Forward
+  // the base material's own patch (e.g. a Forge layer blend) so it chains ahead of the
+  // capture patch instead of being silently dropped — otherwise any layer-blended
+  // surface inside a reflection-capture probe loses its blend.
+  const priorPatch = Object.prototype.hasOwnProperty.call(base, "onBeforeCompile")
+    ? base.onBeforeCompile
+    : null;
+  const priorCacheKey = Object.prototype.hasOwnProperty.call(base, "customProgramCacheKey")
+    ? base.customProgramCacheKey
+    : null;
   installCaptureShaderPatch(
     cloned,
     bake.position,
@@ -493,6 +528,8 @@ export function assignProbeEnvMapMaterial(
     bake.parallax,
     globalEnv,
     globalEnvIntensity,
+    priorPatch,
+    priorCacheKey,
   );
   cloned.needsUpdate = true;
   clonedMaterials.push(cloned);

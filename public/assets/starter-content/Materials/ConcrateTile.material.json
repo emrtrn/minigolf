@@ -10,12 +10,14 @@
   "roughnessTexture": "t-macrovariation",
   "metalnessTexture": null,
   "aoTexture": null,
+  "opacityTexture": null,
+  "emissiveTexture": null,
   "ormTexture": null,
   "uvTiling": {
     "x": 2,
     "y": 2
   },
-  "roughness": 0.7,
+  "roughness": 0.5,
   "metalness": 0,
   "aoIntensity": 1,
   "opacity": 1,
@@ -27,22 +29,29 @@
   "layerBlend": {
     "layer1": {
       "baseColor": "#ffffff",
-      "baseColorTexture": null,
-      "normalTexture": "t-rock-slate-n",
+      "baseColorTexture": "t-ground-grass-d",
+      "normalTexture": "t-ground-grass-n",
       "roughnessTexture": null,
       "metalnessTexture": null,
-      "roughness": 0,
+      "opacityTexture": null,
+      "emissiveTexture": null,
+      "aoTexture": null,
+      "roughness": 1,
       "metalness": 0,
+      "opacity": 1,
+      "emissive": "#000000",
+      "emissiveIntensity": 0,
+      "aoIntensity": 1,
       "uvTiling": {
         "x": 2,
         "y": 2
       }
     },
-    "driver": "slope",
-    "amount": 1,
+    "driver": "maskTexture",
+    "amount": 0.5,
     "min": 0,
     "max": 1,
     "contrast": 1,
-    "maskTexture": null
+    "maskTexture": "t-blend-mask-test"
   }
 }

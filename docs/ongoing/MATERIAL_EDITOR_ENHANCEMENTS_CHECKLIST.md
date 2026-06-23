@@ -287,16 +287,57 @@ onBeforeCompile yolunu seçer.
       dokusu sRGB okunur; color picker ve Constant intensity ile blend edilir.
 - [x] `Layer AO Map` schema/runtime/preview/thumbnail desteği. Layer AO dokusu
       lineer okunur; Constant değeri AO intensity olarak uygulanır.
-- [ ] **Deferred bug:** `maskTexture`/Blend Mask atanırken preview/runtime davranışı
-      kullanıcı testinde halen beklenen sonucu vermiyor. Shader/schema tarafındaki
-      önceki sertleştirmelere rağmen problem çözülmüş sayılmayacak; ayrı oturumda
-      sahne üstü repro ile incelenecek.
+- [x] **Blend Mask tiling düzeltildi:** Maske artık layer 1'in detay tiling'ini miras
+      almıyor; tüm yüzeye 1:1 oturan bir seçici olarak ham `vUv` ile örnekleniyor (texture
+      `repeat = {1,1}`). Önceki `vUv * forgeLayerTiling` örneklemesi sanatçı maskesini
+      yanlışça tekrarlıyordu. Sahne/Play tarafında maskenin görünmemesi ise aşağıdaki
+      reflection-capture kök nedeniyle (probe klonu blend patch'ini eziyordu) aynı
+      düzeltmeyle çözüldü.
+- [x] **ASIL KÖK NEDEN #1 — `vUv` derleme hatası (gerçek GPU render'ı ile bulundu):**
+      `forgeLayerBlendFactor()` `#include <common>` bloğuna enjekte ediliyordu; ama three.js
+      `vUv`'yi **daha sonra** `#include <uv_pars_fragment>`'te tanımlıyor. Maske atanır
+      atanmaz fonksiyon `vUv`'yi örnekliyor → `'vUv' : undeclared identifier` GLSL hatası →
+      **tüm materyal siyaha derleniyor** (hem "blend yok" hem "preview küresi kayboluyor"
+      semptomlarının gerçek nedeni buydu). Maske olmayan slope/constant `value = 0.0`
+      kullandığı için derleniyordu. Düzeltme: maske örneklemesi `vUv`'nin kapsamda olduğu
+      `<map_fragment>`'a taşındı ve blend fonksiyonuna parametre geçildi. (`materials.ts`)
+- [x] **ASIL KÖK NEDEN #2 — clone `defines`'ı düşürüyor (sahne/Play probe yolu):**
+      `MeshStandardMaterial.copy()` `defines`'ı `{ STANDARD }`'a sıfırlıyor; bu yüzden
+      `assignProbeEnvMapMaterial` klonu tüm `USE_FORGE_LAYER_*` define'larını kaybediyordu →
+      `#ifdef`-gated mask/layer-map örneklemeleri derlemeden çıkıyor → reflection-capture
+      probe'unun kapsadığı sahne/Play küresinde texture-tabanlı blend sessizce kayboluyordu.
+      (Slope renk/uniform-tabanlı olduğu için define gerektirmiyor; o yüzden çalışıyordu.)
+      Düzeltme: klon sonrası `cloned.defines = { ...base.defines }`. (`reflectionCapture.ts`)
+- [x] **Doğrulama yöntemi:** headless Chrome + SwiftShader ile gerçek WebGL'de küre render
+      edilip pikseller okundu; `maskLinear` (preview) ve `maskProbe` (probe yolu) artık
+      birebir aynı blend'i veriyor (greenFrac 0.113 vs allConcrete 0). `engine-tests.ts`'e
+      iki regresyon guard'ı eklendi: (a) `<map_fragment>` öncesinde `vUv` kullanımı yok;
+      (b) probe klonu base `defines`'ını korur.
+- [x] **Yan iyileştirmeler:** Preview'a `webglcontextlost`/`webglcontextrestored`
+      kurtarması (`MaterialEditor.ts`); test maskesi `T_Blend_Mask_Test.png` + manifest
+      kaydı (`t-blend-mask-test`). Not: maske `.r` linear okunur ve **Blend Contrast** blend
+      sertliğini belirler (yüksek contrast etkiyi seyrekleştirir).
 
-### C.8 Concrete Tile slope driver inceleme notu
+### C.8 Concrete Tile slope driver inceleme notu — ÇÖZÜLDÜ
 
-Kullanıcı testi: `ConcrateTile.material.json` materyali `slope` driver ile blend
-edildiğinde Material Editor preview içinde görülebiliyor, ancak Scene Editor ve
-Play görünümünde beklenen fark görünmüyor.
+**Kök neden bulundu ve düzeltildi (2026-06-23).** `ConcrateTile` materyali
+`starter-sm-sphere` (pos `[0,2,0]`) placement'ına atanmış; `playground.json` içinde
+pos `[0,1,0]`, radius `6` bir **Sphere Reflection Capture** bu küreyi kapsıyor.
+Placement bir probe `bake` aldığı için `assignProbeEnvMapMaterial()` materyali
+klonluyor ve `installCaptureShaderPatch()` ile `onBeforeCompile`'ı **tamamen
+eziyordu** — böylece layer-blend shader patch'i (ve `customProgramCacheKey`) sessizce
+düşüyor, Scene/Play küre blend'siz render ediyordu. Material Editor preview'unda probe
+olmadığı için blend görünüyordu; fark tam da buydu.
+
+Düzeltme: `assignProbeEnvMapMaterial()` artık taban materyalin kendi `onBeforeCompile`
++ `customProgramCacheKey`'ini (clone bunları taşımaz) capture patch'ine **iletiyor**;
+`installCaptureShaderPatch()` önce taban patch'ini (layer blend) çalıştırıp capture
+patch'ini üstüne biniyor (iki patch ayrık `#include` çapalarında, çakışmıyor). Cache
+key iki özellik setini birleştiriyor. `engine-tests.ts`'e kompozisyon testi eklendi.
+Ek olarak `materialAssets.ts` material JSON fetch'i `cache: "no-cache"` (editörle
+tutarlı stale-cache önlemi) ile güncellendi.
+
+Tarihsel ilk inceleme notları (referans):
 
 İlk inceleme bulguları:
 

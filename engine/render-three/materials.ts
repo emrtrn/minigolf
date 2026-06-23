@@ -226,7 +226,10 @@ function applyLayerBlendMaterial(
   const layerBlendMaskMap = textures.layerBlendMaskTexture
     ? configureForgeTexture(textures.layerBlendMaskTexture, {
         srgb: false,
-        repeat: layer1.uvTiling,
+        // The blend mask selects between layers across the whole surface, so it maps
+        // 1:1 to the base UV — it must NOT inherit layer 1's detail tiling (which would
+        // repeat the artist mask) and is sampled at raw `vUv` in the shader.
+        repeat: { x: 1, y: 1 },
         maxAnisotropy: options.maxAnisotropy,
       })
     : null;
@@ -328,12 +331,6 @@ function patchLayerBlendShader(
   if (maps.layerBlendMaskMap) {
     shader.uniforms.forgeLayerMaskMap = { value: maps.layerBlendMaskMap };
   }
-  const maskTextureUniform = maps.layerBlendMaskMap
-    ? "uniform sampler2D forgeLayerMaskMap;"
-    : "";
-  const maskTextureSample = maps.layerBlendMaskMap
-    ? "value = texture2D( forgeLayerMaskMap, vUv * forgeLayerTiling ).r;"
-    : "value = 0.0;";
 
   shader.vertexShader = shader.vertexShader
     .replace(
@@ -397,15 +394,20 @@ varying vec3 vForgeLayerWorldNormal;
 #ifdef USE_FORGE_LAYER_AOMAP
   uniform sampler2D forgeLayerAoMap;
 #endif
-${maskTextureUniform}
-float forgeLayerBlendFactor() {
+#ifdef USE_FORGE_LAYER_MASKMAP
+  uniform sampler2D forgeLayerMaskMap;
+#endif
+// The mask sample is passed in (not read here): this function is injected into
+// <common>, which precedes <uv_pars_fragment>, so \`vUv\` is NOT yet declared at this
+// point. Sampling the mask here compiled to "vUv undeclared" and blanked the material.
+float forgeLayerBlendFactor( float forgeLayerMaskSample ) {
   float value = forgeLayerAmount;
   if (forgeLayerDriver == 1) {
     value = smoothstep(forgeLayerMin, forgeLayerMax, clamp(dot(normalize(vForgeLayerWorldNormal), vec3(0.0, 1.0, 0.0)), 0.0, 1.0));
   } else if (forgeLayerDriver == 2) {
     value = smoothstep(forgeLayerMin, forgeLayerMax, vForgeLayerWorldPosition.y);
   } else if (forgeLayerDriver == 3) {
-    ${maskTextureSample}
+    value = forgeLayerMaskSample;
   }
   return clamp(pow(clamp(value, 0.0, 1.0), forgeLayerContrast), 0.0, 1.0);
 }`,
@@ -413,7 +415,13 @@ float forgeLayerBlendFactor() {
     .replace(
       "#include <map_fragment>",
       `#include <map_fragment>
-float forgeLayerBlend = forgeLayerBlendFactor();
+// vUv is in scope here (after <uv_pars_fragment>), so sample the mask now and feed it
+// to the blend factor declared in <common>.
+float forgeLayerMaskSample = 0.0;
+#ifdef USE_FORGE_LAYER_MASKMAP
+  forgeLayerMaskSample = texture2D( forgeLayerMaskMap, vUv ).r;
+#endif
+float forgeLayerBlend = forgeLayerBlendFactor( forgeLayerMaskSample );
 vec3 forgeLayerDiffuse = forgeLayerColor;
 #ifdef USE_FORGE_LAYER_MAP
   vec4 forgeLayerSample = texture2D( forgeLayerMap, vUv * forgeLayerTiling );

@@ -182,6 +182,7 @@ import {
 import type { SceneDocument } from "../engine/scene/sceneDocument";
 import {
   buildImportedAssetRecord,
+  inferImportedAssetTypeFromContent,
   resolveContentNewFile,
   resolveContentRenameTarget,
   resolveImportPath,
@@ -209,6 +210,7 @@ import {
   validateForgeMaterialDef,
   validateSaveMaterialPayload,
   validateSaveMaterialSlotsPayload,
+  validateSaveSkeletonPayload,
   validateSaveUvwPayload,
 } from "./saveValidator";
 import {
@@ -218,6 +220,10 @@ import {
 } from "../engine/scene/actorScript";
 import { actorPreviewNodes } from "../engine/scene/actorPreview";
 import { normalizeForgeMaterialDef } from "../engine/assets/material";
+import {
+  normalizeAssetSkeleton,
+  skeletonSidecarPath,
+} from "../src/scene/assetSkeletonLoader";
 import {
   createThreeMaterialFromForgeDef,
   EMISSIVE_INTENSITY_SCALE,
@@ -6497,6 +6503,77 @@ check("material slots save payload requires a .materials.json path", () => {
   );
 });
 
+check("skeleton save payload requires a .skeleton.json path and canonical metadata", () => {
+  const payload = validateSaveSkeletonPayload({
+    path: "assets/characters/Hero.skeleton.json",
+    skeleton: {
+      schema: 1,
+      sockets: [
+        {
+          name: "weapon_r",
+          bone: "hand_r",
+          position: [0, 0, 0],
+          rotation: [0, 90.12345, 0],
+          scale: [1, 1, 1],
+        },
+      ],
+      animationSet: { idle: "Idle", walk: "Walk", run: "Run", unknown: "Ignored" },
+      blendSpaces: [],
+      notifies: [],
+      montages: [],
+      preview: { selectedClip: "Idle" },
+    },
+  });
+  assert.equal(payload.path, "assets/characters/Hero.skeleton.json");
+  assert.deepEqual(payload.skeleton.animationSet, {
+    idle: "Idle",
+    walk: "Walk",
+    run: "Run",
+  });
+  assert.deepEqual(payload.skeleton.preview, { selectedClip: "Idle" });
+  assert.throws(() =>
+    validateSaveSkeletonPayload({ path: "assets/characters/Hero.json", skeleton: {} }),
+  );
+  assert.throws(() =>
+    validateSaveSkeletonPayload({ path: "../secret.skeleton.json", skeleton: {} }),
+  );
+  assert.throws(() =>
+    validateSaveSkeletonPayload({
+      path: "assets/characters/Hero.skeleton.json",
+      skeleton: { sockets: [{ name: "bad", bone: "", position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }] },
+    }),
+  );
+});
+
+check("asset skeleton sidecar normalizes animation metadata", () => {
+  assert.equal(
+    skeletonSidecarPath("assets/characters/Hero.glb"),
+    "assets/characters/Hero.skeleton.json",
+  );
+  const skeleton = normalizeAssetSkeleton({
+    schema: 1,
+    sockets: [
+      {
+        name: "weapon_r",
+        bone: "hand_r",
+        position: [1.123456, 2, 3],
+        rotation: [0, 90, 0],
+        scale: [1, 1, 1],
+      },
+      { name: "", bone: "bad" },
+    ],
+    animationSet: { idle: "Idle", walk: "Walk", unknown: "Ignored" },
+    blendSpaces: [{ name: "speed" }],
+    notifies: [],
+    montages: [],
+    preview: { selectedClip: "Idle" },
+  });
+  assert.deepEqual(skeleton.animationSet, { idle: "Idle", walk: "Walk" });
+  assert.equal(skeleton.sockets.length, 1);
+  assert.deepEqual(skeleton.sockets[0]?.position, [1.1235, 2, 3]);
+  assert.deepEqual(skeleton.preview, { selectedClip: "Idle" });
+});
+
 check("material save payload requires a material path and canonical fields", () => {
   const payload = validateSaveMaterialPayload({
     path: "assets/materials/Stone.material.json",
@@ -6927,6 +7004,26 @@ check("forge material mapping creates matching Three material types and fields",
   assert.match(shader.vertexShader, /vForgeLayerWorldPosition/);
   assert.match(shader.fragmentShader, /forgeLayerBlendFactor/);
   assert.match(shader.fragmentShader, /forgeLayerMaskMap/);
+  // Regression guard for the "vUv undeclared" blank-material bug: forgeLayerBlendFactor
+  // is injected into <common>, which precedes <uv_pars_fragment> (where three declares
+  // `vUv`). Nothing before <map_fragment> may reference vUv, or the whole material fails
+  // to compile and renders black the moment a mask is assigned.
+  const mapFragmentIndex = shader.fragmentShader.indexOf("#include <map_fragment>");
+  const fragBeforeMap = shader.fragmentShader
+    .slice(0, mapFragmentIndex)
+    .replace(/\/\/[^\n]*/g, ""); // strip line comments (which may mention vUv in prose)
+  assert.ok(fragBeforeMap.includes("forgeLayerBlendFactor"), "blend factor declared in <common>");
+  assert.ok(!fragBeforeMap.includes("vUv"), "no vUv usage before <map_fragment>");
+  assert.ok(
+    shader.fragmentShader.indexOf("texture2D( forgeLayerMaskMap, vUv )") > mapFragmentIndex,
+    "mask sampled at/after <map_fragment> where vUv is in scope",
+  );
+  // The blend mask is a whole-surface selector: it samples raw `vUv` (1:1) — where vUv is
+  // in scope (at/after <map_fragment>) — never the per-layer detail tiling.
+  assert.match(shader.fragmentShader, /texture2D\( forgeLayerMaskMap, vUv \)\.r/);
+  assert.match(shader.fragmentShader, /forgeLayerBlendFactor\( forgeLayerMaskSample \)/);
+  assert.equal(layerBlendMaskTexture.repeat.x, 1);
+  assert.equal(layerBlendMaskTexture.repeat.y, 1);
   assert.match(shader.fragmentShader, /diffuseColor\.rgb = mix/);
   assert.match(shader.fragmentShader, /roughnessFactor = mix/);
   assert.match(shader.fragmentShader, /metalnessFactor = mix/);
@@ -8484,6 +8581,93 @@ check("assignProbeEnvMapMaterial clones standard mats; parallax patches the shad
   assert.equal(Object.keys(noAnchors.uniforms).length, 0);
 });
 
+check("assignProbeEnvMapMaterial chains a base layer-blend patch with the capture patch", () => {
+  const fakeTexture = { isTexture: true } as unknown;
+  const makeBake = (parallax: boolean): SphereReflectionCaptureBake =>
+    ({
+      target: { texture: fakeTexture },
+      position: [0, 0, 0],
+      radius: 4,
+      intensity: 1,
+      priority: 0,
+      resolution: 256,
+      parallax,
+    }) as unknown as SphereReflectionCaptureBake;
+
+  const makeLayerBlendMaterial = () =>
+    createThreeMaterialFromForgeDef(
+      normalizeForgeMaterialDef({
+        schema: 1,
+        type: "material",
+        materialType: "standard",
+        name: "Blend Base",
+        baseColorTexture: "rock-d",
+        layerBlend: {
+          layer1: { baseColor: "#ffffff", baseColorTexture: "snow-d" },
+          driver: "slope",
+        },
+      }),
+      { baseColorTexture: new Texture(), layer1BaseColorTexture: new Texture() },
+      { maxAnisotropy: 8 },
+    ) as MeshStandardMaterial;
+
+  // A stub carrying BOTH the layer-blend anchors and the capture anchors, exactly as
+  // three.js hands them to onBeforeCompile (unexpanded `#include` directives).
+  const runComposed = (material: MeshStandardMaterial) => {
+    const shader = {
+      uniforms: {} as Record<string, { value: unknown }>,
+      vertexShader: "#include <common>\nvoid main(){\n#include <worldpos_vertex>\n}",
+      fragmentShader:
+        "#include <common>\n#include <map_fragment>\n#include <roughnessmap_fragment>\n" +
+        "#include <metalnessmap_fragment>\n#include <alphamap_fragment>\n" +
+        "#include <emissivemap_fragment>\n#include <aomap_fragment>\n" +
+        "#include <normal_fragment_maps>\n#include <envmap_physical_pars_fragment>\nvoid main(){}",
+    };
+    material.onBeforeCompile(shader as never, null as never);
+    return shader;
+  };
+
+  const tracked: Material[] = [];
+  const composed = assignProbeEnvMapMaterial(
+    makeLayerBlendMaterial(),
+    makeBake(true),
+    tracked,
+  ) as MeshStandardMaterial;
+  assert.deepEqual(tracked, [composed]);
+  const shader = runComposed(composed);
+  // Layer blend survived the probe clone...
+  assert.match(shader.fragmentShader, /forgeLayerBlendFactor/);
+  assert.match(shader.vertexShader, /vForgeLayerWorldPosition/);
+  assert.ok("forgeLayerMap" in shader.uniforms);
+  // ...and the capture patch is layered on top.
+  assert.ok(shader.fragmentShader.includes("uniform vec3 captureProbePosition;"));
+  assert.ok(shader.vertexShader.includes("vCaptureWorldPos = worldPosition.xyz;"));
+  assert.ok("captureProbePosition" in shader.uniforms);
+  // The clone must keep the base material's `defines`: MeshStandardMaterial.copy() resets
+  // them to `{ STANDARD }`, which would compile out every #ifdef-gated layer sample (mask,
+  // layer maps) and silently kill a texture-driven blend inside a probe.
+  assert.equal(composed.defines?.STANDARD, "");
+  assert.equal(composed.defines?.FORGE_LAYER_BLEND, "");
+  assert.equal(composed.defines?.USE_FORGE_LAYER_MAP, "");
+  // The cache key carries both feature sets so composed programs never collide with
+  // either a plain capture clone or a non-captured layer-blend material.
+  const key = composed.customProgramCacheKey();
+  assert.match(key, /forge-layer-blend-v1/);
+  assert.match(key, /forge-reflection-capture/);
+
+  // Even when the capture itself is a no-op (no parallax, no global env), the base
+  // layer-blend patch must still survive the clone.
+  const preserved = assignProbeEnvMapMaterial(
+    makeLayerBlendMaterial(),
+    makeBake(false),
+    [],
+  ) as MeshStandardMaterial;
+  const preservedShader = runComposed(preserved);
+  assert.match(preservedShader.fragmentShader, /forgeLayerBlendFactor/);
+  assert.match(preserved.customProgramCacheKey(), /forge-layer-blend-v1/);
+  assert.ok(!preserved.customProgramCacheKey().includes("forge-reflection-capture"));
+});
+
 check("isReflectionCaptureBakeStale flags moved / near-far edits; tint follows", () => {
   const item: SphereReflectionCaptureRenderItem = {
     ...resolveSphereReflectionCapture(null),
@@ -9038,4 +9222,45 @@ check("buildImportedAssetRecord derives a valid manifest entry per type", () => 
   assert.equal(report.errorCount, 0);
 });
 
+check("imported GLTF content with skins or animations registers as skeletal mesh", () => {
+  const animatedGltf = JSON.stringify({ asset: { version: "2.0" }, animations: [{}] });
+  assert.equal(
+    inferImportedAssetTypeFromContent("assets/characters/Hero.gltf", animatedGltf),
+    "skeletalMesh",
+  );
+
+  const skinnedGlb = minimalGlbJson({ asset: { version: "2.0" }, skins: [{}] });
+  const type = inferImportedAssetTypeFromContent("assets/characters/Hero.glb", skinnedGlb);
+  assert.equal(type, "skeletalMesh");
+  assert.equal(
+    buildImportedAssetRecord("assets/characters/Hero.glb", skinnedGlb.byteLength, [], type)
+      ?.assetType,
+    "skeletalMesh",
+  );
+
+  const staticGltf = JSON.stringify({ asset: { version: "2.0" }, meshes: [{}] });
+  assert.equal(
+    inferImportedAssetTypeFromContent("assets/models/Crate.gltf", staticGltf),
+    "staticMesh",
+  );
+});
+
 console.log(`[engine-tests] ${checks} checks passed`);
+
+function minimalGlbJson(json: unknown): Uint8Array {
+  const encoder = new TextEncoder();
+  const jsonBytes = encoder.encode(JSON.stringify(json));
+  const paddedJsonLength = Math.ceil(jsonBytes.byteLength / 4) * 4;
+  const bytes = new Uint8Array(12 + 8 + paddedJsonLength);
+  const view = new DataView(bytes.buffer);
+  view.setUint32(0, 0x46546c67, true);
+  view.setUint32(4, 2, true);
+  view.setUint32(8, bytes.byteLength, true);
+  view.setUint32(12, paddedJsonLength, true);
+  view.setUint32(16, 0x4e4f534a, true);
+  bytes.set(jsonBytes, 20);
+  for (let index = 20 + jsonBytes.byteLength; index < bytes.byteLength; index += 1) {
+    bytes[index] = 0x20;
+  }
+  return bytes;
+}

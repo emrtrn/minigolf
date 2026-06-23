@@ -1331,7 +1331,7 @@ export class EditorUi {
     if (item.type !== "file" && isModelAssetType(item.type)) {
       card.addEventListener("dblclick", (event) => {
         event.preventDefault();
-        void this.openStaticMeshEditor(item);
+        void this.openMeshEditor(item);
       });
     }
     if (isActorScriptItem(item)) {
@@ -1396,7 +1396,7 @@ export class EditorUi {
     if (item.type === "material") return () => void this.openMaterialEditor(item);
     if (isActorScriptItem(item)) return () => void this.openActorScriptEditor(item);
     if (item.type !== "file" && isModelAssetType(item.type)) {
-      return () => void this.openStaticMeshEditor(item);
+      return () => void this.openMeshEditor(item);
     }
     return null;
   }
@@ -1608,6 +1608,17 @@ export class EditorUi {
   }
 
   /**
+   * Opens the asset editor that matches the model asset type.
+   */
+  private async openMeshEditor(item: BrowserAssetItem): Promise<void> {
+    if (item.type === "skeletalMesh") {
+      await this.openSkeletalMeshEditor(item);
+      return;
+    }
+    await this.openStaticMeshEditor(item);
+  }
+
+  /**
    * Opens the Static Mesh editor for a model asset (Content Browser
    * double-click). Dynamically imported so its Three.js geometry helpers stay
    * out of the editor entry until a model is actually opened.
@@ -1644,6 +1655,26 @@ export class EditorUi {
     } catch (error) {
       this.setStatus(
         `Could not open Static Mesh editor: ${error instanceof Error ? error.message : String(error)}`,
+        "error",
+      );
+    }
+  }
+
+  /**
+   * Opens the Persona-style Skeletal Mesh editor for skinned character assets.
+   */
+  private async openSkeletalMeshEditor(item: BrowserAssetItem): Promise<void> {
+    try {
+      const { SkeletalMeshEditor } = await import("@/editor/SkeletalMeshEditor");
+      SkeletalMeshEditor.open({
+        modelPath: item.path,
+        ...(item.editable ? { assetId: item.editable.id } : {}),
+        label: item.label,
+        onStatus: (message, tone) => this.setStatus(message, tone),
+      });
+    } catch (error) {
+      this.setStatus(
+        `Could not open Skeletal Mesh editor: ${error instanceof Error ? error.message : String(error)}`,
         "error",
       );
     }

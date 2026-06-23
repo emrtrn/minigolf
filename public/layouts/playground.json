@@ -142,20 +142,7 @@
     },
     {
       "assetId": "starter-sm-sphere",
-      "placements": [
-        {
-          "position": [
-            0,
-            2,
-            0
-          ],
-          "scaleLocked": true,
-          "materialSlot": "concratetile-material",
-          "simulatePhysics": true,
-          "rotationYDeg": 0,
-          "scale": 1
-        }
-      ]
+      "placements": []
     },
     {
       "assetId": "starter-sm-cube",
@@ -166,7 +153,7 @@
             0.75,
             0
           ],
-          "materialSlot": "white-material",
+          "materialSlot": "concratetile-material",
           "rotationYDeg": 0,
           "scale": 1
         }
@@ -247,7 +234,6 @@
       "maxBlur": 1
     },
     "ao": {
-      "enabled": true,
       "radius": 1,
       "intensity": 1
     },
