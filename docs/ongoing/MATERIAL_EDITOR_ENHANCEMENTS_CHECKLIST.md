@@ -292,6 +292,49 @@ onBeforeCompile yolunu seçer.
       önceki sertleştirmelere rağmen problem çözülmüş sayılmayacak; ayrı oturumda
       sahne üstü repro ile incelenecek.
 
+### C.8 Concrete Tile slope driver inceleme notu
+
+Kullanıcı testi: `ConcrateTile.material.json` materyali `slope` driver ile blend
+edildiğinde Material Editor preview içinde görülebiliyor, ancak Scene Editor ve
+Play görünümünde beklenen fark görünmüyor.
+
+İlk inceleme bulguları:
+
+- Materyal asset'i gerçekten `layerBlend.driver = "slope"` içeriyor; yani mevcut
+  dosya için sorun "blend hiç kaydedilmemiş" değil.
+- Material Editor materyali `cache: "no-cache"` ile okuyor, fakat runtime/editor
+  sahne material loader yolu `loadForgeMaterial()` içinde material JSON'u normal
+  `fetch(projectFileUrl(...))` ile okuyor. Bu, Material Editor'ın güncel JSON'u
+  göstermesine karşın Scene/Play tarafının browser cache'ten eski JSON'u kullanması
+  ihtimalini güçlendiriyor.
+- Editor Scene, Material Editor save callback'inde `refreshMaterialAsset(...)`
+  çağırıyor; Play runtime ise materyalleri başlangıçta `loadSceneMaterials()` ile
+  preload ediyor. Açık Play penceresi sonradan kaydedilen materyali hot-refresh
+  etmiyor olabilir.
+- Details'ten yeni material slot atanırken `applyMaterialSlot()` load'u başlatıp
+  aynı anda instance grubunu rebuild ediyor. Material cache henüz dolmadan yapılan
+  ilk rebuild base material ile kalabilir; sonraki async rebuild yolu ayrıca
+  doğrulanmalı.
+- Shader tarafı slope driver'ı world normal `dot(normal, up)` ile hesaplayıp
+  `diffuseColor.rgb` üzerinde blend uyguluyor. Bu nedenle güncel materyal doğru
+  yüklenirse Scene/Play tarafında da görünmesi beklenir.
+- Concrete tile layer ayarı görsel olarak düşük kontrastlı olabilir: layer1'de
+  `baseColorTexture` yok, beyaz sabit renk ve normal map var. Bu testte sadece
+  normal/roughness farkı belirgin olmayabilir; cache/load problemi ayrıştırılırken
+  layer1'e geçici belirgin bir base color veya texture atanarak test edilmeli.
+
+Önerilen çözüm sırası:
+
+1. `src/scene/materialAssets.ts` içindeki material JSON fetch'ine `cache: "no-cache"`
+   ekle.
+2. Scene Editor'da `applyMaterialSlot()` için material load tamamlanmadan yapılan
+   rebuild yarışını test et; gerekirse load tamamlanınca kesin rebuild garantisi ver.
+3. Play tarafında açık runtime'ın materyal hot-refresh yapmadığını kabul et veya
+   ileride editor-save sonrası runtime reload/refresh mekanizması tasarla.
+4. Repro testi: Material Editor Save -> Scene Editor refresh -> Play'i yeniden aç;
+   layer1'e geçici belirgin renk/texture atanarak slope etkisi görsel olarak
+   ayrıştırılsın.
+
 **Kabul:** Taş ve kar dokuları tek materyalde; eğim/yükseklik sürücüsüyle dik
 yüzeyde taş, düz/yüksek yüzeyde kar görünür; blend yokken standart materyal birebir
 aynı render eder (regresyon yok).
