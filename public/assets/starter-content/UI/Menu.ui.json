@@ -20,9 +20,9 @@
         "widget": "Stack",
         "props": {
           "direction": "column",
-          "gap": 16,
+          "gap": 18,
           "align": "center",
-          "padding": "$space.lg",
+          "padding": 20,
           "background": "$color.surface",
           "radius": "$radius.lg"
         },

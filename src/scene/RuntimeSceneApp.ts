@@ -1226,7 +1226,20 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
 
   private async loadMissingSceneModels(): Promise<void> {
     if (!this.assetLoader) return;
-    const missing = sceneModelAssetIds(this.layout).filter((assetId) => !this.models.has(assetId));
+    const needed = sceneModelAssetIds(this.layout).filter((assetId) => !this.models.has(assetId));
+    if (needed.length === 0) return;
+    // Only load ids the manifest still knows as meshes. A layout can outlive an
+    // asset (e.g. a model imported then deleted leaves a dangling placement); such
+    // ids are skipped with a warning instead of throwing and blanking the scene.
+    const manifest = await this.assetLoader.loadManifest();
+    const loadable = new Set(
+      manifest.assets.filter((asset) => isModelAssetType(assetType(asset))).map((asset) => asset.id),
+    );
+    const absent = needed.filter((assetId) => !loadable.has(assetId));
+    if (absent.length > 0) {
+      console.warn("[runtime] layout references assets absent from the manifest; skipping:", absent);
+    }
+    const missing = needed.filter((assetId) => loadable.has(assetId));
     if (missing.length === 0) return;
     const models = await this.assetLoader.loadModels(missing);
     for (const [assetId, model] of models) this.models.set(assetId, model);
@@ -1428,7 +1441,12 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
 
   private createInstancedModel(assetId: string, placements: LayoutPlacement[]): Group {
     const gltf = this.models.get(assetId);
-    if (!gltf) throw new Error(`Runtime asset missing: ${assetId}`);
+    // A dangling layout placement (asset removed from the manifest) renders
+    // nothing rather than aborting the whole scene build.
+    if (!gltf) {
+      console.warn(`[runtime] skipping placement for unloaded asset: ${assetId}`);
+      return new Group();
+    }
     const clonedMaterials: Material[] = [];
     // Placements with a material override and/or a reflection-capture probe envMap
     // are hidden in the instanced mesh and rendered as a separate clone (clone-
