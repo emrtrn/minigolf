@@ -1,4 +1,4 @@
-# Mesh Paint Mode Research and Forge Plan
+# Mesh Paint Mode Araştırması ve Forge Planı
 
 > Tarih: 2026-06-23
 > Durum: Gelecek faz planı. Kod uygulanmadı.
@@ -363,6 +363,47 @@ Faz 1 kabulü:
    - UV channel
    - mesh paint texture
    - material fallback
+
+## Kontrol listesi
+
+### Faz 0 - Araştırma ve kapsam
+
+- [x] Unreal Mesh Paint Mode ana parçaları araştırıldı.
+- [x] Mesh Paint'in Material Editor işi değil, Scene/Level Editor mode'u olduğu netleştirildi.
+- [x] Vertex Color / Vertex Weights / Texture Color / Textures ayrımı yapıldı.
+- [x] Forge için ilk hedefin Vertex Color + Vertex Weights olması kararlaştırıldı.
+- [x] Doğrudan texture asset üstüne paint ve skeletal mesh paint kapsam dışı bırakıldı.
+
+### Faz 1 - Vertex Color / Vertex Weights dikey kesiti
+
+- [ ] `vertexColor` material driver schema alanlarını ekle.
+- [ ] Material validator ve save validator alanlarını güncelle.
+- [ ] Material Editor'da Vertex Color driver ve kanal seçimini göster.
+- [ ] Layer Blend shader patch içinde `vColor` desteği ekle.
+- [ ] Scene/Level Editor içine Mesh Paint Mode switch'i ekle.
+- [ ] Select / Paint / Fill / Save / Remove araçlarını ekle.
+- [ ] Brush cursor, size, strength, falloff, flow ve back-face ignore ayarlarını ekle.
+- [ ] Color View Mode: Off, RGB, Alpha, Red, Green, Blue.
+- [ ] CPU vertex paint prototype ile placement geometry clone/update akışını ekle.
+- [ ] Save/reload için `*.meshpaint.json` sidecar desteği ekle.
+- [ ] Runtime Play tarafında painted vertex color sonucunu göster.
+- [ ] Engine testleri ve `npm run build:verify` gate'i ekle.
+
+### Faz 2 - Copy/Paste ve asset-level aktarım
+
+- [ ] Placement paint verisini başka placement'lara Copy/Paste et.
+- [ ] `To Mesh` ile instance paint'i asset-level `*.vertexcolors.json` sidecar'a aktar.
+- [ ] `To Instances` ile asset-level default'u seçili instance'lara uygula.
+- [ ] Static Mesh Editor'a vertex color inspect/remove/fill paneli ekle.
+- [ ] Reimport/topology değişiminde paint fix/transfer stratejisini ekle.
+
+### Faz 3 - Texture Color karşılığı
+
+- [ ] Mesh Paint Texture sidecar modelini tanımla.
+- [ ] UV channel seçimi ve seam dilation planını uygula.
+- [ ] Material Editor'da `paintTexture` driver/source desteği ekle.
+- [ ] Texture Color <-> Vertex Color dönüşümünü tasarla.
+- [ ] Texture paint import/export akışını ekle.
 
 ## Son karar
 

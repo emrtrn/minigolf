@@ -1,4 +1,4 @@
-# Landscape Mode Research and Forge Plan
+# Landscape Mode Araştırması ve Forge Planı
 
 > Tarih: 2026-06-23
 > Durum: Gelecek faz planı. Kod uygulanmadı.
@@ -562,7 +562,7 @@ Yeni dev endpoint önerileri:
   - landscape data shape ve boyut limitlerini doğrular
   - height/layer array uzunluklarını kontrol eder
 
-## Fazlar
+## Kontrol listesi
 
 ### Faz 0 - Dokümantasyon ve karar
 

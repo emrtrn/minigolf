@@ -1,4 +1,4 @@
-# Foliage Mode Research and Forge Plan
+# Foliage Mode Araştırması ve Forge Planı
 
 > Tarih: 2026-06-23
 > Durum: Gelecek faz planı. Kod uygulanmadı.
@@ -425,7 +425,7 @@ Alınacak fikirler:
 - World Partition grid.
 - Complex overlap/ecosystem competition.
 
-## Fazlar
+## Kontrol listesi
 
 ### Faz 0 - Dokümantasyon ve karar
 

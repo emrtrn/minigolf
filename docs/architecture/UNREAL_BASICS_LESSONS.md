@@ -105,6 +105,31 @@ tutkalı shell'lerde ince kalır.
   preview shader compile hatasinda onceki materyali korur. Takip dokumani:
   `docs/completed/MATERIAL_EDITOR_ENHANCEMENTS_CHECKLIST.md`.
 
+- *2026-06-23* - **Sound Cue Lite arastirma/plani.** Forge, Unreal Sound Cue
+  editorunu birebir kopyalamak yerine Web Audio tabanli dar bir `soundCue`
+  asset/editing katmani hedeflemeli: raw `sound` dosyalari ayri kalir, cue
+  grafi Source/Output/Mixer/Random/Modulator/Loop/Delay ile baslar, spatial,
+  bus/submix, modulation, occlusion ve MetaSound-benzeri procedural graph daha
+  sonraki fazlara ertelenir. Takip dokumani:
+  `docs/planned/SOUND_CUE_EDITOR_RESEARCH_AND_PLAN.md`.
+
+- *2026-06-23* - **Dialogue/Voice kapsam karari.** Unreal'daki Dialogue Voice
+  ve Dialogue Wave modeli, Sound Cue Lite'in alt ozelligi degil; speaker/listener
+  context, subtitle, localization, voice actor direction ve conversation flow
+  nedeniyle ayri bir Dialogue/Voice feature alani olmali. Sound Cue Lite ile
+  yalnizca playback katmaninda kesisir; live voice chat / microphone capture ise
+  daha ayri bir multiplayer/media kapsamidir. Takip dokumani:
+  `docs/planned/DIALOGUE_AND_VOICE_RESEARCH_AND_PLAN.md`.
+
+- *2026-06-23* - **User Interface / UMG-Slate kapsam karari.** Forge, Unreal'in
+  UI ayrimlarini alacak ama araclari birebir kopyalamayacak: oyun HUD/menu
+  tarafi `.ui.json` + `RuntimeUiSubsystem` + HTML/CSS overlay tabanli **UMG Lite**,
+  editor/arac tarafi mevcut dev-only `EditorUi` cizgisi, state tarafi MVVM-lite
+  store, input tarafi Common UI benzeri screen stack/focus/back routing olacak.
+  World-space UI, screen UI oturduktan sonra `WidgetComponentLite` fazina
+  birakilmali. Takip dokumani:
+  `docs/planned/USER_INTERFACE_UMG_SLATE_RESEARCH_AND_PLAN.md`.
+
 - *2026-06-20* — **Script Communication System kararı.** Forge, Unreal Blueprint
   Communication modelini görsel node VM olarak kopyalamayacak. Actor Script verisi
   iletişim sözleşmesini taşır; behavior mantığı `src/game/` TypeScript kodunda

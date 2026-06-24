@@ -7547,6 +7547,29 @@
         "bytes": 367
       },
       "license": "Unknown"
+    },
+    {
+      "id": "base-basic-pbr",
+      "name": "Base Basic Pbr",
+      "assetType": "staticMesh",
+      "category": "Props",
+      "path": "assets/starter-content/StaticMeshes/Props/base_basic_pbr.glb",
+      "tags": [],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "Props",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 10708420
+      },
+      "license": "Unknown"
     }
   ]
 }
