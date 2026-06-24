@@ -433,9 +433,10 @@ Blend Space sample'larında çözdüğüm gibi `blendSampleClipOptions` desenini
       çizgi** (render loop'ta dünya pozisyonlarından canlı güncellenir; seçili sarı). Body referansları
       esnek (yeniden adlandırılan body veri kaybetmez). engine-tests: normalize + validate round-trip.
 - [x] **Aşama 3 — Runtime ragdoll (3b + 3a + 3c + 3d TAMAM, 2026-06-24).** Sıra: 3b→3a→3c→3d.
-      Runtime el ile doğrulandı (Play'de `R`); editör Simulate önizlemesi de eklendi. Aşama-dışı kalanlar
-      (opsiyonel): gerçek tetik (ölüm/hasar eventi), cone/twist limiti (Rapier sürüm sınırı), demo
-      `character-a` body author'lama, get-up geri-blend. Detay alt maddelerde + SONRAKİ bloğunda.
+      Runtime el ile doğrulandı (Play'de `R`); editör Simulate önizlemesi + **cone/twist açısal limiti**
+      (raw `jointSetLimits`, rest-safe) eklendi. Aşama-dışı kalanlar (opsiyonel): gerçek tetik (ölüm/hasar
+      eventi), demo `character-a` body author'lama, get-up geri-blend, gerçek cone limit (daha yeni Rapier).
+      Detay alt maddelerde + SONRAKİ bloğunda.
   - [x] **3a — Engine: Rapier joint + ragdoll spawn (2026-06-24).** Yeni generic modül
         [`engine/physics/ragdoll.ts`](../../engine/physics/ragdoll.ts): tipler (`RagdollGroupDesc`/
         `RagdollBodyDesc`/`RagdollJointDesc`/`RagdollPose`) + saf `worldAnchorToBodyLocal`
@@ -445,10 +446,15 @@ Blend Space sample'larında çözdüğüm gibi `blendSampleClipOptions` desenini
         canlı dünyaya bırakır (statik level collider'larıyla çarpışır), her tick body world transform'u
         okunur, dispose/despawn temizler; `rebuildRapierWorld` ragdoll'ları geçersiz kılar.
         Glue [`ragdollSpec.ts`](../../src/game/ragdollSpec.ts) `toRagdollGroupDesc`: world anchor → iki
-        body-local anchor. **Kısıt:** rapier3d-compat 0.19 `SphericalImpulseJoint`'te cone/twist limiti
-        **yok** → swing/twist taşınır ama henüz zorlanmaz (angular damping ile floppy ama kararlı; gerçek
-        cone-twist daha yeni Rapier veya raw generic-limit API ister — ertelendi). engine-tests **+2**
-        (314): world→local anchor, group desc lowering.
+        body-local anchor. engine-tests **+2** (314): world→local anchor, group desc lowering.
+        **Cone/twist limiti EKLENDİ (2026-06-24, ayrı tur):** spherical joint kurulduktan sonra **raw**
+        `world.impulseJoints.raw.jointSetLimits(handle, axis, min, max)` ile açısal eksenler kısıtlanır
+        (AngX/AngZ=swing, AngY=twist — uzuvlar Y boyunca kapsül). 0.19 `SphericalImpulseJoint` typed
+        limit sunmadığı, rest-frame de olmadığı için: saf `ragdollJointAngularLimits` limitleri body'lerin
+        **rest relative açısına** genişletir (tight authored limit küçük-rest eklemlerde korunur; hip/shoulder
+        gibi büyük-rest eklemler spawn'da ihlal etmesin diye gevşetilir → asla patlamaz). Feature-detected
+        (raw setter yoksa no-op=floppy). engine-tests **+1** (316). Yine de **approximation** (identity-ref,
+        per-axis box limit); el ile Play doğrulaması kullanıcıda.
   - [x] **3b — Saf ragdoll spec builder** (2026-06-24). Yeni saf modül
         [`src/game/ragdollSpec.ts`](../../src/game/ragdollSpec.ts): `buildRagdollSpec(bodies,
         constraints, resolveBoneWorld)` → `RagdollSpec { bodies:[{name, shape, size, position(world),
@@ -499,11 +505,12 @@ Blend Space sample'larında çözdüğüm gibi `blendSampleClipOptions` desenini
 **Aşama 3 sonrası kalan (opsiyonel/yeni yön — Aşama 3 kapsamı dışı):**
 
 - **Gerçek ragdoll tetiği:** debug `R` yerine ölüm/hasar eventi (oyun mantığı `activateRagdoll`'u çağırır).
-- **Cone/twist limiti:** rapier3d-compat 0.19 `SphericalImpulseJoint` limitsiz → ragdoll floppy. Daha yeni
-  Rapier veya raw generic-joint limit API ile katı eklemler. Swing/twist verisi spec'te zaten taşınıyor.
 - **Demo author'lama:** `character-a`'ya editörde örnek physicsBodies/Constraints ekle (henüz yok) — hem
   Simulate önizlemesi hem runtime `R` için gerekli; demo asset'i ragdoll'a hazır hale getirir.
 - **Geri-blend (get-up):** ragdoll'dan animasyona yumuşak dönüş (şu an ragdoll terminal).
+- **Gerçek cone limit (cila):** şu an açısal limit raw `jointSetLimits` ile per-axis box + rest-widened
+  (approximation, identity-ref). Daha yeni Rapier'in dedicated cone-twist'i veya joint-frame ile rest-ref
+  edilmiş gerçek cone daha doğru olur. Mevcut yeterince stiff; doğruluk gerekirse.
 
 ### Faz 5 — Persistans & Save Validator
 

@@ -11,10 +11,25 @@ import type { Entity, EntityId } from "../scene/entity";
 import type { PhysicsAabb, PhysicsContact, PhysicsQuery } from "../behavior/behaviorSubsystem";
 import type { Vec3 } from "../scene/layout";
 import {
+  ragdollJointAngularLimits,
   RAGDOLL_COLLISION_GROUPS,
+  type QuatXYZW,
   type RagdollGroupDesc,
+  type RagdollJointDesc,
   type RagdollPose,
 } from "./ragdoll";
+
+/**
+ * Raw Rapier joint-set angular-limit setter. `RawImpulseJointSet.jointSetLimits`
+ * is typed but its `RawJointAxis` enum isn't exported, so we reach it through this
+ * minimal structural type with plain axis indices (AngX=3, AngY=4, AngZ=5).
+ */
+interface RawAngularLimitSetter {
+  jointSetLimits(handle: number, axis: number, min: number, max: number): void;
+}
+const RAW_JOINT_AXIS_ANG_X = 3;
+const RAW_JOINT_AXIS_ANG_Y = 4;
+const RAW_JOINT_AXIS_ANG_Z = 5;
 
 export const PHYSICS_SUBSYSTEM_ID = "physics";
 /** Collider surface defaults when no physical material is assigned. */
@@ -42,6 +57,7 @@ type RapierModule = typeof import("@dimforge/rapier3d-compat");
 type RapierWorld = InstanceType<RapierModule["World"]>;
 type RapierRigidBody = ReturnType<RapierWorld["createRigidBody"]>;
 type RapierCollider = ReturnType<RapierWorld["createCollider"]>;
+type RapierImpulseJoint = ReturnType<RapierWorld["createImpulseJoint"]>;
 
 interface RapierBodyRecord {
   id: EntityId;
@@ -214,6 +230,7 @@ export class PhysicsSubsystem implements Subsystem, PhysicsQuery {
     const RAPIER = this.rapierModule;
     if (!RAPIER || !this.rapierWorld) return null;
     const bodies = new Map<string, RapierRigidBody>();
+    const bodyQuats = new Map<string, QuatXYZW>();
     for (const bodyDesc of desc.bodies) {
       const rigidBody = this.rapierWorld.createRigidBody(
         RAPIER.RigidBodyDesc.dynamic()
@@ -237,6 +254,7 @@ export class PhysicsSubsystem implements Subsystem, PhysicsQuery {
         rigidBody,
       );
       bodies.set(bodyDesc.name, rigidBody);
+      bodyQuats.set(bodyDesc.name, bodyDesc.quaternion);
     }
     for (const joint of desc.joints) {
       const a = bodies.get(joint.bodyA);
@@ -246,7 +264,10 @@ export class PhysicsSubsystem implements Subsystem, PhysicsQuery {
         { x: joint.anchorA[0], y: joint.anchorA[1], z: joint.anchorA[2] },
         { x: joint.anchorB[0], y: joint.anchorB[1], z: joint.anchorB[2] },
       );
-      this.rapierWorld.createImpulseJoint(params, a, b, true);
+      const impulseJoint = this.rapierWorld.createImpulseJoint(params, a, b, true);
+      const quatA = bodyQuats.get(joint.bodyA);
+      const quatB = bodyQuats.get(joint.bodyB);
+      if (quatA && quatB) this.applyRagdollJointLimits(impulseJoint, joint, quatA, quatB);
     }
     if (options.detachEntityId !== undefined) {
       const record = this.rapierBodies.get(options.detachEntityId);
@@ -258,6 +279,31 @@ export class PhysicsSubsystem implements Subsystem, PhysicsQuery {
     this.nextRagdollId += 1;
     this.ragdollGroups.set(id, { id, bodies });
     return id;
+  }
+
+  /**
+   * Clamps a spherical ragdoll joint's swing (AngX/AngZ) and twist (AngY) — limbs
+   * run along Y, so AngY is the twist axis. Limits go through the raw joint set
+   * (`jointSetLimits`) because the typed `SphericalImpulseJoint` exposes none; the
+   * values are rest-widened (`ragdollJointAngularLimits`) so the joint never
+   * starts in violation. Feature-detected: a no-op (floppy) if the raw setter is
+   * absent, so a Rapier version bump can't crash here.
+   */
+  private applyRagdollJointLimits(
+    joint: RapierImpulseJoint,
+    jointDesc: RagdollJointDesc,
+    quatA: QuatXYZW,
+    quatB: QuatXYZW,
+  ): void {
+    const rawSet = this.rapierWorld?.impulseJoints.raw as unknown as
+      | Partial<RawAngularLimitSetter>
+      | undefined;
+    if (!rawSet || typeof rawSet.jointSetLimits !== "function") return;
+    const limits = ragdollJointAngularLimits(quatA, quatB, jointDesc.swingRad, jointDesc.twistRad);
+    const handle = joint.handle;
+    rawSet.jointSetLimits(handle, RAW_JOINT_AXIS_ANG_X, -limits.swing, limits.swing);
+    rawSet.jointSetLimits(handle, RAW_JOINT_AXIS_ANG_Y, -limits.twist, limits.twist);
+    rawSet.jointSetLimits(handle, RAW_JOINT_AXIS_ANG_Z, -limits.swing, limits.swing);
   }
 
   /** World transforms of a spawned ragdoll's bodies, after the latest step. */

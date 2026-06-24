@@ -153,7 +153,11 @@ import {
   RAGDOLL_DENSITY,
   type BoneWorldTransform,
 } from "../src/game/ragdollSpec";
-import { boneWorldFromBodyPose, worldAnchorToBodyLocal } from "../engine/physics/ragdoll";
+import {
+  boneWorldFromBodyPose,
+  ragdollJointAngularLimits,
+  worldAnchorToBodyLocal,
+} from "../engine/physics/ragdoll";
 import type {
   GameModeContext,
   InputMode,
@@ -7387,6 +7391,23 @@ check("ragdoll bone driving: boneWorldFromBodyPose inverts buildRagdollSpec plac
   ]);
   approxVec(recovered.position, boneWorld.position);
   approxVec(recovered.quaternion, boneWorld.quaternion);
+});
+
+check("ragdoll joint limits: authored kept when bodies align; widened past the rest angle", () => {
+  const identity = [0, 0, 0, 1] as [number, number, number, number];
+  // Aligned bodies (rest angle ~0): authored swing/twist survive (both > the margin).
+  const aligned = ragdollJointAngularLimits(identity, identity, 0.6, 0.4);
+  assert.ok(Math.abs(aligned.swing - 0.6) < 1e-9, `swing ${aligned.swing}`);
+  assert.ok(Math.abs(aligned.twist - 0.4) < 1e-9, `twist ${aligned.twist}`);
+  // 90°-apart bodies (a hip/shoulder root): a tight authored limit is widened to
+  // restAngle (π/2) + margin so the joint can't start in violation.
+  const yaw90 = [0, Math.SQRT1_2, 0, Math.SQRT1_2] as [number, number, number, number];
+  const widened = ragdollJointAngularLimits(identity, yaw90, 0.3, 0.2);
+  const expected = Math.PI / 2 + 0.0873;
+  assert.ok(Math.abs(widened.swing - expected) < 1e-3, `widened swing ${widened.swing}`);
+  assert.ok(Math.abs(widened.twist - expected) < 1e-3, `widened twist ${widened.twist}`);
+  // A generous authored limit (larger than rest) is preserved.
+  assert.equal(ragdollJointAngularLimits(identity, identity, 2, 2).swing, 2);
 });
 
 check("asset skeleton sidecar normalizes animation metadata", () => {

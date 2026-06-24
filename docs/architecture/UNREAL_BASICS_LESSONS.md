@@ -317,6 +317,20 @@ Yürütme track'i bittikçe buradan çekilir; detaylar yukarıdaki ilgili §'de.
 Yeni kayıtları en üste ekle. Kaydet: tarih, madde #, ne değişti, nerede durdu,
 alınan karar (sonraki oturum yeniden tartışmasın).
 
+- *2026-06-24* - **Ragdoll cone/twist açısal limiti (floppy → stiff).** Ragdoll joint'leri artık açısal
+  limitli. Sorun: rapier3d-compat 0.19 typed `SphericalImpulseJoint`'te limit API yok. Çözüm: spherical
+  joint kurulduktan sonra **raw** `world.impulseJoints.raw.jointSetLimits(handle, axis, min, max)` ile
+  AngX/AngZ=swing, AngY=twist eksenleri kısıtlanır (uzuvlar Y boyunca kapsül → AngY twist). `RawJointAxis`
+  exported değil → enum sayıları (AngX=3/AngY=4/AngZ=5) `jointSetLimits`'e yapısal cast ile geçilir
+  (feature-detected; raw setter yoksa no-op=floppy, sürüm bump'ı çökertmez). **Kritik güvenlik:** 0.19
+  spherical joint'in rest-frame'i yok → limitler identity'den ölçülür; büyük rest-açılı eklemler (hip/
+  shoulder) tight limitle spawn'da ihlal edip patlardı. Saf `ragdollJointAngularLimits` (engine/physics/
+  ragdoll.ts) limiti body'lerin **rest relative açısına** (`2·acos(|qRel.w|)`) genişletir + ~5° margin →
+  küçük-rest eklem authored limiti korur, büyük-rest eklem gevşer ama **asla ihlal etmez** (provably:
+  limit ≥ restAngle ≥ her eksen bileşeni). Gate: tsc temiz, test:engine **316** (+1: rest-widen/authored-
+  keep/generous), vite build temiz (oyun bundle +0.6kB, Rapier hâlâ lazy). **Sınır:** approximation
+  (identity-ref, per-axis box, gerçek anatomik cone değil); el ile Play doğrulaması kullanıcıda. Gerçek
+  cone-twist için daha yeni Rapier (dedicated cone API) veya joint-frame ile rest-ref gerekir.
 - *2026-06-24* - **Ragdoll Aşama 3 KAPANDI: editör "Simulate" önizleme (3d).** Runtime ragdoll (3b+3a+3c)
   kullanıcı tarafından Play'de doğrulandıktan sonra son faz 3d eklendi. `SkeletalMeshEditor` Physics
   modunda **Simulate** toggle: editör-içi `new PhysicsSubsystem({backend:"rapier"})` + modelin ayak

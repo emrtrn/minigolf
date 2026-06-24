@@ -61,6 +61,46 @@ export interface RagdollPose {
   quaternion: QuatXYZW;
 }
 
+/** Symmetric angular limits (radians) for a ragdoll joint's swing/twist axes. */
+export interface RagdollAngularLimits {
+  /** Half-angle applied to both swing axes (`±swing`). */
+  swing: number;
+  /** Half-angle applied to the twist axis (`±twist`). */
+  twist: number;
+}
+
+/**
+ * Computes safe symmetric angular limits for a ragdoll joint.
+ *
+ * rapier3d-compat 0.19's spherical joint exposes no rest frame, so per-axis
+ * angular limits are measured from *identity*, not the bind pose. A joint whose
+ * bodies already sit at a large relative angle (a hip/shoulder root) would then
+ * start outside a tight authored limit and snap violently at spawn. To stay safe,
+ * each limit is widened to never be tighter than the bodies' rest relative angle
+ * (plus a small margin): tight joints (spine, elbow, knee) keep their authored
+ * limit, while large-rest joints get a looser-but-bounded cone — strictly less
+ * floppy than no limit, and never spawn-violating. Pure.
+ */
+export function ragdollJointAngularLimits(
+  bodyAQuat: QuatXYZW,
+  bodyBQuat: QuatXYZW,
+  swingRad: number,
+  twistRad: number,
+  marginRad = 0.0873, // ~5°
+): RagdollAngularLimits {
+  const a = new Quaternion(bodyAQuat[0], bodyAQuat[1], bodyAQuat[2], bodyAQuat[3]);
+  const b = new Quaternion(bodyBQuat[0], bodyBQuat[1], bodyBQuat[2], bodyBQuat[3]);
+  const rest = a.invert().multiply(b);
+  // Total relative angle ∈ [0, π]; bounds every per-axis component, so a limit
+  // ≥ this can't be violated at spawn.
+  const restAngle = 2 * Math.acos(Math.min(1, Math.abs(rest.w)));
+  const floor = restAngle + marginRad;
+  return {
+    swing: Math.max(swingRad, floor),
+    twist: Math.max(twistRad, floor),
+  };
+}
+
 /**
  * Collision groups for ragdoll colliders: membership bit 0, filtering out bit 0,
  * so ragdoll parts collide with the rest of the world (default groups) but never
