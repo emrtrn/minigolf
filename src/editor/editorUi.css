@@ -2522,13 +2522,15 @@ body.editor-mode #debug-stats {
 }
 .uie-action-field { grid-template-columns: 92px 1fr; }
 .uie-action-field input[hidden] { display: none; }
-.uie-transition-field {
+.uie-transition-field,
+.uie-a11y-field {
   display: block;
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
-.uie-transition-field > span {
+.uie-transition-field > span,
+.uie-a11y-field > span {
   display: block;
   color: #aeb8bd;
   font-size: 12px;

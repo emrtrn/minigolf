@@ -425,6 +425,14 @@ import {
   transitionClasses,
   UI_TRANSITION_BASE_CLASS,
 } from "../engine/ui/uiTransition";
+import {
+  auditUiA11y,
+  collectFocusables,
+  isUiNodeFocusable,
+  nextFocusIndex,
+  normalizeUiA11y,
+  resolveUiA11yAttrs,
+} from "../engine/ui/uiA11y";
 
 let checks = 0;
 const check = (label: string, fn: () => void): void => {
@@ -10746,6 +10754,7 @@ check("formatUiDebug renders the HUD, screen stack, locale and bound fields", ()
       ["player.speed", 2.5],
       ["player.speedLabel", "Speed 2.5 m/s"],
     ],
+    audit: [],
   });
   assert.deepEqual(lines, [
     "ui",
@@ -10759,14 +10768,34 @@ check("formatUiDebug renders the HUD, screen stack, locale and bound fields", ()
 });
 
 check("formatUiDebug shows placeholders when nothing is mounted", () => {
-  const lines = formatUiDebug({ hud: null, screens: [], locale: null, fields: [] });
+  const lines = formatUiDebug({ hud: null, screens: [], locale: null, fields: [], audit: [] });
   assert.deepEqual(lines, ["ui", "hud: none", "screens: none", "locale: none", "fields: none"]);
 });
 
 check("formatUiDebug clips long string values", () => {
   const long = "x".repeat(40);
-  const lines = formatUiDebug({ hud: null, screens: [], locale: null, fields: [["msg", long]] });
+  const lines = formatUiDebug({
+    hud: null,
+    screens: [],
+    locale: null,
+    fields: [["msg", long]],
+    audit: [],
+  });
   assert.equal(lines.at(-1), `  msg = "${"x".repeat(29)}..."`);
+});
+
+check("formatUiDebug lists accessibility audit findings", () => {
+  const lines = formatUiDebug({
+    hud: null,
+    screens: ["Menu"],
+    locale: null,
+    fields: [],
+    audit: ['Menu: Button "go" — Button has no text or label'],
+  });
+  assert.deepEqual(lines.slice(-2), [
+    "a11y(1):",
+    '  Menu: Button "go" — Button has no text or label',
+  ]);
 });
 
 check("normalizeUiTransition: shorthand string expands to enter+exit", () => {
@@ -10941,6 +10970,146 @@ check("collectUiLocBindings finds only Text/Button nodes with localized text", (
   assert.deepEqual(
     locNodes.map((entry) => entry.node.id).sort(),
     ["b", "t"],
+  );
+});
+
+// --- U7c accessibility -----------------------------------------------------
+
+check("normalizeUiA11y keeps valid fields and drops empty/garbage", () => {
+  assert.deepEqual(normalizeUiA11y({ label: "Go", role: "button", focusable: true }), {
+    label: "Go",
+    role: "button",
+    focusable: true,
+  });
+  assert.deepEqual(normalizeUiA11y({ focusable: false }), { focusable: false });
+  // Empty strings + wrong types are dropped; an all-empty object → undefined.
+  assert.equal(normalizeUiA11y({ label: "", role: 5 }), undefined);
+  assert.equal(normalizeUiA11y(null), undefined);
+});
+
+check("normalizeUiWidgetDef round-trips node a11y + initialFocus, dropping no-ops", () => {
+  const def = normalizeUiWidgetDef({
+    name: "M",
+    initialFocus: "go",
+    root: {
+      id: "root",
+      widget: "Canvas",
+      children: [
+        { id: "img", widget: "Image", a11y: { label: "Logo" } },
+        { id: "go", widget: "Button", a11y: { focusable: false }, props: { text: "Go" } },
+        { id: "plain", widget: "Text", a11y: { label: "" }, props: { text: "x" } },
+      ],
+    },
+  });
+  assert.equal(def.initialFocus, "go");
+  assert.deepEqual(findUiNode(def.root, "img")!.a11y, { label: "Logo" });
+  assert.deepEqual(findUiNode(def.root, "go")!.a11y, { focusable: false });
+  // An a11y that normalizes to nothing leaves the node without the field.
+  assert.equal(findUiNode(def.root, "plain")!.a11y, undefined);
+  // initialFocus pointing at nothing useful is dropped (empty string).
+  assert.equal(normalizeUiWidgetDef({ name: "M", initialFocus: "", root: {} }).initialFocus, undefined);
+});
+
+check("resolveUiA11yAttrs maps widget kinds + a11y overrides to ARIA", () => {
+  const def = normalizeUiWidgetDef({
+    name: "M",
+    root: {
+      id: "root",
+      widget: "Canvas",
+      children: [
+        { id: "bar", widget: "ProgressBar", props: { value: 30, max: 60 } },
+        { id: "img", widget: "Image", a11y: { label: "Logo" } },
+        { id: "btn", widget: "Button", a11y: { label: "Start", focusable: false }, props: { text: "x" } },
+        { id: "box", widget: "Panel", a11y: { focusable: true, role: "menu" } },
+      ],
+    },
+  });
+  assert.deepEqual(resolveUiA11yAttrs(findUiNode(def.root, "bar")!), {
+    role: "progressbar",
+    "aria-valuemin": "0",
+    "aria-valuemax": "60",
+    "aria-valuenow": "30",
+  });
+  assert.deepEqual(resolveUiA11yAttrs(findUiNode(def.root, "img")!), {
+    role: "img",
+    "aria-label": "Logo",
+  });
+  // Button: native focus, label override, focusable:false → tabindex -1.
+  assert.deepEqual(resolveUiA11yAttrs(findUiNode(def.root, "btn")!), {
+    "aria-label": "Start",
+    tabindex: "-1",
+  });
+  // Focusable non-Button gets tabindex 0 + the role override.
+  assert.deepEqual(resolveUiA11yAttrs(findUiNode(def.root, "box")!), {
+    role: "menu",
+    tabindex: "0",
+  });
+});
+
+check("collectFocusables + isUiNodeFocusable follow the focusable rules", () => {
+  const def = normalizeUiWidgetDef({
+    name: "M",
+    root: {
+      id: "root",
+      widget: "Canvas",
+      children: [
+        { id: "a", widget: "Button", props: { text: "A" } },
+        { id: "b", widget: "Button", a11y: { focusable: false }, props: { text: "B" } },
+        { id: "c", widget: "Panel", a11y: { focusable: true } },
+        { id: "d", widget: "Text", props: { text: "D" } },
+      ],
+    },
+  });
+  assert.deepEqual(collectFocusables(def.root), ["a", "c"]);
+  assert.equal(isUiNodeFocusable(findUiNode(def.root, "a")!), true);
+  assert.equal(isUiNodeFocusable(findUiNode(def.root, "b")!), false);
+  assert.equal(isUiNodeFocusable(findUiNode(def.root, "d")!), false);
+});
+
+check("nextFocusIndex wraps both ways and seeds from an empty selection", () => {
+  assert.equal(nextFocusIndex(0, 3, 1), 1);
+  assert.equal(nextFocusIndex(2, 3, 1), 0); // wrap forward
+  assert.equal(nextFocusIndex(0, 3, -1), 2); // wrap back
+  assert.equal(nextFocusIndex(-1, 3, 1), 0); // none focused, forward → first
+  assert.equal(nextFocusIndex(-1, 3, -1), 2); // none focused, back → last
+  assert.equal(nextFocusIndex(0, 0, 1), -1); // nothing to focus
+});
+
+check("buildUiRenderTree attaches ARIA attrs to render nodes", () => {
+  const def = normalizeUiWidgetDef({
+    name: "M",
+    root: {
+      id: "root",
+      widget: "Canvas",
+      children: [{ id: "bar", widget: "ProgressBar", props: { value: 1, max: 4 } }],
+    },
+  });
+  const tree = buildUiRenderTree(def);
+  assert.equal(tree.children[0]!.attrs?.role, "progressbar");
+  assert.equal(tree.children[0]!.attrs?.["aria-valuenow"], "1");
+  // A bare container with no a11y carries no attrs.
+  assert.equal(tree.attrs, undefined);
+});
+
+check("auditUiA11y flags nameless Button + Image, passes named ones", () => {
+  const def = normalizeUiWidgetDef({
+    name: "Menu",
+    root: {
+      id: "root",
+      widget: "Canvas",
+      children: [
+        { id: "blank", widget: "Button", props: {} },
+        { id: "named", widget: "Button", props: { text: "Go" } },
+        { id: "keyed", widget: "Button", props: { text: { key: "menu.go" } } },
+        { id: "logo", widget: "Image", props: {} },
+        { id: "alt", widget: "Image", a11y: { label: "Logo" } },
+      ],
+    },
+  });
+  const issues = auditUiA11y(def);
+  assert.deepEqual(
+    issues.map((issue) => issue.nodeId).sort(),
+    ["blank", "logo"],
   );
 });
 

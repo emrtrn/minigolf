@@ -29,6 +29,7 @@ import {
 } from "@engine/ui/uiWidget";
 import { renderUiWidget, type RenderedUiWidget } from "@engine/ui/uiRenderer";
 import { BINDABLE_UI_PROPS } from "@engine/ui/uiBinding";
+import { collectFocusables, type UiA11y } from "@engine/ui/uiA11y";
 import { applyUiTheme, type UiThemeDef } from "@engine/ui/uiTheme";
 import {
   normalizeUiTransition,
@@ -356,8 +357,13 @@ export class UiWidgetEditor {
     }
     if (node.widget === "Button") this.detailsHost.append(this.makeActionField(node));
 
-    // Screen transition lives on the asset (def), shown when the root is selected.
-    if (node.id === this.def.root.id) this.detailsHost.append(this.makeTransitionSection());
+    this.detailsHost.append(this.makeA11ySection(node));
+
+    // Screen transition + initial focus live on the asset (def), shown for the root.
+    if (node.id === this.def.root.id) {
+      this.detailsHost.append(this.makeTransitionSection());
+      this.detailsHost.append(this.makeInitialFocusSection());
+    }
 
     // Node actions (reorder / delete) — never delete the root.
     const actions = document.createElement("div");
@@ -589,6 +595,100 @@ export class UiWidgetEditor {
     span.textContent = label;
     row.append(span, control);
     return row;
+  }
+
+  /**
+   * Accessibility editor (per node): `aria-label`, an optional ARIA `role`
+   * override, and focusability (default / force-focusable / non-focusable).
+   * Writes `node.a11y` through {@link setA11y}; cleared fields drop the key.
+   */
+  private makeA11ySection(node: UiNode): HTMLElement {
+    const wrap = document.createElement("div");
+    wrap.className = "uie-field uie-a11y-field";
+    const title = document.createElement("span");
+    title.textContent = "Accessibility";
+    wrap.append(title);
+
+    const a11y = node.a11y ?? {};
+
+    const label = document.createElement("input");
+    label.type = "text";
+    label.placeholder = node.widget === "Image" ? "alt text" : "aria-label";
+    label.value = a11y.label ?? "";
+    label.addEventListener("change", () =>
+      this.setA11y(node, "label", label.value.trim() || undefined),
+    );
+
+    const role = document.createElement("input");
+    role.type = "text";
+    role.placeholder = "role (optional)";
+    role.value = a11y.role ?? "";
+    role.addEventListener("change", () =>
+      this.setA11y(node, "role", role.value.trim() || undefined),
+    );
+
+    const focusable = document.createElement("select");
+    for (const [value, text] of [
+      ["", "(default)"],
+      ["yes", "Focusable"],
+      ["no", "Not focusable"],
+    ] as const) {
+      const opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = text;
+      focusable.append(opt);
+    }
+    focusable.value = a11y.focusable === true ? "yes" : a11y.focusable === false ? "no" : "";
+    focusable.addEventListener("change", () =>
+      this.setA11y(
+        node,
+        "focusable",
+        focusable.value === "yes" ? true : focusable.value === "no" ? false : undefined,
+      ),
+    );
+
+    wrap.append(
+      this.makeLabeledRow("Label", label),
+      this.makeLabeledRow("Role", role),
+      this.makeLabeledRow("Focusable", focusable),
+    );
+    return wrap;
+  }
+
+  /** Sets one {@link UiA11y} field on a node (undefined/empty clears it). */
+  private setA11y<K extends keyof UiA11y>(node: UiNode, key: K, value: UiA11y[K] | undefined): void {
+    const a11y: UiA11y = { ...(node.a11y ?? {}) };
+    if (value === undefined || value === "") delete a11y[key];
+    else a11y[key] = value;
+    if (Object.keys(a11y).length === 0) delete node.a11y;
+    else node.a11y = a11y;
+    this.markDirty();
+    this.renderPreview();
+  }
+
+  /**
+   * Screen-level initial focus selector (asset): which focusable node receives
+   * focus when the widget opens as a screen. Defaults to the first focusable.
+   */
+  private makeInitialFocusSection(): HTMLElement {
+    const select = document.createElement("select");
+    const none = document.createElement("option");
+    none.value = "";
+    none.textContent = "(first focusable)";
+    select.append(none);
+    for (const id of collectFocusables(this.def.root)) {
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = id;
+      select.append(opt);
+    }
+    select.value = this.def.initialFocus ?? "";
+    select.addEventListener("change", () => {
+      if (select.value) this.def.initialFocus = select.value;
+      else delete this.def.initialFocus;
+      this.markDirty();
+    });
+    return this.makeLabeledRow("Initial Focus", select);
   }
 
   /** Replays the authored enter transition on the current preview element. */

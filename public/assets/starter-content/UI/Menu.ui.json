@@ -8,10 +8,11 @@
   },
   "theme": "default-theme",
   "transition": {
-    "enter": "scale",
+    "enter": "fade",
     "exit": "scale",
-    "durationMs": 160
+    "durationMs": 300
   },
+  "initialFocus": "resume",
   "root": {
     "id": "root",
     "widget": "Canvas",
@@ -26,6 +27,9 @@
         "props": {
           "width": 200,
           "height": 50
+        },
+        "a11y": {
+          "label": "Game logo"
         },
         "children": []
       },
@@ -45,7 +49,9 @@
             "id": "title",
             "widget": "Text",
             "props": {
-              "text": { "key": "menu.title" },
+              "text": {
+                "key": "menu.title"
+              },
               "fontSize": 40,
               "fontWeight": 700,
               "color": "$color.text"
@@ -56,7 +62,12 @@
             "id": "subtitle",
             "widget": "Text",
             "props": {
-              "text": { "key": "menu.build", "params": { "version": "0.1" } },
+              "text": {
+                "key": "menu.build",
+                "params": {
+                  "version": "0.1"
+                }
+              },
               "fontSize": 16,
               "color": "$color.muted"
             },
@@ -66,7 +77,9 @@
             "id": "resume",
             "widget": "Button",
             "props": {
-              "text": { "key": "menu.resume" },
+              "text": {
+                "key": "menu.resume"
+              },
               "onClick": {
                 "type": "back"
               }
@@ -77,7 +90,9 @@
             "id": "options",
             "widget": "Button",
             "props": {
-              "text": { "key": "menu.options" },
+              "text": {
+                "key": "menu.options"
+              },
               "onClick": {
                 "type": "message",
                 "message": "Menu.OpenOptions"

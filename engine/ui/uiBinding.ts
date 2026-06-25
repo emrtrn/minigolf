@@ -88,6 +88,9 @@ export function applyBoundNode(
       const pct = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0;
       const fill = element.querySelector<HTMLElement>(".forge-ui-progress__fill");
       if (fill) fill.style.width = `${(pct * 100).toFixed(2)}%`;
+      // Keep the ARIA value in sync so a screen reader announces the live progress.
+      element.setAttribute("aria-valuenow", String(value));
+      element.setAttribute("aria-valuemax", String(max));
       break;
     }
     default:

@@ -262,6 +262,8 @@ export interface UiDebugSnapshot {
   fields: Array<[string, UiFieldValue]>;
   /** Active UI locale, or null when the scene authors no localization tables. */
   locale: string | null;
+  /** Accessibility audit findings across the mounted HUD + screens. */
+  audit: string[];
 }
 
 export interface RuntimeStatsApp {
@@ -645,12 +647,13 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
    * Returns empty layers before the UI subsystem boots.
    */
   getUiDebugSnapshot(): UiDebugSnapshot {
-    const host = this.uiSubsystem?.getDebugSnapshot() ?? { hud: null, screens: [] };
+    const host = this.uiSubsystem?.getDebugSnapshot() ?? { hud: null, screens: [], audit: [] };
     return {
       hud: host.hud,
       screens: host.screens,
       fields: this.uiStore.snapshot(),
       locale: this.localeRegistry?.activeLocale ?? null,
+      audit: host.audit,
     };
   }
 

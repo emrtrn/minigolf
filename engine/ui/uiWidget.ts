@@ -19,6 +19,7 @@
  */
 import type { SceneJsonValue } from "../scene/entity";
 import { normalizeUiTransition, type UiTransition } from "./uiTransition";
+import { normalizeUiA11y, type UiA11y } from "./uiA11y";
 
 /**
  * The first widget set (plan §1). Containers (`Canvas`, `Panel`, `Stack`) hold
@@ -115,6 +116,8 @@ export interface UiNode {
   widget: UiWidgetKind;
   /** Normalized prop bag (literals or {@link UiBinding} objects). */
   props: Record<string, SceneJsonValue>;
+  /** Optional accessibility metadata (ARIA label/role, focusability). See `uiA11y.ts`. */
+  a11y?: UiA11y;
   children: UiNode[];
 }
 
@@ -134,6 +137,12 @@ export interface UiWidgetDef {
   theme?: string;
   /** Optional screen enter/exit animation (applied by the runtime UI host). */
   transition?: UiTransition;
+  /**
+   * Optional id of the node to focus when this widget is pushed as a screen
+   * (accessibility, U7c). Falls back to the first focusable node when absent or
+   * when the referenced node isn't focusable.
+   */
+  initialFocus?: string;
   root: UiNode;
 }
 
@@ -283,11 +292,12 @@ function normalizeUiNode(value: unknown, nextId: () => string): UiNode {
   const widget = isUiWidgetKind(input.widget) ? input.widget : "Panel";
   const id = typeof input.id === "string" && input.id.length > 0 ? input.id : nextId();
   const props = normalizeProps(input.props);
+  const a11y = normalizeUiA11y(input.a11y);
   const children =
     isUiContainerKind(widget) && Array.isArray(input.children)
       ? input.children.map((child) => normalizeUiNode(child, nextId))
       : [];
-  return { id, widget, props, children };
+  return { id, widget, props, ...(a11y ? { a11y } : {}), children };
 }
 
 /**
@@ -303,6 +313,10 @@ export function normalizeUiWidgetDef(value: unknown, fallbackName = "Untitled"):
   const preview = normalizePreview(input.preview);
   const theme = typeof input.theme === "string" && input.theme.length > 0 ? input.theme : undefined;
   const transition = normalizeUiTransition(input.transition);
+  const initialFocus =
+    typeof input.initialFocus === "string" && input.initialFocus.length > 0
+      ? input.initialFocus
+      : undefined;
 
   let counter = 0;
   const seen = new Set<string>();
@@ -325,6 +339,7 @@ export function normalizeUiWidgetDef(value: unknown, fallbackName = "Untitled"):
     preview,
     ...(theme ? { theme } : {}),
     ...(transition ? { transition } : {}),
+    ...(initialFocus ? { initialFocus } : {}),
     root,
   };
 }
@@ -343,6 +358,7 @@ function dedupeNodeIds(node: UiNode, seen: Set<string>): UiNode {
       id,
       widget: current.widget,
       props: current.props,
+      ...(current.a11y ? { a11y: current.a11y } : {}),
       children: current.children.map(assign),
     };
   };

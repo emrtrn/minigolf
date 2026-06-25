@@ -301,7 +301,7 @@ Bu, Forge'un mevcut `?editor` / runtime ayrimina uyumludur.
 - [x] Sonraki faz icin animation, localization, accessibility ve world-space UI gereksinimlerini ayri planla. (U7) → asagidaki "## U7 — Ileri UI plani" bolumu; U7a–U7d alt-fazlari + onerilen sira + kapsam sinirlari.
 - [x] **U7a — UI animation:** deklaratif gecis preset'leri (fade/slide/scale) ekran push/pop icin; `prefers-reduced-motion` saygisi. (timeline yok) → `engine/ui/uiTransition.ts` + `UiWidgetDef.transition` + RuntimeUiSubsystem enter/exit + style.css preset'leri + editor transition paneli & "Play"; 6 yeni headless test → 354 check, `verify:dist --strict` runtime-only.
 - [x] **U7b — Localization:** `.loc.json` string tablolari + Text `textKey`, aktif locale resolver, runtime + binding entegrasyonu. → `engine/ui/uiLocale.ts` (`normalizeUiLocaleTable`/`applyLocParams`/`LocaleRegistry`) + `UiTextKey` (`uiWidget.ts`) + renderer `resolveLoc` + `bindUiLocale` (locale-change re-apply) + `RuntimeSceneApp.loadUiLocaleRegistry` + `worldSettings.locale` (save-validator allowlist) + debug `locale:` satiri; demo en/tr tablolari, `Menu.ui.json` textKey'lere tasindi; 8 yeni headless test → 361 check, `verify:dist --strict` runtime-only.
-- [ ] **U7c — Accessibility:** ARIA rol/label/alt, klavye+gamepad focus navigation, modal focus trap + initial/restore focus, high-contrast tema.
+- [x] **U7c — Accessibility:** ARIA rol/label/alt, klavye focus navigation, modal focus trap + initial/restore focus, high-contrast tema. → `engine/ui/uiA11y.ts` (`resolveUiA11yAttrs`/`collectFocusables`/`nextFocusIndex`/`auditUiA11y`) + `UiNode.a11y`/`UiWidgetDef.initialFocus` (`uiWidget.ts`) + renderer ARIA attrs + ProgressBar canli `aria-valuenow` (`uiBinding.ts`) + RuntimeUiSubsystem `role=dialog`/`aria-modal` + focus trap + initial/restore focus + Tab/arrow nav + `?debug` a11y audit + `:focus-visible` & `prefers-contrast` (style.css) + editor a11y/initialFocus paneli; 8 yeni headless test → 369 check, `verify:dist --strict` runtime-only.
 - [ ] **U7d — World-space widget (WidgetComponentLite):** once screen-projected DOM (billboard label/prompt), sonra raycast etkilesim; true 3D widget mesh en sona.
 
 ## Uygulama durumu
@@ -556,10 +556,60 @@ menu Turkce gelir.
 Kapsam disi (planda): cogul/plural, cinsiyet, sayi/tarih formatlama, runtime
 canli kultur hot-swap UI editoru. (RTL → U7c layout notu.)
 
+### U7c — Accessibility (TAMAMLANDI)
+
+U7 ucuncu alt-fazi: web-native erisilebilirlik. DOM zaten erisilebilir oldugu
+icin gercek ARIA roller/oznitelikler ve klavye focus'u neredeyse bedava — bu faz
+widget'i dogru semantige esleyip screen stack uzerine modal focus yonetimi kurar.
+
+Eklenenler:
+
+- `engine/ui/uiA11y.ts` (saf): `UiA11y` (`label`/`role`/`focusable`),
+  `normalizeUiA11y` (bos/yanlis tipleri duser), `resolveUiA11yAttrs` (widget
+  kind + a11y → ARIA harita: ProgressBar `role=progressbar`+`aria-value*`, Image
+  `role=img`, `label`→`aria-label`, `role` override, `focusable`→`tabindex`),
+  `isUiNodeFocusable`/`collectFocusables` (focus sirasi: Button + `focusable:true`),
+  `nextFocusIndex` (wrap'li navigasyon), `auditUiA11y` (isimsiz Button / label'siz
+  Image lint'i).
+- `engine/ui/uiWidget.ts`: `UiNode.a11y?` + `UiWidgetDef.initialFocus?`;
+  `normalizeUiNode`/`dedupeNodeIds`/`normalizeUiWidgetDef` alanlari korur (no-op
+  a11y dusurulur). `validateSaveUiPayload` tum def'i normalize ettigi icin kayitta
+  korunur (ayri allowlist gerekmez — `.ui.json` node alani, layout alani degil).
+- `engine/ui/uiRenderer.ts`: `UiRenderNode.attrs?` (build pass'te
+  `resolveUiA11yAttrs`), `mountUiRenderNode` `setAttribute` ile uygular.
+- `engine/ui/uiBinding.ts`: bagli ProgressBar guncellenince `aria-valuenow`/
+  `aria-valuemax` da senkron (canli ilerleme screen reader'a yansir).
+- `src/ui/RuntimeUiSubsystem.ts`: her ekran layer'i `role=dialog`+`aria-modal`+
+  `aria-label`; push'ta onceki focus saklanir → `initialFocus` (yoksa ilk
+  focusable, yoksa layer) odaklanir; pop/clear onceki focus'u geri verir; modal
+  **focus trap** + Tab/Shift+Tab + ok tuslari `screenRoot` keydown handler'inda
+  `collectFocusables`+`nextFocusIndex` ile (public `moveFocus`/`activateFocused`
+  ileride gamepad icin); `getDebugSnapshot` artik `auditUiA11y` bulgularini tasir.
+- `src/scene/RuntimeSceneApp.ts` + `debugStats.ts`: `UiDebugSnapshot.audit`;
+  `?debug` UI inspector'inda `a11y(n):` satirlari (isimsiz Button/Image uyarisi).
+- `src/style.css`: `:focus-visible` ring (`--forge-ui-focus` token) +
+  `@media (prefers-contrast: more)` high-contrast token override (U6 tema sistemi
+  uzerine). reduced-motion zaten U7a'da.
+- `src/editor/UiWidgetEditor.ts`: Details'te **Accessibility** paneli (label/role/
+  focusable) ve root secince **Initial Focus** selektoru (focusable node id'leri).
+- Demo: `Menu.ui.json` → `initialFocus: "resume"`, logo Image'a `a11y.label`.
+- 8 yeni headless test (normalize/round-trip/resolveUiA11yAttrs/collectFocusables/
+  nextFocusIndex/render attrs/audit + formatUiDebug audit satiri).
+
+Dogrulama: `tsc`, `npm run build:verify` (369 test + `verify:dist --strict`
+runtime-only), `check:assets` PASS. Elle: `/` ac, `Escape` ile pause menuyu ac;
+Resume odakli gelir, Tab/ok tuslari menude gezer, Escape kapatip oyuna doner;
+`?debug` ile a11y audit satirlarini gor.
+
+Kapsam disi (planda): gamepad focus routing (public `moveFocus`/`activateFocused`
+hazir ama action-map'e baglanmadi — `GamepadInputSource` yok), tam screen-reader
+live-region senaryolari, otomatik kontrast hesaplama, RTL layout.
+
 ### Sonraki adim (U7)
 
-- Sirada **U7c (accessibility)** → U7d (world-space). Detayli plan asagida
-  ("## U7 — Ileri UI plani"). a11y label'lari `textKey` ile lokalize edilebilir.
+- Sirada **U7d (world-space widget / WidgetComponentLite)** — son alt-faz, ayri
+  subsystem; Secenek A (screen-projected DOM billboard) ile baslar. Detayli plan
+  asagida ("## U7 — Ileri UI plani").
 
 ## U7 — Ileri UI plani
 

@@ -67,6 +67,42 @@ body {
   --forge-ui-surface: rgba(16, 19, 26, 0.82);
   --forge-ui-radius: 6px;
   --forge-ui-gap: 12px;
+  --forge-ui-focus: #ffd54a;
+}
+
+/*
+ * Keyboard focus ring (accessibility, U7c). Only `:focus-visible` so a mouse
+ * click does not draw the ring; the runtime UI host moves focus with the
+ * keyboard/Tab and the screen focus trap, and authors can recolor it per theme
+ * via the `--forge-ui-focus` token.
+ */
+#ui-overlay .forge-ui-node:focus-visible,
+#ui-overlay .forge-ui-button:focus-visible,
+.forge-ui-screen-layer:focus-visible {
+  outline: 2px solid var(--forge-ui-focus);
+  outline-offset: 2px;
+}
+/* The modal layer itself is only a fallback focus holder — never ring it. */
+.forge-ui-screen-layer:focus-visible {
+  outline: none;
+}
+
+/*
+ * High-contrast theme (accessibility, U7c): when the OS asks for more contrast,
+ * override the UI tokens with a stark palette. Layers over the U6 theme system,
+ * so a `.theme.json`'s own tokens still win where it sets them.
+ */
+@media (prefers-contrast: more) {
+  #ui-overlay {
+    --forge-ui-color: #ffffff;
+    --forge-ui-accent: #0a5fff;
+    --forge-ui-surface: #000000;
+    --forge-ui-focus: #ffff00;
+  }
+  .forge-ui-button {
+    border: 2px solid #ffffff;
+    box-shadow: none;
+  }
 }
 
 .forge-ui-node {

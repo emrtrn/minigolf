@@ -25,6 +25,7 @@ import {
   type UiWidgetKind,
 } from "./uiWidget";
 import { tokenToCssVar } from "./uiTheme";
+import { resolveUiA11yAttrs } from "./uiA11y";
 
 /** Stable CSS suffix per widget kind (`Forge-ui-<suffix>`), decoupled from the enum casing. */
 const WIDGET_CSS_NAME: Record<UiWidgetKind, string> = {
@@ -66,6 +67,8 @@ export interface UiRenderNode {
   className: string;
   /** CSS-named inline style props (e.g. `align-items`, `border-radius`). */
   style: Record<string, string>;
+  /** ARIA / accessibility attributes (e.g. `role`, `aria-label`, `tabindex`). */
+  attrs?: Record<string, string>;
   /** Text content for leaf nodes (Text/Button); undefined for containers. */
   text?: string;
   /** Click action for interactive nodes (Button). */
@@ -238,11 +241,13 @@ export function buildUiRenderNode(node: UiNode, opts: UiBuildOptions = {}): UiRe
 
   const style = resolveInlineStyle(node);
   const className = classNameFor(node);
+  const resolvedAttrs = resolveUiA11yAttrs(node);
+  const a11y = Object.keys(resolvedAttrs).length > 0 ? { attrs: resolvedAttrs } : {};
 
   if (node.widget === "Image") {
     const src = readUiStaticString(node, "src");
     if (src) style["background-image"] = `url(${JSON.stringify(src)})`;
-    return { nodeId: node.id, widget: "Image", tag: "div", className, style, children: [] };
+    return { nodeId: node.id, widget: "Image", tag: "div", className, style, ...a11y, children: [] };
   }
 
   if (node.widget === "Text") {
@@ -252,6 +257,7 @@ export function buildUiRenderNode(node: UiNode, opts: UiBuildOptions = {}): UiRe
       tag: "div",
       className,
       style,
+      ...a11y,
       text: resolveNodeText(node, opts) ?? "",
       children: [],
     };
@@ -265,6 +271,7 @@ export function buildUiRenderNode(node: UiNode, opts: UiBuildOptions = {}): UiRe
       tag: "button",
       className,
       style,
+      ...a11y,
       text: resolveNodeText(node, opts) ?? "Button",
       ...(action ? { action } : {}),
       children: [],
@@ -278,6 +285,7 @@ export function buildUiRenderNode(node: UiNode, opts: UiBuildOptions = {}): UiRe
       tag: "div",
       className,
       style,
+      ...a11y,
       children: [progressFillNode(node)],
     };
   }
@@ -286,7 +294,7 @@ export function buildUiRenderNode(node: UiNode, opts: UiBuildOptions = {}): UiRe
   const children = isUiContainerKind(node.widget)
     ? node.children.map((child) => buildUiRenderNode(child, opts))
     : [];
-  return { nodeId: node.id, widget: node.widget, tag: "div", className, style, children };
+  return { nodeId: node.id, widget: node.widget, tag: "div", className, style, ...a11y, children };
 }
 
 /** Pure: builds the full render tree for an asset (its root node). */
@@ -306,6 +314,9 @@ export function mountUiRenderNode(node: UiRenderNode, ctx: UiMountContext): HTML
   element.className = node.className;
   for (const [css, value] of Object.entries(node.style)) {
     element.style.setProperty(css, value);
+  }
+  if (node.attrs) {
+    for (const [name, value] of Object.entries(node.attrs)) element.setAttribute(name, value);
   }
   if (!node.synthetic && node.nodeId) element.dataset.uiId = node.nodeId;
   if (node.text !== undefined && node.children.length === 0) {

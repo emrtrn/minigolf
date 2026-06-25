@@ -86,6 +86,10 @@ export function formatUiDebug(snapshot: UiDebugSnapshot): string[] {
       lines.push(`  ${path} = ${formatFieldValue(value)}`);
     }
   }
+  if (snapshot.audit.length > 0) {
+    lines.push(`a11y(${snapshot.audit.length}):`);
+    for (const issue of snapshot.audit) lines.push(`  ${issue}`);
+  }
   return lines;
 }
 
