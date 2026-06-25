@@ -298,7 +298,11 @@ Bu, Forge'un mevcut `?editor` / runtime ayrimina uyumludur.
 - [x] **Include** widget kind ekle: baska `.ui.json` asset'lerini inline gomme, derinlik limiti ile dongü koruması, placeholder + resolved CSS wrapper, RuntimeUiSubsystem'e `resolveWidget` callback, RuntimeSceneApp'te tum `.ui.json` asset'leri on-load, 4 yeni headless test. → 344 check + `verify:dist --strict` yesil.
 - [x] **UI debug inspector** ekle: `?debug` overlay'inde aktif HUD + ekran stack'i + ViewModel store alanlari. → `UiViewModelStore.snapshot()` + `RuntimeUiSubsystem.getDebugSnapshot()` + `RuntimeSceneApp.getUiDebugSnapshot()` + `debugStats.ts#formatUiDebug` (pure); 4 yeni headless test → 348 check.
 - [x] **Editor tema onizleme** ekle: UI editordeki canli preview artik widget'in `theme` ref'ini cozup uyguluyor (`loadUiThemeAsset` + `applyUiTheme`); stage'e runtime `--forge-ui-*` varsayilanlari verildi, boylece temasiz widget'lar da oyundaki gibi gorunuyor. `verify:dist --strict` hala runtime-only (editor kodu dist'e sizmaz).
-- [ ] Sonraki faz icin animation, localization, accessibility ve world-space UI gereksinimlerini ayri planla. (U7)
+- [x] Sonraki faz icin animation, localization, accessibility ve world-space UI gereksinimlerini ayri planla. (U7) → asagidaki "## U7 — Ileri UI plani" bolumu; U7a–U7d alt-fazlari + onerilen sira + kapsam sinirlari.
+- [x] **U7a — UI animation:** deklaratif gecis preset'leri (fade/slide/scale) ekran push/pop icin; `prefers-reduced-motion` saygisi. (timeline yok) → `engine/ui/uiTransition.ts` + `UiWidgetDef.transition` + RuntimeUiSubsystem enter/exit + style.css preset'leri + editor transition paneli & "Play"; 6 yeni headless test → 354 check, `verify:dist --strict` runtime-only.
+- [ ] **U7b — Localization:** `.loc.json` string tablolari + Text `textKey`, aktif locale resolver, runtime + binding entegrasyonu.
+- [ ] **U7c — Accessibility:** ARIA rol/label/alt, klavye+gamepad focus navigation, modal focus trap + initial/restore focus, high-contrast tema.
+- [ ] **U7d — World-space widget (WidgetComponentLite):** once screen-projected DOM (billboard label/prompt), sonra raycast etkilesim; true 3D widget mesh en sona.
 
 ## Uygulama durumu
 
@@ -465,10 +469,194 @@ Kapsam disi (U6b'de yapilmadi): named slot/template (Include'un parametreli
 hali) ve editorde Include subtree'sinin canli onizlemesi (editor hala placeholder
 gosterir) — U7 oncesi opsiyonel polish.
 
+### U7a — UI animation (TAMAMLANDI)
+
+U7 ilk alt-fazi: deklaratif ekran gecis animasyonlari (web-first, CSS
+transform/opacity — timeline yok).
+
+Eklenenler:
+
+- `engine/ui/uiTransition.ts` (saf): `UI_TRANSITION_PRESETS`
+  (`none|fade|slide-up|slide-down|slide-left|slide-right|scale`), `UiTransition`
+  (`enter`/`exit`/`durationMs`), `normalizeUiTransition` (string kisayolu veya
+  obje; gecersiz preset → `none`, sure [0,2000]ms clamp, iki uc da none ise
+  `null`), `transitionClasses(preset, reducedMotion)` (base + offset CSS sinifi,
+  none/reduced-motion → null).
+- `engine/ui/uiWidget.ts`: `UiWidgetDef.transition?` + `normalizeUiWidgetDef`
+  alani normalize eder (no-op ise dusurur). `validateSaveUiPayload` zaten tum
+  def'i normalize ettigi icin kayitta korunur (ayri allowlist gerekmez).
+- `src/ui/RuntimeUiSubsystem.ts`: `pushScreen` enter animasyonu (offset state'te
+  mount → sonraki frame offset'i kaldir), `popScreen` exit animasyonu (input +
+  binding hemen birakilir; layer `transitionend`/timeout sonrasi DOM'dan silinir;
+  `pointer-events:none` ile olen ekran tiklama yutmaz). `prefers-reduced-motion`
+  → animasyon atlanir (anlik). Bekleyen exit timer'lari `dispose`'da temizlenir.
+- `src/style.css`: `.forge-ui-tx` (transition seam) + `.forge-ui-tx-<preset>`
+  offset state'leri + `@media (prefers-reduced-motion)` guvenligi.
+- `src/editor/UiWidgetEditor.ts`: root secince Details'te **Screen Transition**
+  paneli (enter/exit preset + sure) ve **Play transition** ile canli preview'da
+  enter'i tekrar oynatma. (editor reduced-motion'i yok sayar ki yazar daima gorsun)
+- Demo: `Menu.ui.json` (pause menu) artik `scale` gecisi tasiyor.
+- 6 yeni headless test (normalize varyantlari + transitionClasses + def round-trip).
+
+Dogrulama: `tsc`, `npm run build:verify` (354 test + `verify:dist --strict`
+runtime-only), `check:assets` PASS. Elle: `/` ac, `Escape` ile pause menu
+acilirken/kapanirken scale+fade gecisini gor.
+
 ### Sonraki adim (U7)
 
-- U7: animation, localization, accessibility, world-space widget/component
-  gereksinimlerini ayri planla.
+- Sirada **U7b (localization)** → U7c (accessibility) → U7d (world-space).
+  Detayli plan asagida ("## U7 — Ileri UI plani").
+
+## U7 — Ileri UI plani
+
+U7, UMG'nin "ileri" UI katmanidir: animation, localization, accessibility ve
+world-space widget. Dordu de ayri, kendi icinde tamamlanabilen alt-fazlardir
+(U7a–U7d). Hepsi U1–U6b'nin kurdugu cekirdek uzerine biner ve ayni kurallari
+korur:
+
+- Saf engine yardimcilari `engine/ui/*` altinda (DOM/Three'siz, headless test
+  edilebilir); ince DOM/runtime katmani `src/ui` + `src/scene`.
+- Editor kodu dev-only kalir; `npm run build:verify` her adimda
+  `verify:dist --strict` "runtime-only" gecmeli.
+- `.ui.json`'a eklenen **her yeni alan** `normalizeUiWidgetDef` (engine) + sunucu
+  tarafi `validateSaveUiPayload`/`normalizeUiWidgetDef` (tools/saveValidator.ts)
+   uzerinden gecmeli, yoksa kayitta sessizce dusurulur. Yeni bir **placement /
+  layout actor alani** ise `tools/saveValidator.ts` allowlist'ine eklenmeli
+  (CLAUDE.md "Save-validator allowlist gotcha").
+- Binding/expression yok kurali surur: localization keyleri ve a11y label'lari
+  typed/path tabanli olur, arbitrary JS degil.
+- Her alt-faz: `tsc --noEmit` + `npm run test:engine` + `npm run build:verify`
+  yesil; yeni davranis icin headless test.
+
+### U7a — UI animation (gecis preset'leri)
+
+**Unreal dersi:** UMG widget animation timeline (transform/opacity/color
+keyframe). Best-practice notu (bu dokuman §103): layout degistiren animasyon
+pahali; transform/opacity gibi hafif animasyon tercih edilmeli.
+
+**Forge yaklasimi (web-first):** full timeline editoru YOK (U4 kapsam disi).
+Bunun yerine deklaratif, isimli gecis preset'leri — CSS `transform`/`opacity`
+transition'lari ile.
+
+- Veri modeli: ekran (ve istege bagli node) icin opsiyonel
+  `transition: { enter, exit, durationMs }`. Preset enum (sinirli):
+  `none | fade | slide-up | slide-down | slide-left | slide-right | scale`.
+  `normalizeUiWidgetDef` gecersiz preset'i `none`'a indirger, `durationMs`'i
+  makul araliga clamp eder.
+- Engine (saf): `engine/ui/uiTransition.ts` — `normalizeUiTransition`,
+  `transitionClasses(preset)` (enter/exit/active CSS sinif adlari),
+  `prefersReducedMotion()` ortam kontrolu icin enjekte edilebilir bayrak.
+- Runtime: `RuntimeUiSubsystem` push'ta enter sinifini uygular (bir sonraki
+  frame'de kaldirarak transition tetikler), pop'ta exit sinifini uygular ve
+  `transitionend` (veya `durationMs` timeout fallback) sonrasi layer'i DOM'dan
+  siler. `prefers-reduced-motion: reduce` → animasyon atlanir (anlik).
+- CSS: `src/style.css`'te `.forge-ui-screen-layer.is-entering/.is-exiting` +
+  preset siniflari (transform/opacity). Editor degil, runtime stili.
+- Editor: Details'te root/ekran icin transition selektoru + "Play transition"
+  onizleme dugmesi (preview'da enter'i oynatir).
+- Test: `normalizeUiTransition` (gecerli koru / gecersiz dusur / clamp);
+  `transitionClasses` esleme; reduced-motion'da bos sinif.
+- Kapsam disi: keyframe timeline, per-property egri, material/renk animasyonu,
+  spring fizik.
+
+### U7b — Localization
+
+**Unreal dersi:** FText, string table, kultur degisimi, text formatting.
+
+**Forge yaklasimi:** `.loc.json` string tablolari + Text widget'inda typed
+`textKey`.
+
+- Asset: `.loc.json` = `{ schema:1, type:"uiLoc", locale, strings: { key: text } }`.
+  Manifest'te — `.theme.json` gibi — `ui` asset tipi altinda kalir, uzanti ile
+  ayrilir. `EditorUi.isUiWidgetItem` guard'i `.loc.json`'i da widget editorunden
+  haric tutmali (tema icin yapildigi gibi).
+- Veri modeli: Text prop'u `text: { key: "menu.start", params?: { name: "..." } }`
+  destekler (mevcut `{ bind }` deseninin kardesi). Param yer tutucu yalniz
+  `{name}` substitution — expression yok.
+- Engine (saf): `engine/ui/uiLocale.ts` — `normalizeUiLocaleTable`,
+  `LocaleRegistry` (locale → tablo), `resolveLocString(key, params)` (eksikse
+  key'i veya verilen default'u dondurur). `uiBinding` resolver'i `textKey`'i
+  cozer; locale degisince ilgili node'lar yeniden uygulanir (store flush
+  desenine paralel bir locale-change abonesi).
+- Runtime: `RuntimeSceneApp` manifest'ten `.loc.json` tablolarini yukler, aktif
+  locale'i proje ayarindan/varsayilandan secer, resolver'i
+  `RuntimeUiSubsystem`'e verir.
+- saveValidator: v1'de loc tablolari elle yazilir (save endpoint yok) →
+  validator gerekmez; ileride loc editoru eklenirse `validateSaveLoc` notu.
+- Test: `resolveLocString` fallback + param substitution; `normalizeUiLocaleTable`
+  scalar koruma; Text `textKey` cozumleme.
+- Kapsam disi: cogul/plural kurallari, cinsiyet, sayi/tarih formatlama, runtime
+  canli kultur hot-swap UI editoru. (RTL bir bayrak olarak U7c layout'una not.)
+
+### U7c — Accessibility
+
+**Unreal dersi:** Slate accessibility, screen reader, Common UI focus/navigation
+(default focus, back/cancel, gamepad/klavye).
+
+**Forge avantaji:** DOM native a11y'ye sahip — gercek roller/oznitelikler bedava.
+
+- Semantik: renderer widget kind → ARIA. Button gercek `<button>` (veya
+  `role="button"` + klavye) + `aria-label`; ProgressBar `role="progressbar"` +
+  `aria-valuenow/min/max`; Image `alt`; ekran `role="dialog"` + `aria-modal`.
+  Node'da opsiyonel `a11y: { label, role?, focusable? }`; ekranda `initialFocus`
+  (node id). Bu alanlar normalizer + saveValidator allowlist'inden gecmeli.
+- Engine (saf): `engine/ui/uiA11y.ts` — `resolveUiA11yAttrs(node)` (oznitelik
+  haritasi), `collectFocusables(tree)` (focus sirasi), `nextFocusIndex(...)`
+  (wrap'li navigasyon).
+- Runtime: `RuntimeUiSubsystem` modal focus trap (ust ekran), ekran acilinca
+  initial focus, kapaninca onceki focus restore. Input action'lari
+  (`navigateUp/Down/Left/Right`, `confirm`, `cancel`) Common UI haritasindan
+  focus hareketine baglanir (klavye + gamepad). `cancel` zaten `back`.
+- Tema: high-contrast token seti + `prefers-contrast` saygisi (U6 tema sistemi
+  uzerine). reduced-motion zaten U7a'da.
+- Editor: Details'te a11y alanlari; debug inspector'a basit audit (label'siz
+  Button / alt'siz Image uyarisi).
+- Test: a11y oznitelik esleme; `collectFocusables` sira; focus trap wrap;
+  navigasyon indeksi.
+- Kapsam disi: tam screen-reader live-region senaryolari (minimal `aria-live`
+  status disinda), otomatik kontrast hesaplama. a11y label'lari U7b geldiyse
+  `textKey` ile lokalize edilir.
+
+### U7d — World-space widget (WidgetComponentLite)
+
+**Unreal dersi:** Widget Component (UI'yi 3D dunyada/screen-space goster) +
+Widget Interaction Component (raycast pointer). Bu dokuman, screen UI oturmadan
+baslamamali demisti — artik oturdu.
+
+**Forge yaklasimi — iki secenek, asamali:**
+
+- **Once Secenek A — screen-projected DOM (billboard label/prompt):** bir
+  `.ui.json` widget'i DOM overlay olarak render edilir ve her frame bir dunya
+  capasinin (actor/socket/dunya noktasi) ekran izdusumune konumlandirilir.
+  Ucuz, net metin, DOM-to-texture yok. Kameraya gore mesafe-bazli scale/fade,
+  kamera arkasinda gizleme, opsiyonel raycast occlusion. Pointer etkilesimi
+  gercek DOM oldugu icin dogal calisir (z-order + pointer-events ayari).
+- **Sonra Secenek B — gercek 3D widget mesh:** DOM→canvas/texture (CSS3D veya
+  html-to-image) bir Three duzlemde, ya da widget'i dogrudan Three mesh olarak
+  kurma. Egri/aydinlatilmis/occlude olan sahne-ici UI icin; agir, ertelenir.
+  Raycast→UV→sentetik event etkilesimi de buraya.
+- Veri modeli: yeni yerlestirilen actor/component — `widgetComponents[]`:
+  `{ widget: assetId, anchor: {entityId|worldPos|socket}, space:"screen",
+  offset, maxDistance, billboard }`. **Bu yeni layout alani saveValidator
+  allowlist'ine eklenmeli** (applyTransformFields/validate* — CLAUDE.md gotcha).
+- Engine (saf): dunya→ekran izdusum matematigi (varsa mevcut yardimciyi kullan)
+  ve `resolveWidgetComponentVisibility(distance, maxDistance)` → scale/opacity.
+- Runtime: `WorldUiSubsystem` (ya da `RuntimeUiSubsystem` uzantisi) — dunya-bagli
+  widget'lari ayri overlay layer'a mount eder, transform'larini her frame gunceller.
+- Editor: yeni actor tipi olarak yerlestirme (diger placed actor'lar gibi), capa
+  uzerinde gizmo, Details'te widget ref + space + maxDistance.
+- Test: izdusum gorunurluk/scale matematigi; placement normalizer/validator.
+- Kapsam disi (ilk kesim): gercek 3D widget mesh, 3D widget'ta raycast etkilesim,
+  egri panel.
+
+### U7 onerilen sira ve gerekce
+
+1. **U7a (animation)** — kucuk, self-contained, mevcut ekran/menuye aninda polish.
+2. **U7b (localization)** — veri tesisati; a11y label'lari bunun ustune lokalize
+   olabilsin diye accessibility'den once.
+3. **U7c (accessibility)** — screen stack focus/nav uzerine biner; web-native,
+   yuksek deger.
+4. **U7d (world-space)** — en buyuk, ayri subsystem; en sona, Secenek A ile baslar.
 
 ## Onerilen uygulama sirasi
 

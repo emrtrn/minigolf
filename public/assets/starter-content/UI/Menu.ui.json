@@ -7,6 +7,11 @@
     "height": 720
   },
   "theme": "default-theme",
+  "transition": {
+    "enter": "scale",
+    "exit": "scale",
+    "durationMs": 160
+  },
   "root": {
     "id": "root",
     "widget": "Canvas",

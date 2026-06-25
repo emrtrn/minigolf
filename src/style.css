@@ -91,6 +91,43 @@ body {
   pointer-events: auto;
 }
 
+/* U7a screen transitions: `.forge-ui-tx` enables the transition (duration set
+   inline by the host); each `.forge-ui-tx-<preset>` is the from/out offset state
+   the host adds/removes to drive enter/exit. Reused by the editor preview. */
+.forge-ui-tx {
+  transition-property: opacity, transform;
+  transition-timing-function: ease;
+  will-change: opacity, transform;
+}
+.forge-ui-tx-fade {
+  opacity: 0;
+}
+.forge-ui-tx-slide-up {
+  opacity: 0;
+  transform: translateY(16px);
+}
+.forge-ui-tx-slide-down {
+  opacity: 0;
+  transform: translateY(-16px);
+}
+.forge-ui-tx-slide-left {
+  opacity: 0;
+  transform: translateX(16px);
+}
+.forge-ui-tx-slide-right {
+  opacity: 0;
+  transform: translateX(-16px);
+}
+.forge-ui-tx-scale {
+  opacity: 0;
+  transform: scale(0.92);
+}
+@media (prefers-reduced-motion: reduce) {
+  .forge-ui-tx {
+    transition: none;
+  }
+}
+
 /* Canvas: the widget root, fills the overlay frame. */
 .forge-ui-canvas {
   position: absolute;

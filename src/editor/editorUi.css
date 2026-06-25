@@ -2522,6 +2522,19 @@ body.editor-mode #debug-stats {
 }
 .uie-action-field { grid-template-columns: 92px 1fr; }
 .uie-action-field input[hidden] { display: none; }
+.uie-transition-field {
+  display: block;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.uie-transition-field > span {
+  display: block;
+  color: #aeb8bd;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.uie-transition-field .uie-btn { margin-top: 4px; }
 .uie-bindable-controls { display: flex; gap: 4px; min-width: 0; }
 .uie-bindable-controls input { min-width: 0; }
 .uie-bind-toggle {

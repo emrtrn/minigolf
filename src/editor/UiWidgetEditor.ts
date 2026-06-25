@@ -29,6 +29,12 @@ import {
 import { renderUiWidget, type RenderedUiWidget } from "@engine/ui/uiRenderer";
 import { BINDABLE_UI_PROPS } from "@engine/ui/uiBinding";
 import { applyUiTheme, type UiThemeDef } from "@engine/ui/uiTheme";
+import {
+  normalizeUiTransition,
+  transitionClasses,
+  UI_TRANSITION_PRESETS,
+  DEFAULT_TRANSITION_DURATION_MS,
+} from "@engine/ui/uiTransition";
 import { loadUiThemeAsset, loadUiWidgetAsset, saveUiWidgetAsset } from "@/editor/uiWidgetStore";
 
 type StatusTone = "info" | "success" | "error";
@@ -349,6 +355,9 @@ export class UiWidgetEditor {
     }
     if (node.widget === "Button") this.detailsHost.append(this.makeActionField(node));
 
+    // Screen transition lives on the asset (def), shown when the root is selected.
+    if (node.id === this.def.root.id) this.detailsHost.append(this.makeTransitionSection());
+
     // Node actions (reorder / delete) — never delete the root.
     const actions = document.createElement("div");
     actions.className = "uie-node-actions";
@@ -493,6 +502,107 @@ export class UiWidgetEditor {
     message.addEventListener("change", apply);
     wrap.append(select, message);
     return wrap;
+  }
+
+  /**
+   * Screen transition editor (asset-level): enter/exit preset + duration, plus a
+   * "Play" button that replays the enter animation on the live preview. Writes
+   * `this.def.transition` through `normalizeUiTransition` (cleared when both ends
+   * are "none").
+   */
+  private makeTransitionSection(): HTMLElement {
+    const wrap = document.createElement("div");
+    wrap.className = "uie-field uie-transition-field";
+    const title = document.createElement("span");
+    title.textContent = "Screen Transition";
+    wrap.append(title);
+
+    const current = this.def.transition;
+    const apply = (enter: string, exit: string, durationMs: number): void => {
+      const next = normalizeUiTransition({ enter, exit, durationMs });
+      if (next) this.def.transition = next;
+      else delete this.def.transition;
+      this.markDirty();
+    };
+
+    const enterSelect = this.makePresetSelect(current?.enter ?? "none");
+    const exitSelect = this.makePresetSelect(current?.exit ?? "none");
+    const duration = document.createElement("input");
+    duration.type = "number";
+    duration.min = "0";
+    duration.value = String(current?.durationMs ?? DEFAULT_TRANSITION_DURATION_MS);
+
+    const onChange = (): void =>
+      apply(enterSelect.value, exitSelect.value, Number(duration.value) || 0);
+    enterSelect.addEventListener("change", onChange);
+    exitSelect.addEventListener("change", onChange);
+    duration.addEventListener("change", onChange);
+
+    wrap.append(
+      this.makeLabeledRow("Enter", enterSelect),
+      this.makeLabeledRow("Exit", exitSelect),
+      this.makeLabeledRow("Duration (ms)", duration),
+    );
+
+    const play = document.createElement("button");
+    play.type = "button";
+    play.className = "uie-btn";
+    play.textContent = "Play transition";
+    play.title = "Replay the enter animation on the preview";
+    play.addEventListener("click", () => this.playPreviewTransition());
+    wrap.append(play);
+    return wrap;
+  }
+
+  private makePresetSelect(value: string): HTMLSelectElement {
+    const select = document.createElement("select");
+    for (const preset of UI_TRANSITION_PRESETS) {
+      const opt = document.createElement("option");
+      opt.value = preset;
+      opt.textContent = preset;
+      select.append(opt);
+    }
+    select.value = value;
+    return select;
+  }
+
+  private makeLabeledRow(label: string, control: HTMLElement): HTMLElement {
+    const row = document.createElement("label");
+    row.className = "uie-field uie-subfield";
+    const span = document.createElement("span");
+    span.textContent = label;
+    row.append(span, control);
+    return row;
+  }
+
+  /** Replays the authored enter transition on the current preview element. */
+  private playPreviewTransition(): void {
+    const el = this.rendered?.element;
+    const transition = this.def.transition;
+    if (!el || !transition) return;
+    // The editor previews the animation regardless of reduced-motion so authors
+    // can always see it.
+    const classes = transitionClasses(transition.enter);
+    if (!classes) return;
+    el.style.transitionDuration = `${transition.durationMs}ms`;
+    el.classList.add(classes.base, classes.offset);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => el.classList.remove(classes.offset));
+    });
+    let done = false;
+    const cleanup = (): void => {
+      if (done) return;
+      done = true;
+      window.clearTimeout(timer);
+      el.removeEventListener("transitionend", onEnd);
+      el.classList.remove(classes.base);
+      el.style.transitionDuration = "";
+    };
+    const onEnd = (event: TransitionEvent): void => {
+      if (event.target === el) cleanup();
+    };
+    el.addEventListener("transitionend", onEnd);
+    const timer = window.setTimeout(cleanup, transition.durationMs + 80);
   }
 
   private makeButton(

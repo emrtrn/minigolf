@@ -18,6 +18,7 @@
  * load or be silently corrupted on save.
  */
 import type { SceneJsonValue } from "../scene/entity";
+import { normalizeUiTransition, type UiTransition } from "./uiTransition";
 
 /**
  * The first widget set (plan §1). Containers (`Canvas`, `Panel`, `Stack`) hold
@@ -115,6 +116,8 @@ export interface UiWidgetDef {
   preview: UiPreview;
   /** Optional `*.theme.json` token asset reference (resolved in a later phase). */
   theme?: string;
+  /** Optional screen enter/exit animation (applied by the runtime UI host). */
+  transition?: UiTransition;
   root: UiNode;
 }
 
@@ -261,6 +264,7 @@ export function normalizeUiWidgetDef(value: unknown, fallbackName = "Untitled"):
   const name = typeof input.name === "string" && input.name.length > 0 ? input.name : fallbackName;
   const preview = normalizePreview(input.preview);
   const theme = typeof input.theme === "string" && input.theme.length > 0 ? input.theme : undefined;
+  const transition = normalizeUiTransition(input.transition);
 
   let counter = 0;
   const seen = new Set<string>();
@@ -282,6 +286,7 @@ export function normalizeUiWidgetDef(value: unknown, fallbackName = "Untitled"):
     name,
     preview,
     ...(theme ? { theme } : {}),
+    ...(transition ? { transition } : {}),
     root,
   };
 }

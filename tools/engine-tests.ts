@@ -414,6 +414,11 @@ import {
 import { UiViewModelStore } from "../engine/ui/uiViewModel";
 import { collectUiBindings, resolveUiBoundValue } from "../engine/ui/uiBinding";
 import { normalizeUiThemeDef, themeToCssVariables, tokenToCssVar } from "../engine/ui/uiTheme";
+import {
+  normalizeUiTransition,
+  transitionClasses,
+  UI_TRANSITION_BASE_CLASS,
+} from "../engine/ui/uiTransition";
 
 let checks = 0;
 const check = (label: string, fn: () => void): void => {
@@ -10743,6 +10748,61 @@ check("formatUiDebug clips long string values", () => {
   const long = "x".repeat(40);
   const lines = formatUiDebug({ hud: null, screens: [], fields: [["msg", long]] });
   assert.equal(lines.at(-1), `  msg = "${"x".repeat(29)}..."`);
+});
+
+check("normalizeUiTransition: shorthand string expands to enter+exit", () => {
+  assert.deepEqual(normalizeUiTransition("fade"), {
+    enter: "fade",
+    exit: "fade",
+    durationMs: 160,
+  });
+});
+
+check("normalizeUiTransition: object form keeps valid presets, clamps duration", () => {
+  assert.deepEqual(normalizeUiTransition({ enter: "slide-up", exit: "scale", durationMs: 9999 }), {
+    enter: "slide-up",
+    exit: "scale",
+    durationMs: 2000,
+  });
+});
+
+check("normalizeUiTransition: invalid preset falls back to none on that end", () => {
+  assert.deepEqual(normalizeUiTransition({ enter: "spin", exit: "fade", durationMs: 100 }), {
+    enter: "none",
+    exit: "fade",
+    durationMs: 100,
+  });
+});
+
+check("normalizeUiTransition: both ends none (or junk) → null (no-op)", () => {
+  assert.equal(normalizeUiTransition({ enter: "none", exit: "none" }), null);
+  assert.equal(normalizeUiTransition("none"), null);
+  assert.equal(normalizeUiTransition(undefined), null);
+  assert.equal(normalizeUiTransition(42), null);
+});
+
+check("transitionClasses: preset maps to base + offset, none/reduced → null", () => {
+  assert.deepEqual(transitionClasses("slide-left"), {
+    base: UI_TRANSITION_BASE_CLASS,
+    offset: `${UI_TRANSITION_BASE_CLASS}-slide-left`,
+  });
+  assert.equal(transitionClasses("none"), null);
+  assert.equal(transitionClasses("fade", true), null); // reduced motion
+});
+
+check("normalizeUiWidgetDef carries a valid transition and drops a no-op one", () => {
+  const withTx = normalizeUiWidgetDef({
+    name: "T",
+    transition: { enter: "fade", exit: "fade", durationMs: 200 },
+    root: { id: "root", widget: "Canvas", children: [] },
+  });
+  assert.deepEqual(withTx.transition, { enter: "fade", exit: "fade", durationMs: 200 });
+  const noTx = normalizeUiWidgetDef({
+    name: "T",
+    transition: { enter: "none", exit: "none" },
+    root: { id: "root", widget: "Canvas", children: [] },
+  });
+  assert.equal(noTx.transition, undefined);
 });
 
 console.log(`[engine-tests] ${checks} checks passed`);

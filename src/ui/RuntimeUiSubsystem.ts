@@ -29,6 +29,7 @@ import { renderUiWidget, type RenderedUiWidget, type RenderUiWidgetOptions } fro
 import { bindUiWidget } from "@engine/ui/uiBinding";
 import type { UiViewModelStore } from "@engine/ui/uiViewModel";
 import { applyUiTheme, type UiThemeDef } from "@engine/ui/uiTheme";
+import { transitionClasses, type UiTransition } from "@engine/ui/uiTransition";
 
 export interface RuntimeUiSubsystemOptions {
   /** Invoked when a `message`-kind widget action fires (UI → gameplay). */
@@ -48,6 +49,8 @@ interface ScreenEntry {
   rendered: RenderedUiWidget;
   /** Authored widget name, for the `?debug` inspector. */
   name: string;
+  /** Screen enter/exit animation, or null when none authored. */
+  transition: UiTransition | null;
   /** Releases this screen's data bindings on pop/clear. */
   disposeBinding: () => void;
 }
@@ -68,6 +71,8 @@ export class RuntimeUiSubsystem {
   /** Mounted HUD widget name, for the `?debug` inspector. */
   private hudName: string | null = null;
   private readonly screens: ScreenEntry[] = [];
+  /** Pending enter/exit-animation cleanup timers, cleared on dispose. */
+  private readonly animationTimers = new Set<ReturnType<typeof setTimeout>>();
 
   constructor(
     private readonly host: HTMLElement,
@@ -122,7 +127,15 @@ export class RuntimeUiSubsystem {
     layer.appendChild(rendered.element);
     this.applyTheme(rendered, widget);
     this.screenRoot.appendChild(layer);
-    this.screens.push({ layer, rendered, name: widget.name, disposeBinding: this.bind(rendered, widget) });
+    const transition = widget.transition ?? null;
+    this.screens.push({
+      layer,
+      rendered,
+      name: widget.name,
+      transition,
+      disposeBinding: this.bind(rendered, widget),
+    });
+    this.animateEnter(layer, transition);
     this.fireStackChange(prevDepth);
     return rendered;
   }
@@ -139,17 +152,21 @@ export class RuntimeUiSubsystem {
     this.applyTheme(rendered, widget);
     top.rendered = rendered;
     top.name = widget.name;
+    top.transition = widget.transition ?? null;
     top.disposeBinding = this.bind(rendered, widget);
     return rendered;
   }
 
-  /** Pops the top screen. Returns false when the stack was already empty. */
+  /**
+   * Pops the top screen. Returns false when the stack was already empty. Input
+   * routing (the stack-change callback) and data bindings are released
+   * immediately; the layer's DOM is removed after its exit animation finishes.
+   */
   popScreen(): boolean {
     const entry = this.screens.pop();
     if (!entry) return false;
     entry.disposeBinding();
-    entry.rendered.dispose();
-    entry.layer.remove();
+    this.animateExit(entry);
     this.fireStackChange(this.screens.length + 1);
     return true;
   }
@@ -183,10 +200,91 @@ export class RuntimeUiSubsystem {
   }
 
   dispose(): void {
+    for (const timer of this.animationTimers) clearTimeout(timer);
+    this.animationTimers.clear();
     this.clearScreens();
     this.clearHud();
     this.hudLayer.remove();
     this.screenRoot.remove();
+  }
+
+  /** True when the user prefers reduced motion (animations are then skipped). */
+  private reducedMotion(): boolean {
+    return (
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
+  }
+
+  /**
+   * Plays a screen's enter animation: mount in the offset (from) state, then drop
+   * the offset on the next frame so CSS transitions it to the natural state.
+   * No-op for `none`/reduced-motion. The base class + inline duration are cleared
+   * once the transition ends so later style changes don't animate.
+   */
+  private animateEnter(layer: HTMLElement, transition: UiTransition | null): void {
+    const classes = transition ? transitionClasses(transition.enter, this.reducedMotion()) : null;
+    if (!classes || !transition) return;
+    layer.style.transitionDuration = `${transition.durationMs}ms`;
+    layer.classList.add(classes.base, classes.offset);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => layer.classList.remove(classes.offset));
+    });
+    let done = false;
+    const cleanup = (): void => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      this.animationTimers.delete(timer);
+      layer.removeEventListener("transitionend", onEnd);
+      layer.classList.remove(classes.base);
+      layer.style.transitionDuration = "";
+    };
+    const onEnd = (event: TransitionEvent): void => {
+      if (event.target === layer) cleanup();
+    };
+    layer.addEventListener("transitionend", onEnd);
+    const timer = setTimeout(cleanup, transition.durationMs + 80);
+    this.animationTimers.add(timer);
+  }
+
+  /**
+   * Plays a screen's exit animation, then removes its layer + disposes its
+   * widget. The layer stops intercepting input immediately. With no transition
+   * (or reduced motion) the removal is synchronous.
+   */
+  private animateExit(entry: ScreenEntry): void {
+    const classes = entry.transition
+      ? transitionClasses(entry.transition.exit, this.reducedMotion())
+      : null;
+    if (!classes || !entry.transition) {
+      entry.rendered.dispose();
+      entry.layer.remove();
+      return;
+    }
+    const { layer } = entry;
+    layer.style.pointerEvents = "none";
+    layer.style.transitionDuration = `${entry.transition.durationMs}ms`;
+    layer.classList.add(classes.base);
+    void layer.offsetWidth; // Force reflow so the offset animates from the natural state.
+    layer.classList.add(classes.offset);
+    let done = false;
+    const cleanup = (): void => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      this.animationTimers.delete(timer);
+      layer.removeEventListener("transitionend", onEnd);
+      entry.rendered.dispose();
+      layer.remove();
+    };
+    const onEnd = (event: TransitionEvent): void => {
+      if (event.target === layer) cleanup();
+    };
+    layer.addEventListener("transitionend", onEnd);
+    const timer = setTimeout(cleanup, entry.transition.durationMs + 80);
+    this.animationTimers.add(timer);
   }
 
   private readonly handleAction = (action: UiAction, nodeId: string): void => {
