@@ -248,6 +248,36 @@ export interface LayoutCharacter {
   interaction?: LayoutInteraction;
 }
 
+/**
+ * Authored gameplay-rules config (the runtime's minimal Game Framework). Pure
+ * data the runtime hands to `normalizeGameRules` (src/game/gameRules.ts); engine
+ * never imports the game-layer store, so this mirrors that config's shape.
+ * Absent means the scene runs with no scoring/objective rules (the template
+ * default). A concrete game authors this; the editor preserves it on save.
+ */
+export interface LayoutGameRules {
+  /** Named scalars the rules track (score, lives, coins, …). */
+  variables?: Array<{ id: string; initial?: number; label?: string }>;
+  /** Collect/reach-N objectives. */
+  objectives?: Array<{
+    id: string;
+    label?: string;
+    target: number;
+    initial?: number;
+    optional?: boolean;
+  }>;
+  /** Optional round timer; `down` resolves `onExpire` at zero, `up` is a stopwatch. */
+  timer?: {
+    durationSeconds: number;
+    direction?: "up" | "down";
+    onExpire?: "win" | "lose";
+  };
+  /** Win when every required objective completes. Default: true iff objectives exist. */
+  winWhenObjectivesComplete?: boolean;
+  /** Lose when this variable's value reaches <= 0 (e.g. "lives"). */
+  loseWhenVariableDepleted?: string;
+}
+
 export interface LayoutWorldSettings {
   /** Central static/instanced shadow casting. Absent means false. */
   staticObjectsCastShadow?: boolean;
@@ -278,6 +308,18 @@ export interface LayoutWorldSettings {
    * `menu` action (Escape). Absent means Escape only releases pointer lock.
    */
   pauseMenuWidget?: string;
+  /**
+   * UI Widget asset id pushed as a modal screen when the rules layer resolves a
+   * win. Absent means no automatic screen (the HUD still reflects `game.phase`).
+   */
+  winScreenWidget?: string;
+  /** UI Widget asset id pushed as a modal screen when the rules layer resolves a loss. */
+  loseScreenWidget?: string;
+  /**
+   * Minimal gameplay rules (score/objectives/timer/win-lose). Absent means the
+   * scene runs with no rules — the template default. See {@link LayoutGameRules}.
+   */
+  gameRules?: LayoutGameRules;
   /**
    * Active UI locale id (`en`, `tr`, ...) selecting which `.loc.json` table
    * resolves localized widget text. Absent means the first loaded table wins.

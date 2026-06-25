@@ -198,6 +198,12 @@ import { LocaleRegistry, normalizeUiLocaleTable } from "@engine/ui/uiLocale";
 import { normalizeWorldWidgets } from "@engine/ui/uiWorldWidget";
 import { RuntimeUiSubsystem } from "@/ui/RuntimeUiSubsystem";
 import { WorldUiSubsystem, type WorldUiDebugSnapshot } from "@/ui/WorldUiSubsystem";
+import {
+  GameStateStore,
+  normalizeGameRules,
+  parseGameEvent,
+  type GamePhase,
+} from "@/game/gameRules";
 import type { AssetCollisionDef } from "@engine/scene/collision";
 import {
   assetCollisionDefHasCollider,
@@ -387,6 +393,15 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
   private readonly uiStore = new UiViewModelStore();
   /** Pause-menu widget pushed on the `menu` action; null when none is configured. */
   private pauseMenuDef: UiWidgetDef | null = null;
+  /** Minimal gameplay-rules store; null when the scene authors no `gameRules`. */
+  private gameStateStore: GameStateStore | null = null;
+  /** Unsubscribe for the `game-event` script-message bridge into the rules store. */
+  private gameEventUnsub: (() => void) | null = null;
+  /** Modal screens shown when the rules layer resolves a win/loss; null when none. */
+  private winScreenDef: UiWidgetDef | null = null;
+  private loseScreenDef: UiWidgetDef | null = null;
+  /** True once the win/loss screen for the current terminal round has been pushed. */
+  private gameOutcomeShown = false;
   /** All loaded `.ui.json` widget defs keyed by asset id (used by Include resolution). */
   private readonly uiDefs = new Map<string, UiWidgetDef>();
   /** Loaded UI theme defs keyed by their `theme` reference (asset id or path). */
@@ -550,6 +565,7 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
       // input, so opening a screen suppresses this frame's camera/movement.
       this.updateUiInput();
       this.gameModeSession?.update(deltaMs / 1000);
+      this.updateGameRules(deltaMs / 1000);
       this.updateUiStore();
       this.updateWorldUi();
       this.updateParticleEffects(deltaMs / 1000);
@@ -572,6 +588,9 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
     this.uiSubsystem = null;
     this.worldUiSubsystem?.dispose();
     this.worldUiSubsystem = null;
+    this.gameEventUnsub?.();
+    this.gameEventUnsub = null;
+    this.gameStateStore = null;
     this.keyboardInput.detach();
     this.pointerLook.detach();
     this.pointerButtons.detach();
@@ -826,8 +845,12 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
     if (!host) return;
     const hudId = this.layout.worldSettings?.hudWidget;
     const pauseId = this.layout.worldSettings?.pauseMenuWidget;
+    const winId = this.layout.worldSettings?.winScreenWidget;
+    const loseId = this.layout.worldSettings?.loseScreenWidget;
+    const gameRules = normalizeGameRules(this.layout.worldSettings?.gameRules);
     const worldWidgets = normalizeWorldWidgets(this.layout.worldWidgets);
-    if (!hudId && !pauseId && worldWidgets.length === 0) return;
+    const wantsScreenHost = Boolean(hudId || pauseId || winId || loseId);
+    if (!wantsScreenHost && worldWidgets.length === 0 && !gameRules) return;
 
     // Load ALL .ui.json assets so Include refs in any widget can be resolved.
     const allDefs = await this.loadAllUiWidgetDefs();
@@ -839,13 +862,16 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
     this.uiStore.setField("player.speed", 0);
     this.uiStore.setField("player.speedLabel", "Speed 0.0 m/s");
 
-    if (hudId || pauseId) {
+    if (wantsScreenHost) {
       this.uiSubsystem = new RuntimeUiSubsystem(host, {
         store: this.uiStore,
         ...(this.localeRegistry ? { locale: this.localeRegistry } : {}),
         resolveTheme: (ref) => this.uiThemes.get(ref) ?? null,
         resolveWidget: (src) => this.uiDefs.get(src) ?? null,
         onMessageAction: (action) => {
+          // Reserved `game:*` widget messages drive the rules layer in-shell; all
+          // other messages forward to gameplay as a `ui-action` script message.
+          if (this.handleGameUiMessage(action.message)) return;
           this.behaviorSubsystem.emitScriptMessage("ui-action", "ui", { message: action.message });
         },
         onScreenStackChange: (depth) => this.handleUiScreenStackChange(depth),
@@ -855,6 +881,26 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
         if (hud) this.uiSubsystem.setHud(hud);
       }
       if (pauseId) this.pauseMenuDef = this.uiDefs.get(pauseId) ?? null;
+      if (winId) this.winScreenDef = this.uiDefs.get(winId) ?? null;
+      if (loseId) this.loseScreenDef = this.uiDefs.get(loseId) ?? null;
+    }
+
+    if (gameRules) {
+      this.gameStateStore = new GameStateStore(gameRules);
+      // Bridge content-emitted `game-event` script messages into the rules store
+      // so triggers/actor scripts (score, objective progress, win/lose) drive it
+      // without the engine knowing any project rule. Released in dispose().
+      this.gameEventUnsub = this.behaviorSubsystem.subscribeScriptMessage(
+        "game-event",
+        (envelope) => {
+          const event = parseGameEvent(envelope.payload);
+          if (event) this.gameStateStore?.dispatch(event);
+        },
+      );
+      // Seed bound fields so the HUD's first render shows authored starting values.
+      for (const [path, value] of Object.entries(this.gameStateStore.hudFields())) {
+        this.uiStore.setField(path, value);
+      }
     }
 
     if (worldWidgets.length > 0) {
@@ -1000,6 +1046,69 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
     this.uiStore.setField("player.speed", speed);
     this.uiStore.setField("player.speedLabel", `Speed ${speed.toFixed(1)} m/s`);
     this.uiStore.flush();
+  }
+
+  /**
+   * Advances the gameplay-rules store (when configured), mirrors its bindable
+   * `game.*` fields into the UI ViewModel store, and pushes the configured
+   * win/loss screen once when the round settles. The round freezes while any
+   * screen (pause or outcome) is open, so pausing genuinely pauses the timer.
+   * Flushed by {@link updateUiStore}, which runs immediately after.
+   */
+  private updateGameRules(dt: number): void {
+    const store = this.gameStateStore;
+    if (!store) return;
+    const paused = (this.uiSubsystem?.screenDepth ?? 0) > 0;
+    if (!paused) store.tick(dt);
+    for (const [path, value] of Object.entries(store.hudFields())) {
+      this.uiStore.setField(path, value);
+    }
+    if (!this.gameOutcomeShown && store.phase !== "playing") {
+      this.gameOutcomeShown = true;
+      this.showGameOutcome(store.phase);
+    }
+  }
+
+  /** Presents the win/loss screen for a settled round, replacing any open screen. */
+  private showGameOutcome(phase: GamePhase): void {
+    if (!this.uiSubsystem) return;
+    const def = phase === "won" ? this.winScreenDef : this.loseScreenDef;
+    if (!def) return;
+    if (this.uiSubsystem.screenDepth > 0) this.uiSubsystem.clearScreens();
+    this.uiSubsystem.pushScreen(def);
+  }
+
+  /**
+   * Intercepts reserved `game:*` UI widget messages (win/loss/pause buttons):
+   * `game:restart` restarts the round, `game:resume` closes the open screen.
+   * Returns true when handled so the message isn't also forwarded to gameplay.
+   */
+  private handleGameUiMessage(message: string): boolean {
+    switch (message) {
+      case "game:restart":
+        this.restartGame();
+        return true;
+      case "game:resume":
+        this.uiSubsystem?.clearScreens();
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Restarts the rules round in place: resets the store to its authored initial
+   * state, closes any open screen (resuming gameplay), and broadcasts a
+   * `game-restart` script message so content can reset itself (respawn pickups,
+   * move the player home). A full world reset is the game's responsibility — the
+   * framework owns only the rules state. No-op without a rules store.
+   */
+  private restartGame(): void {
+    if (!this.gameStateStore) return;
+    this.gameStateStore.dispatch({ kind: "restart" });
+    this.gameOutcomeShown = false;
+    this.uiSubsystem?.clearScreens();
+    this.behaviorSubsystem.emitScriptMessage("game-restart", "game", {});
   }
 
   /**

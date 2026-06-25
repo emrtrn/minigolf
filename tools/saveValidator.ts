@@ -464,6 +464,125 @@ function validateHexColor(value: unknown, label: string): string {
   return value;
 }
 
+/** Throws unless `value` is a finite number; returns it. */
+function requireFiniteNumber(value: unknown, label: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new Error(`${label} must be a finite number`);
+  }
+  return value;
+}
+
+/** Throws unless `value` is a non-empty string; returns it. */
+function requireNonEmptyString(value: unknown, label: string): string {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error(`${label} must be a non-empty string`);
+  }
+  return value;
+}
+
+/**
+ * Strict allowlist for `worldSettings.gameRules` (the runtime Game Framework
+ * config). Mirrors `normalizeGameRules` in src/game/gameRules.ts — any new field
+ * must be added here too or it is silently dropped on save.
+ */
+function validateGameRules(value: unknown): Record<string, unknown> | undefined {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== "object") {
+    throw new Error("worldSettings.gameRules must be an object");
+  }
+  const input = value as Record<string, unknown>;
+  const rules: Record<string, unknown> = {};
+
+  if (input.variables !== undefined) {
+    if (!Array.isArray(input.variables)) {
+      throw new Error("worldSettings.gameRules.variables must be an array");
+    }
+    rules.variables = input.variables.map((entry, i) => {
+      if (!entry || typeof entry !== "object") {
+        throw new Error(`worldSettings.gameRules.variables[${i}] must be an object`);
+      }
+      const v = entry as Record<string, unknown>;
+      const out: Record<string, unknown> = {
+        id: requireNonEmptyString(v.id, `gameRules.variables[${i}].id`),
+      };
+      if (v.initial !== undefined) {
+        out.initial = requireFiniteNumber(v.initial, `gameRules.variables[${i}].initial`);
+      }
+      if (v.label !== undefined) {
+        out.label = requireNonEmptyString(v.label, `gameRules.variables[${i}].label`);
+      }
+      return out;
+    });
+  }
+
+  if (input.objectives !== undefined) {
+    if (!Array.isArray(input.objectives)) {
+      throw new Error("worldSettings.gameRules.objectives must be an array");
+    }
+    rules.objectives = input.objectives.map((entry, i) => {
+      if (!entry || typeof entry !== "object") {
+        throw new Error(`worldSettings.gameRules.objectives[${i}] must be an object`);
+      }
+      const o = entry as Record<string, unknown>;
+      const out: Record<string, unknown> = {
+        id: requireNonEmptyString(o.id, `gameRules.objectives[${i}].id`),
+        target: requireFiniteNumber(o.target, `gameRules.objectives[${i}].target`),
+      };
+      if (o.label !== undefined) {
+        out.label = requireNonEmptyString(o.label, `gameRules.objectives[${i}].label`);
+      }
+      if (o.initial !== undefined) {
+        out.initial = requireFiniteNumber(o.initial, `gameRules.objectives[${i}].initial`);
+      }
+      if (o.optional !== undefined) {
+        if (typeof o.optional !== "boolean") {
+          throw new Error(`gameRules.objectives[${i}].optional must be boolean`);
+        }
+        if (o.optional) out.optional = true;
+      }
+      return out;
+    });
+  }
+
+  if (input.timer !== undefined) {
+    if (!input.timer || typeof input.timer !== "object") {
+      throw new Error("worldSettings.gameRules.timer must be an object");
+    }
+    const t = input.timer as Record<string, unknown>;
+    const timer: Record<string, unknown> = {
+      durationSeconds: requireFiniteNumber(t.durationSeconds, "gameRules.timer.durationSeconds"),
+    };
+    if (t.direction !== undefined) {
+      if (t.direction !== "up" && t.direction !== "down") {
+        throw new Error('gameRules.timer.direction must be "up" or "down"');
+      }
+      timer.direction = t.direction;
+    }
+    if (t.onExpire !== undefined) {
+      if (t.onExpire !== "win" && t.onExpire !== "lose") {
+        throw new Error('gameRules.timer.onExpire must be "win" or "lose"');
+      }
+      timer.onExpire = t.onExpire;
+    }
+    rules.timer = timer;
+  }
+
+  if (input.winWhenObjectivesComplete !== undefined) {
+    if (typeof input.winWhenObjectivesComplete !== "boolean") {
+      throw new Error("worldSettings.gameRules.winWhenObjectivesComplete must be boolean");
+    }
+    rules.winWhenObjectivesComplete = input.winWhenObjectivesComplete;
+  }
+  if (input.loseWhenVariableDepleted !== undefined) {
+    rules.loseWhenVariableDepleted = requireNonEmptyString(
+      input.loseWhenVariableDepleted,
+      "gameRules.loseWhenVariableDepleted",
+    );
+  }
+
+  return Object.keys(rules).length > 0 ? rules : undefined;
+}
+
 function validateWorldSettings(value: unknown): Record<string, unknown> | null {
   if (value === undefined) return null;
   if (!value || typeof value !== "object") {
@@ -520,6 +639,20 @@ function validateWorldSettings(value: unknown): Record<string, unknown> | null {
     }
     worldSettings.pauseMenuWidget = input.pauseMenuWidget;
   }
+  if (input.winScreenWidget !== undefined) {
+    worldSettings.winScreenWidget = requireNonEmptyString(
+      input.winScreenWidget,
+      "worldSettings.winScreenWidget",
+    );
+  }
+  if (input.loseScreenWidget !== undefined) {
+    worldSettings.loseScreenWidget = requireNonEmptyString(
+      input.loseScreenWidget,
+      "worldSettings.loseScreenWidget",
+    );
+  }
+  const gameRules = validateGameRules(input.gameRules);
+  if (gameRules) worldSettings.gameRules = gameRules;
   if (input.locale !== undefined) {
     if (typeof input.locale !== "string" || input.locale.length === 0) {
       throw new Error("worldSettings.locale must be a non-empty string");

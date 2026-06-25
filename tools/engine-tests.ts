@@ -5811,6 +5811,56 @@ check("save validator preserves worldSettings.hudWidget + pauseMenuWidget + loca
   );
 });
 
+check("save validator preserves worldSettings.gameRules + win/lose screens", () => {
+  const out = validateLayout({
+    schema: 1,
+    name: "rules",
+    loadGroups: [],
+    instances: [],
+    characters: [],
+    worldSettings: {
+      winScreenWidget: "win",
+      loseScreenWidget: "lose",
+      gameRules: {
+        variables: [{ id: "score", initial: 0, label: "Score" }],
+        objectives: [{ id: "coins", label: "Coins", target: 3, optional: false }],
+        timer: { durationSeconds: 60, direction: "down", onExpire: "lose" },
+        winWhenObjectivesComplete: true,
+        loseWhenVariableDepleted: "lives",
+      },
+    },
+  }) as RoomLayout;
+  assert.equal(out.worldSettings?.winScreenWidget, "win");
+  assert.equal(out.worldSettings?.loseScreenWidget, "lose");
+  const rules = out.worldSettings?.gameRules;
+  assert.equal(rules?.variables?.[0]?.id, "score");
+  assert.equal(rules?.variables?.[0]?.label, "Score");
+  assert.equal(rules?.objectives?.[0]?.target, 3);
+  assert.equal(rules?.timer?.durationSeconds, 60);
+  assert.equal(rules?.timer?.onExpire, "lose");
+  assert.equal(rules?.winWhenObjectivesComplete, true);
+  assert.equal(rules?.loseWhenVariableDepleted, "lives");
+  // The normalizer must accept what the validator preserved (round-trips clean).
+  assert.notEqual(normalizeGameRules(rules), null);
+});
+
+check("save validator rejects malformed gameRules", () => {
+  const base = { schema: 1, name: "r", loadGroups: [], instances: [], characters: [] };
+  assert.throws(() => validateLayout({ ...base, worldSettings: { gameRules: 5 } }));
+  assert.throws(() =>
+    validateLayout({ ...base, worldSettings: { gameRules: { variables: [{ initial: 1 }] } } }),
+  );
+  assert.throws(() =>
+    validateLayout({ ...base, worldSettings: { gameRules: { objectives: [{ id: "x" }] } } }),
+  );
+  assert.throws(() =>
+    validateLayout({
+      ...base,
+      worldSettings: { gameRules: { timer: { durationSeconds: 10, direction: "sideways" } } },
+    }),
+  );
+});
+
 check("save validator rejects a non-string gameMode", () => {
   assert.throws(() =>
     validateLayout({
