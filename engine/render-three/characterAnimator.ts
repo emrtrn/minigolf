@@ -1,5 +1,6 @@
 import { AnimationMixer, LoopRepeat } from "three";
 import type { AnimationAction, AnimationClip, Object3D } from "three";
+import { applyRootMotionToClips, type RootMotionClipSetting } from "./rootMotion";
 
 /** A clip plus its (un-normalized) blend weight, as produced by a blend space. */
 export interface AnimatorBlendWeight {
@@ -27,9 +28,15 @@ export class CrossfadeAnimator {
   /** Clips actively contributing to the current weighted blend (empty in clip mode). */
   private readonly blendActions = new Map<string, AnimationAction>();
 
-  constructor(root: Object3D, clips: readonly AnimationClip[]) {
+  constructor(
+    root: Object3D,
+    clips: readonly AnimationClip[],
+    options: { readonly rootMotion?: readonly RootMotionClipSetting[] } = {},
+  ) {
     this.mixer = new AnimationMixer(root);
-    for (const clip of clips) this.actions.set(clip.name, this.mixer.clipAction(clip));
+    for (const clip of applyRootMotionToClips(clips, options.rootMotion)) {
+      this.actions.set(clip.name, this.mixer.clipAction(clip));
+    }
     this.clips = new Set(this.actions.keys());
   }
 

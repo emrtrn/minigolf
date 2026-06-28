@@ -18,6 +18,7 @@ import type {
   WebGLRenderer,
 } from "three";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { applyRootMotionToClip, type RootMotionClipSetting } from "@engine/render-three/rootMotion";
 
 import {
   applyResponsiveCameraViewport,
@@ -275,13 +276,14 @@ export function createSceneCharacterMixer(
   character: Object3D,
   gltf: GLTF,
   animationName: string | undefined,
+  rootMotion?: readonly RootMotionClipSetting[],
 ): AnimationMixer | null {
   const clip = animationName
     ? gltf.animations.find((candidate) => candidate.name === animationName)
     : null;
   if (!clip) return null;
   const mixer = new AnimationMixer(character);
-  mixer.clipAction(clip).play();
+  mixer.clipAction(applyRootMotionToClip(clip, rootMotion?.find((setting) => setting.clip === clip.name))).play();
   return mixer;
 }
 

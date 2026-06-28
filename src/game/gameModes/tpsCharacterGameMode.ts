@@ -168,8 +168,10 @@ export class TpsCharacterSession implements GameModeSession {
     // An authored upper-body bone enables the layered animator (legs locomotion +
     // upper-body montage slot); otherwise fall back to the full-body crossfade.
     const upperBodyBone = player.skeleton?.upperBodyBone;
+    const rootMotion = player.skeleton?.rootMotion;
+    const rootMotionOptions = rootMotion ? { rootMotion } : {};
     const layered = upperBodyBone
-      ? new LayeredCharacterAnimator(player.object, player.gltf.animations, upperBodyBone)
+      ? new LayeredCharacterAnimator(player.object, player.gltf.animations, upperBodyBone, rootMotionOptions)
       : null;
     if (layered?.hasUpperBody) {
       this.layered = layered;
@@ -177,7 +179,7 @@ export class TpsCharacterSession implements GameModeSession {
       layered.playLocomotion(initialClip, 0);
       this.clipNames = layered.clips;
     } else {
-      const animator = new CrossfadeAnimator(player.object, player.gltf.animations);
+      const animator = new CrossfadeAnimator(player.object, player.gltf.animations, rootMotionOptions);
       animator.play(initialClip, 0);
       this.context.addMixer(animator.mixer);
       this.animator = animator;

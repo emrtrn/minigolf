@@ -148,6 +148,22 @@ export interface AssetSkeletonMontageDef {
   blendOutSeconds: number;
 }
 
+export const ROOT_MOTION_MODES = ["preserve", "lockXZ", "lockXYZ"] as const;
+export type RootMotionMode = (typeof ROOT_MOTION_MODES)[number];
+
+/**
+ * Per-clip root-motion playback policy. `lockXZ` keeps vertical root bob/jumps
+ * but removes horizontal drift; `lockXYZ` fully pins the root translation to
+ * the clip's first frame. The source GLTF is not rewritten.
+ */
+export interface AssetSkeletonRootMotionDef {
+  /** Clip name carried by the asset. */
+  clip: string;
+  mode: RootMotionMode;
+  /** Optional animated node to pin; absent means auto-detect a root-like node. */
+  rootNode?: string;
+}
+
 export interface AssetSkeletonPreviewPrefs {
   selectedClip: string | null;
 }
@@ -159,6 +175,8 @@ export interface AssetSkeletonDef {
   blendSpaces: AssetSkeletonBlendSpaceDef[];
   notifies: AssetSkeletonNotifyDef[];
   montages: AssetSkeletonMontageDef[];
+  /** Clip-level root motion handling for in-place playback. */
+  rootMotion: AssetSkeletonRootMotionDef[];
   /** Bone-attached collision bodies (PhAT-lite); consumed by a future ragdoll. */
   physicsBodies: AssetSkeletonPhysicsBodyDef[];
   /** Joints linking physics bodies (ragdoll articulation). */
@@ -190,6 +208,7 @@ export function defaultAssetSkeleton(): AssetSkeletonDef {
     blendSpaces: [],
     notifies: [],
     montages: [],
+    rootMotion: [],
     physicsBodies: [],
     physicsConstraints: [],
     preview: { selectedClip: null },
@@ -217,6 +236,7 @@ export function normalizeAssetSkeleton(value: unknown): AssetSkeletonDef {
     blendSpaces: normalizeBlendSpaces(input.blendSpaces),
     notifies: normalizeNotifies(input.notifies),
     montages: normalizeMontages(input.montages),
+    rootMotion: normalizeRootMotion(input.rootMotion),
     physicsBodies: normalizePhysicsBodies(input.physicsBodies),
     physicsConstraints: normalizePhysicsConstraints(input.physicsConstraints),
     preview: normalizePreview(input.preview),
@@ -247,6 +267,29 @@ function normalizeMontages(value: unknown): AssetSkeletonMontageDef[] {
       blendOutSeconds: normalizeBlendSeconds(input.blendOutSeconds, 0.2),
     };
     result.push(montage);
+  }
+  return result;
+}
+
+function normalizeRootMotion(value: unknown): AssetSkeletonRootMotionDef[] {
+  if (!Array.isArray(value)) return [];
+  const result: AssetSkeletonRootMotionDef[] = [];
+  const clips = new Set<string>();
+  for (const item of value) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const input = item as Record<string, unknown>;
+    if (typeof input.clip !== "string" || input.clip.length === 0) continue;
+    if (!ROOT_MOTION_MODES.includes(input.mode as RootMotionMode)) continue;
+    if (clips.has(input.clip)) continue;
+    clips.add(input.clip);
+    const entry: AssetSkeletonRootMotionDef = {
+      clip: input.clip,
+      mode: input.mode as RootMotionMode,
+    };
+    if (typeof input.rootNode === "string" && input.rootNode.length > 0) {
+      entry.rootNode = input.rootNode;
+    }
+    result.push(entry);
   }
   return result;
 }

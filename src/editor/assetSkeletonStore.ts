@@ -13,6 +13,7 @@ export {
   BLEND_SPACE_TYPES,
   MONTAGE_SLOTS,
   PHYSICS_BODY_SHAPES,
+  ROOT_MOTION_MODES,
   defaultAssetSkeleton,
   defaultBlendSpaceAxis,
   loadAssetSkeleton,
@@ -29,6 +30,7 @@ export type {
   AssetSkeletonPhysicsBodyDef,
   AssetSkeletonPhysicsConstraintDef,
   AssetSkeletonPreviewPrefs,
+  AssetSkeletonRootMotionDef,
   AssetSkeletonSocketDef,
   BlendSampleWeight,
   BlendSpaceAxisDef,
@@ -36,6 +38,7 @@ export type {
   BlendSpaceType,
   MontageSlot,
   PhysicsBodyShape,
+  RootMotionMode,
 } from "@/scene/assetSkeletonLoader";
 
 export async function saveAssetSkeleton(

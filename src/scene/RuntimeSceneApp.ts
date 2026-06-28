@@ -1422,7 +1422,12 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
     const possessedEntityId = session.playerState.pawnEntityId;
     for (const ref of this.characterRefs) {
       if (ref.entityId === possessedEntityId) continue;
-      const mixer = createSceneCharacterMixer(ref.object, ref.gltf, ref.placement.animation);
+      const mixer = createSceneCharacterMixer(
+        ref.object,
+        ref.gltf,
+        ref.placement.animation,
+        ref.skeleton?.rootMotion,
+      );
       if (mixer) this.animationSubsystem.add(mixer);
     }
   }

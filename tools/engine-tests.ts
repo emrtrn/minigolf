@@ -124,6 +124,7 @@ import { parseEffectDefinition } from "../engine/render-three/particleEffect";
 import { CrossfadeAnimator } from "../engine/render-three/characterAnimator";
 import { collectSubtreeNodeNames, splitClipsByUpperBody } from "../engine/render-three/bodyMask";
 import { LayeredCharacterAnimator } from "../engine/render-three/layeredCharacterAnimator";
+import { applyRootMotionToClip, rootMotionPositionNodes } from "../engine/render-three/rootMotion";
 import { createCharacterSceneObject, entityCharacterItem } from "../engine/render-three/models";
 import {
   DEFAULT_GAME_MODE_ID,
@@ -4709,6 +4710,36 @@ const buildLayeredClips = (): AnimationClip[] => [
   new AnimationClip("holding-both-shoot", 0.5, ["torso", "arm-right", "arm-left", "head"].map(positionTrack)),
 ];
 
+check("root motion clip filtering pins horizontal root translation for in-place playback", () => {
+  const root = new VectorKeyframeTrack("Hips.position", [0, 0.5, 1], [0, 1, 0, 2, 2, 4, 5, 3, 9]);
+  const hand = new VectorKeyframeTrack("Hand.position", [0, 1], [1, 0, 0, 2, 0, 0]);
+  const clip = new AnimationClip("run", 1, [root, hand]);
+
+  const filtered = applyRootMotionToClip(clip, { clip: "run", mode: "lockXZ" });
+
+  assert.notEqual(filtered, clip);
+  assert.deepEqual(Array.from(filtered.tracks[0]!.values), [0, 1, 0, 0, 2, 0, 0, 3, 0]);
+  assert.deepEqual(Array.from(filtered.tracks[1]!.values), [1, 0, 0, 2, 0, 0]);
+  assert.deepEqual(Array.from(clip.tracks[0]!.values), [0, 1, 0, 2, 2, 4, 5, 3, 9]);
+});
+
+check("root motion clip filtering can pin XYZ on an authored root node", () => {
+  const clip = new AnimationClip("jump", 1, [
+    new VectorKeyframeTrack("Armature.position", [0, 1], [0, 4, 0, 0, 6, 3]),
+    new VectorKeyframeTrack("Hips.position", [0, 1], [10, 1, 10, 12, 2, 12]),
+  ]);
+
+  const filtered = applyRootMotionToClip(clip, {
+    clip: "jump",
+    mode: "lockXYZ",
+    rootNode: "Armature",
+  });
+
+  assert.deepEqual(Array.from(filtered.tracks[0]!.values), [0, 4, 0, 0, 4, 0]);
+  assert.deepEqual(Array.from(filtered.tracks[1]!.values), [10, 1, 10, 12, 2, 12]);
+  assert.deepEqual(rootMotionPositionNodes(clip), ["Armature", "Hips"]);
+});
+
 check("splitClipsByUpperBody: routes each track to the half its node belongs to", () => {
   const rig = buildCharacterRig();
   const upper = collectSubtreeNodeNames(rig, "torso");
@@ -7139,6 +7170,10 @@ check("skeleton save payload requires a .skeleton.json path and canonical metada
         { name: "fire", clip: "holding-both-shoot", slot: "upperBody", loop: false, blendInSeconds: 0.08 },
         { name: "aim", clip: "holding-both", slot: "upperBody", loop: true },
       ],
+      rootMotion: [
+        { clip: "Run", mode: "lockXZ", rootNode: "Hips" },
+        { clip: "Jump", mode: "lockXYZ" },
+      ],
       upperBodyBone: "torso",
       preview: { selectedClip: "Idle" },
     },
@@ -7153,6 +7188,10 @@ check("skeleton save payload requires a .skeleton.json path and canonical metada
   assert.deepEqual(payload.skeleton.montages, [
     { name: "fire", clip: "holding-both-shoot", slot: "upperBody", loop: false, blendInSeconds: 0.08, blendOutSeconds: 0.2 },
     { name: "aim", clip: "holding-both", slot: "upperBody", loop: true, blendInSeconds: 0.12, blendOutSeconds: 0.2 },
+  ]);
+  assert.deepEqual(payload.skeleton.rootMotion, [
+    { clip: "Run", mode: "lockXZ", rootNode: "Hips" },
+    { clip: "Jump", mode: "lockXYZ" },
   ]);
   assert.equal(payload.skeleton.sockets[0]?.previewAssetId, "starter-sword");
   assert.deepEqual(payload.skeleton.preview, { selectedClip: "Idle" });
@@ -7486,6 +7525,24 @@ check("asset skeleton physics bodies round-trip through the save validator; bad 
         physicsBodies: [
           { name: "b", bone: "hips", size: [1, 1, 1] },
           { name: "b", bone: "spine", size: [1, 1, 1] },
+        ],
+      },
+    }),
+  );
+  // Root-motion entries require a valid mode and one row per clip.
+  assert.throws(() =>
+    validateSaveSkeletonPayload({
+      path: "assets/characters/Hero.skeleton.json",
+      skeleton: { rootMotion: [{ clip: "Run", mode: "bake" }] },
+    }),
+  );
+  assert.throws(() =>
+    validateSaveSkeletonPayload({
+      path: "assets/characters/Hero.skeleton.json",
+      skeleton: {
+        rootMotion: [
+          { clip: "Run", mode: "lockXZ" },
+          { clip: "Run", mode: "lockXYZ" },
         ],
       },
     }),

@@ -4,8 +4,8 @@
   "animationSet": {
     "idle": "Idle_Loop",
     "walk": "Walk_Loop",
-    "run": "Sprint_Loop",
-    "jump": "Jump_Loop",
+    "run": "Jog_Fwd_Loop",
+    "jump": "Jump_Start",
     "fall": "Jump_Land"
   },
   "blendSpaces": [
@@ -22,9 +22,23 @@
   ],
   "notifies": [],
   "montages": [],
+  "rootMotion": [
+    {
+      "clip": "Walk_Loop",
+      "mode": "lockXZ"
+    },
+    {
+      "clip": "Jog_Fwd_Loop",
+      "mode": "lockXZ"
+    },
+    {
+      "clip": "Sprint_Loop",
+      "mode": "lockXZ"
+    }
+  ],
   "physicsBodies": [],
   "physicsConstraints": [],
   "preview": {
-    "selectedClip": "Jog_Fwd_Loop"
+    "selectedClip": "Sprint_Loop"
   }
 }

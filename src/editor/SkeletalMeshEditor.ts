@@ -38,6 +38,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 import { VertexNormalsHelper } from "three/examples/jsm/helpers/VertexNormalsHelper.js";
 import { CrossfadeAnimator } from "@engine/render-three/characterAnimator";
+import { applyRootMotionToClips, rootMotionPositionNodes } from "@engine/render-three/rootMotion";
 import { PhysicsSubsystem } from "@engine/physics/physicsSubsystem";
 import type { Entity } from "@engine/scene/entity";
 import type { Vec3 } from "@engine/scene/layout";
@@ -53,6 +54,7 @@ import {
   BLEND_SPACE_TYPES,
   MONTAGE_SLOTS,
   PHYSICS_BODY_SHAPES,
+  ROOT_MOTION_MODES,
   defaultAssetSkeleton,
   defaultBlendSpaceAxis,
   loadAssetSkeleton,
@@ -65,12 +67,14 @@ import {
   type AssetSkeletonNotifyDef,
   type AssetSkeletonPhysicsBodyDef,
   type AssetSkeletonPhysicsConstraintDef,
+  type AssetSkeletonRootMotionDef,
   type AssetSkeletonSocketDef,
   type BlendSpaceAxisDef,
   type BlendSpaceSampleDef,
   type BlendSpaceType,
   type MontageSlot,
   type PhysicsBodyShape,
+  type RootMotionMode,
 } from "@/editor/assetSkeletonStore";
 
 export interface SkeletalMeshEditorOptions {
@@ -219,7 +223,10 @@ export class SkeletalMeshEditor {
   private bones: Bone[] = [];
   /** Every named node in the model — upper-body root candidates (skinned or rigid). */
   private nodeNames: string[] = [];
+  private modelRoot: Object3D | null = null;
   private clips: AnimationClip[] = [];
+  private playbackClips: AnimationClip[] = [];
+  private readonly playbackClipByName = new Map<string, AnimationClip>();
   private skeleton: AssetSkeletonDef = defaultAssetSkeleton();
 
   private animator: CrossfadeAnimator | null = null;
@@ -327,14 +334,14 @@ export class SkeletalMeshEditor {
       const gltf = await this.loader.loadAsync(projectFileUrl(this.options.modelPath));
       if (this.disposed) return;
       this.clips = gltf.animations;
+      this.modelRoot = gltf.scene;
       this.modelGroup.add(gltf.scene);
       this.collectModelInfo(gltf.scene);
       this.frameModel(gltf.scene);
       this.buildSkeletonHelper(gltf.scene);
       this.buildNormalHelpers(gltf.scene);
-      this.animator = new CrossfadeAnimator(gltf.scene, this.clips);
-      this.mixer = this.animator.mixer;
       await this.loadSkeleton();
+      this.rebuildPlaybackAnimator();
       this.selectedClipName = this.resolveInitialClip();
       if (this.selectedClipName) this.selectClip(this.selectedClipName, { autoplay: false, crossfade: false });
       this.renderToolbar();
@@ -353,8 +360,33 @@ export class SkeletalMeshEditor {
   private async loadSkeleton(): Promise<void> {
     this.skeleton = await loadAssetSkeleton(this.options.modelPath);
     this.sanitizeAnimationSet();
+    this.sanitizeRootMotion();
     this.sanitizeSockets();
     this.rebuildSocketOverlays();
+  }
+
+  private sanitizeRootMotion(): void {
+    const available = new Set(this.clips.map((clip) => clip.name));
+    const rootMotion = this.skeleton.rootMotion.filter((setting) => available.has(setting.clip));
+    this.skeleton = { ...this.skeleton, rootMotion };
+  }
+
+  private rebuildPlaybackAnimator(): void {
+    const root = this.modelRoot;
+    if (!root) return;
+    this.mixer?.stopAllAction();
+    this.playbackClips = applyRootMotionToClips(this.clips, this.skeleton.rootMotion);
+    this.playbackClipByName.clear();
+    for (const clip of this.playbackClips) this.playbackClipByName.set(clip.name, clip);
+    this.animator = new CrossfadeAnimator(root, this.playbackClips);
+    this.mixer = this.animator.mixer;
+    this.action = null;
+    this.clearBlendPreviewActions();
+    this.blendPreviewActive = false;
+  }
+
+  private playbackClip(name: string): AnimationClip | null {
+    return this.playbackClipByName.get(name) ?? this.clips.find((clip) => clip.name === name) ?? null;
   }
 
   private resolveInitialClip(): string {
@@ -837,6 +869,7 @@ export class SkeletalMeshEditor {
             : `<div class="sm-empty">Select a clip to preview animation.</div>`
         }
       </div>
+      ${clip ? this.renderRootMotionDetails(clip) : ""}
       ${this.renderNotifyDetails(clip)}
       <div class="sm-section">
         <div class="sm-section-title">Animation Set</div>
@@ -857,6 +890,31 @@ export class SkeletalMeshEditor {
       </div>
       ${this.renderBlendSpaceDetails()}
       ${this.renderMontageDetails()}
+    `;
+  }
+
+  private renderRootMotionDetails(clip: AnimationClip): string {
+    const setting = this.rootMotionSetting(clip.name);
+    const mode = setting?.mode ?? "preserve";
+    return `
+      <div class="sm-section">
+        <div class="sm-section-title">Root Motion</div>
+        <label class="sm-row">
+          <span>Mode</span>
+          <select data-skel-root-motion-mode="${escapeHtml(clip.name)}">
+            ${ROOT_MOTION_MODES.map(
+              (item) => `<option value="${item}" ${item === mode ? "selected" : ""}>${rootMotionModeLabel(item)}</option>`,
+            ).join("")}
+          </select>
+        </label>
+        <label class="sm-row">
+          <span>Root Node</span>
+          <select data-skel-root-motion-node="${escapeHtml(clip.name)}" ${mode === "preserve" ? "disabled" : ""}>
+            ${this.rootMotionNodeOptions(clip, setting?.rootNode ?? "")}
+          </select>
+        </label>
+        <div class="sm-hint">In-place modes pin the chosen node's position track during playback; the source GLTF stays unchanged.</div>
+      </div>
     `;
   }
 
@@ -1184,6 +1242,16 @@ export class SkeletalMeshEditor {
       const next = Number((event.target as HTMLInputElement).value);
       this.crossfadeDuration = Number.isFinite(next) ? clamp(next, 0, 2) : 0.2;
       this.renderDetails();
+    });
+    this.detailsHost.querySelectorAll<HTMLSelectElement>("[data-skel-root-motion-mode]").forEach((select) => {
+      select.addEventListener("change", () => {
+        this.setRootMotionMode(select.dataset.skelRootMotionMode ?? "", select.value as RootMotionMode);
+      });
+    });
+    this.detailsHost.querySelectorAll<HTMLSelectElement>("[data-skel-root-motion-node]").forEach((select) => {
+      select.addEventListener("change", () => {
+        this.setRootMotionNode(select.dataset.skelRootMotionNode ?? "", select.value);
+      });
     });
     this.detailsHost.querySelectorAll<HTMLSelectElement>("[data-skel-role]").forEach((select) => {
       select.addEventListener("change", () => {
@@ -2410,6 +2478,66 @@ export class SkeletalMeshEditor {
     this.renderDetails();
   }
 
+  private rootMotionSetting(clipName: string): AssetSkeletonRootMotionDef | null {
+    return this.skeleton.rootMotion.find((setting) => setting.clip === clipName) ?? null;
+  }
+
+  private rootMotionNodeOptions(clip: AnimationClip, selected: string): string {
+    const nodes = rootMotionPositionNodes(clip);
+    return `
+      <option value="" ${selected ? "" : "selected"}>Auto</option>
+      ${nodes
+        .map((node) => `<option value="${escapeHtml(node)}" ${node === selected ? "selected" : ""}>${escapeHtml(node)}</option>`)
+        .join("")}
+    `;
+  }
+
+  private setRootMotionMode(clipName: string, mode: RootMotionMode): void {
+    if (!this.clips.some((clip) => clip.name === clipName)) return;
+    if (!ROOT_MOTION_MODES.includes(mode)) return;
+    const current = this.rootMotionSetting(clipName);
+    if (mode === "preserve") {
+      this.skeleton = {
+        ...this.skeleton,
+        rootMotion: this.skeleton.rootMotion.filter((setting) => setting.clip !== clipName),
+      };
+    } else {
+      const next: AssetSkeletonRootMotionDef = {
+        clip: clipName,
+        mode,
+        ...(current?.rootNode ? { rootNode: current.rootNode } : {}),
+      };
+      this.skeleton = {
+        ...this.skeleton,
+        rootMotion: upsertRootMotion(this.skeleton.rootMotion, next),
+      };
+    }
+    this.markDirty();
+    this.restartSelectedClipPreview();
+    this.setStatus(`Root motion for ${clipName}: ${rootMotionModeLabel(mode)}.`);
+  }
+
+  private setRootMotionNode(clipName: string, rootNode: string): void {
+    const current = this.rootMotionSetting(clipName);
+    if (!current || current.mode === "preserve") return;
+    const next: AssetSkeletonRootMotionDef = { clip: clipName, mode: current.mode };
+    if (rootNode) next.rootNode = rootNode;
+    this.skeleton = {
+      ...this.skeleton,
+      rootMotion: upsertRootMotion(this.skeleton.rootMotion, next),
+    };
+    this.markDirty();
+    this.restartSelectedClipPreview();
+  }
+
+  private restartSelectedClipPreview(): void {
+    const clipName = this.selectedClipName;
+    const wasPlaying = this.playing;
+    this.rebuildPlaybackAnimator();
+    if (clipName) this.selectClip(clipName, { autoplay: wasPlaying, crossfade: false });
+    else this.renderDetails();
+  }
+
   private getSelectedBlendSpace(): AssetSkeletonBlendSpaceDef | null {
     if (!this.selectedBlendSpaceName) return null;
     return this.skeleton.blendSpaces.find((blend) => blend.name === this.selectedBlendSpaceName) ?? null;
@@ -2611,7 +2739,7 @@ export class SkeletalMeshEditor {
     const blend = this.getSelectedBlendSpace();
     if (!blend || !this.mixer) return;
     for (const clipName of new Set(blend.samples.map((sample) => sample.clip))) {
-      const clip = this.clips.find((item) => item.name === clipName);
+      const clip = this.playbackClip(clipName);
       if (!clip) continue;
       const action = this.mixer.clipAction(clip);
       action.reset();
@@ -2786,6 +2914,8 @@ export class SkeletalMeshEditor {
     if (!clip || !this.mixer) return;
     const previousClipName = this.selectedClipName;
     this.selectedClipName = clip.name;
+    const playbackClip = this.playbackClip(clip.name);
+    if (!playbackClip) return;
     this.skeleton = {
       ...this.skeleton,
       preview: { ...this.skeleton.preview, selectedClip: clip.name },
@@ -2797,9 +2927,9 @@ export class SkeletalMeshEditor {
       this.animator.play(clip.name, duration);
     } else {
       this.mixer.stopAllAction();
-      this.mixer.clipAction(clip).reset().play();
+      this.mixer.clipAction(playbackClip).reset().play();
     }
-    this.action = this.mixer.clipAction(clip);
+    this.action = this.mixer.clipAction(playbackClip);
     this.applyLoopMode();
     this.action.paused = !options.autoplay;
     this.playing = options.autoplay;
@@ -2986,6 +3116,26 @@ function disposeObject3D(root: Object3D): void {
       material.dispose();
     }
   });
+}
+
+function upsertRootMotion(
+  settings: readonly AssetSkeletonRootMotionDef[],
+  next: AssetSkeletonRootMotionDef,
+): AssetSkeletonRootMotionDef[] {
+  let replaced = false;
+  const result = settings.map((setting) => {
+    if (setting.clip !== next.clip) return setting;
+    replaced = true;
+    return next;
+  });
+  if (!replaced) result.push(next);
+  return result;
+}
+
+function rootMotionModeLabel(mode: RootMotionMode): string {
+  if (mode === "lockXZ") return "In Place: Lock XZ";
+  if (mode === "lockXYZ") return "In Place: Lock XYZ";
+  return "Preserve Root Motion";
 }
 
 function emptyStats(): MeshStats {

@@ -1669,6 +1669,7 @@ export function validateSaveMaterialSlotsPayload(value: unknown): {
 }
 
 const SKELETON_ANIMATION_SET_ROLES = ["idle", "walk", "run", "jump", "fall"] as const;
+const SKELETON_ROOT_MOTION_MODES = ["preserve", "lockXZ", "lockXYZ"] as const;
 
 function validateAnimationSet(value: unknown): Record<string, string> {
   if (value === undefined || value === null) return {};
@@ -1866,6 +1867,42 @@ function validateMontages(value: unknown): Record<string, unknown>[] {
   });
 }
 
+function validateRootMotion(value: unknown): Record<string, unknown>[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) throw new Error("skeleton.rootMotion must be an array");
+  const clips = new Set<string>();
+  return value.map((item, index) => {
+    const label = `skeleton.rootMotion[${index}]`;
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      throw new Error(`${label} must be an object`);
+    }
+    const input = item as Record<string, unknown>;
+    if (typeof input.clip !== "string" || input.clip.length === 0) {
+      throw new Error(`${label}.clip must be a non-empty clip name string`);
+    }
+    if (clips.has(input.clip)) throw new Error(`${label}.clip "${input.clip}" is duplicated`);
+    clips.add(input.clip);
+    if (
+      !SKELETON_ROOT_MOTION_MODES.includes(
+        input.mode as (typeof SKELETON_ROOT_MOTION_MODES)[number],
+      )
+    ) {
+      throw new Error(`${label}.mode must be one of ${SKELETON_ROOT_MOTION_MODES.join(", ")}`);
+    }
+    const output: Record<string, unknown> = {
+      clip: input.clip,
+      mode: input.mode,
+    };
+    if (input.rootNode !== undefined && input.rootNode !== null && input.rootNode !== "") {
+      if (typeof input.rootNode !== "string") {
+        throw new Error(`${label}.rootNode must be a node name string`);
+      }
+      output.rootNode = input.rootNode;
+    }
+    return output;
+  });
+}
+
 function validateNotify(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error(`${label} must be an object`);
@@ -2023,6 +2060,7 @@ export function validateAssetSkeletonDef(value: unknown): Record<string, unknown
     blendSpaces: validateBlendSpaces(input.blendSpaces),
     notifies: validateNotifies(input.notifies),
     montages: validateMontages(input.montages),
+    rootMotion: validateRootMotion(input.rootMotion),
     physicsBodies: validatePhysicsBodies(input.physicsBodies),
     physicsConstraints: validatePhysicsConstraints(input.physicsConstraints),
     preview: {

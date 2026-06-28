@@ -13,6 +13,7 @@
 import { type AnimationClip, type Object3D } from "three";
 import { CrossfadeAnimator, type AnimatorBlendWeight } from "./characterAnimator";
 import { collectSubtreeNodeNames, splitClipsByUpperBody } from "./bodyMask";
+import { applyRootMotionToClips, type RootMotionClipSetting } from "./rootMotion";
 
 export interface LayeredMontageOptions {
   readonly blendInSeconds?: number;
@@ -34,10 +35,16 @@ export class LayeredCharacterAnimator {
   /** Active one-shot upper montage, with the time left and its return blend. */
   private montage: { clip: string; remaining: number; blendOut: number } | null = null;
 
-  constructor(root: Object3D, clips: readonly AnimationClip[], upperBodyBone: string) {
+  constructor(
+    root: Object3D,
+    clips: readonly AnimationClip[],
+    upperBodyBone: string,
+    options: { readonly rootMotion?: readonly RootMotionClipSetting[] } = {},
+  ) {
     const upperNames = collectSubtreeNodeNames(root, upperBodyBone);
     this.upperBodyMatched = upperNames.size > 0;
-    const split = splitClipsByUpperBody(clips, upperNames);
+    const playbackClips = applyRootMotionToClips(clips, options.rootMotion);
+    const split = splitClipsByUpperBody(playbackClips, upperNames);
     this.lower = new CrossfadeAnimator(root, split.lower);
     this.upper = new CrossfadeAnimator(root, split.upper);
     this.clips = new Set(clips.map((clip) => clip.name));
