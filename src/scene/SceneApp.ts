@@ -174,6 +174,7 @@ import {
   DEFAULT_SCENE_AMBIENT_COLOR,
   DEFAULT_SCENE_AMBIENT_INTENSITY,
   DEFAULT_SCENE_BACKGROUND_COLOR,
+  DEFAULT_SCENE_KILL_Z,
   DEFAULT_SCENE_LIGHT_COLOR,
   DEFAULT_SCENE_STATIC_OBJECTS_CAST_SHADOWS,
   DEFAULT_SCENE_STATIC_OBJECTS_RECEIVE_SHADOWS,
@@ -1029,6 +1030,7 @@ export class SceneApp {
       backgroundColor: this.backgroundColor(),
       ambientColor: this.ambientColor(),
       ambientIntensity: this.ambientIntensity(),
+      killZ: this.killZ(),
       gameMode: this.gameMode(),
     };
   }
@@ -1042,6 +1044,7 @@ export class SceneApp {
         | "backgroundColor"
         | "ambientColor"
         | "ambientIntensity"
+        | "killZ"
         | "gameMode"
       >
     >,
@@ -4052,6 +4055,12 @@ export class SceneApp {
       worldSettings.ambientIntensity = settings.ambientIntensity;
     }
 
+    if (settings.killZ === DEFAULT_SCENE_KILL_Z) {
+      delete worldSettings.killZ;
+    } else {
+      worldSettings.killZ = settings.killZ;
+    }
+
     // The default camera mode is implicit: omit it so layouts stay clean and old
     // layouts (no gameMode) keep round-tripping unchanged.
     if (settings.gameMode === DEFAULT_GAME_MODE_ID) {
@@ -5788,6 +5797,10 @@ export class SceneApp {
 
   private ambientIntensity(): number {
     return resolveSceneWorldSettings(this.layout).ambientIntensity;
+  }
+
+  private killZ(): number {
+    return resolveSceneWorldSettings(this.layout).killZ;
   }
 
   private gameMode(): string {

@@ -1998,6 +1998,7 @@ function characterMovementFields(node: ComponentTemplateNode): string {
     ${vec3Row("rotationRate", "Rotation Rate°/s", readVec3Prop(props.rotationRate, [0, 0, 500]))}
     ${numberField("capsuleRadius", "Capsule Radius", 0.3, 'step="0.05" min="0"')}
     ${numberField("capsuleHalfHeight", "Capsule Half Height", 0.9, 'step="0.05" min="0"')}
+    ${numberField("maxStepHeight", "Max Step Height", 0.45, 'step="0.05" min="0"')}
     <label class="as-field as-check">
       <input type="checkbox" data-as-character-movement-orient ${
         props.orientRotationToMovement === false ? "" : "checked"
@@ -2103,6 +2104,7 @@ function defaultComponentProps(kind: ActorComponentKind): Record<string, SceneJs
       movementMode: "walking",
       capsuleRadius: 0.3,
       capsuleHalfHeight: 0.9,
+      maxStepHeight: 0.45,
     };
   }
   if (kind === "SpringArm") {

@@ -226,6 +226,7 @@ function defaultCharacterComponents(): ComponentTemplateNode[] {
         movementMode: "walking",
         capsuleRadius: 0.3,
         capsuleHalfHeight: 0.9,
+        maxStepHeight: 0.45,
       },
     },
   ];

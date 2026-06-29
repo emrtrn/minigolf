@@ -39,6 +39,13 @@ const CLOUD_DOME_RADIUS = 90;
 
 /** Fixed wind heading (xz) the drift scrolls along; `speed` scales its length. */
 const WIND_DIRECTION = new Vector2(1, 0.35).normalize();
+/**
+ * The raw `1 / dir.y` sky-plane projection stretches too aggressively near the
+ * horizon and makes the lower cloud edge read as if it is "falling". Blend the
+ * projection toward a gentler scale as we approach the horizon.
+ */
+const HORIZON_BLEND_END = 0.45;
+const HORIZON_PROJECTION_FLOOR = 0.35;
 
 const VERTEX_SHADER = /* glsl */ `
   varying vec3 vDir;
@@ -99,9 +106,11 @@ const FRAGMENT_SHADER = /* glsl */ `
     float horizon = smoothstep(0.0, 0.18, dir.y);
     if (horizon <= 0.0) discard;
 
-    // Sky-plane projection: clouds live on a plane "at infinity"; dividing by the
-    // up-component stretches them naturally toward the horizon.
-    vec2 plane = dir.xz / max(dir.y, 0.1);
+    // Sky-plane projection with a softened horizon remap so the lower cloud edge
+    // does not look like it drops vertically toward the ground.
+    float horizonBlend = smoothstep(0.0, ${HORIZON_BLEND_END.toFixed(2)}, dir.y);
+    float projectionY = mix(${HORIZON_PROJECTION_FLOOR.toFixed(2)}, 1.0, horizonBlend);
+    vec2 plane = dir.xz / projectionY;
     vec2 p = plane * uScale + uWind * uTime;
 
     float n = fbm(p);

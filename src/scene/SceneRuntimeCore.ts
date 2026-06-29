@@ -68,6 +68,7 @@ export const DEFAULT_SCENE_BACKGROUND_COLOR = "#d7d7c7";
 export const DEFAULT_SCENE_AMBIENT_COLOR = "#ffffff";
 export const DEFAULT_SCENE_AMBIENT_INTENSITY = 0;
 export const DEFAULT_SCENE_GRAVITY: Vec3 = [0, -9.81, 0];
+export const DEFAULT_SCENE_KILL_Z = -20;
 
 export interface SceneRuntimeCore {
   renderer: WebGLRenderer;
@@ -82,6 +83,7 @@ export interface ResolvedSceneWorldSettings {
   ambientColor: string;
   ambientIntensity: number;
   gravity: Vec3;
+  killZ: number;
 }
 
 export function createSceneRuntimeCore(
@@ -140,6 +142,7 @@ export function resolveSceneWorldSettings(
     ambientColor: layout?.worldSettings?.ambientColor ?? DEFAULT_SCENE_AMBIENT_COLOR,
     ambientIntensity: layout?.worldSettings?.ambientIntensity ?? DEFAULT_SCENE_AMBIENT_INTENSITY,
     gravity: layout?.worldSettings?.gravity ?? DEFAULT_SCENE_GRAVITY,
+    killZ: layout?.worldSettings?.killZ ?? DEFAULT_SCENE_KILL_Z,
   };
 }
 

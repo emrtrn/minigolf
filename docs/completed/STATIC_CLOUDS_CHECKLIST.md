@@ -52,10 +52,11 @@ environment actor" şablonudur:
   90u'dan yakın opak sahne geometrisi depth buffer ile bulutu doğal olarak
   perdeler (backdrop hissi). Bu yüzden Sky'ın saf `depthTest:false` deseninden
   ayrılır.
-- **Shader:** value-noise tabanlı 5-oktav fBm. `dir.xz / dir.y` "sky-plane"
-  projeksiyonu ile bulutlar ufka doğru doğal olarak uzar; ufuk altı `discard`.
-  `coverage` eşiği düşürür (daha çok kaplama), `softness` geçiş bandını
-  genişletir, `density` genel opaklık, `scale` öbek boyutu.
+- **Shader:** value-noise tabanlı 5-oktav fBm. Ufukta aşırı gerilmeyi azaltmak
+  için `dir.y` üzerinde yumuşatılmış bir sky-plane remap kullanılır; bulutlar
+  hala ufka doğru uzar ama alt kenar "aşağı düşüyor" gibi görünmez. Ufuk altı
+  `discard`. `coverage` eşiği düşürür (daha çok kaplama), `softness` geçiş
+  bandını genişletir, `density` genel opaklık, `scale` öbek boyutu.
 - **Drift:** `advanceCloudTime` her kare `uTime`'ı artırır; `uWind = sabit yön ×
   speed`. `speed = 0` → sıfır vektör → görünür hareket yok (statik). Time
   koşulsuz ilerler; maliyeti ihmal edilebilir.

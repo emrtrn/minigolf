@@ -246,6 +246,7 @@ export interface CharacterMovementComponent {
   movementMode: CharacterMovementMode;
   capsuleRadius: number;
   capsuleHalfHeight: number;
+  maxStepHeight: number;
 }
 
 /**
@@ -662,6 +663,7 @@ export function readCharacterMovementComponent(
     movementMode: mode,
     capsuleRadius: readFiniteNumber(data.capsuleRadius, 0.3, 0),
     capsuleHalfHeight: readFiniteNumber(data.capsuleHalfHeight, 0.9, 0),
+    maxStepHeight: readFiniteNumber(data.maxStepHeight, 0.45, 0),
   };
 }
 

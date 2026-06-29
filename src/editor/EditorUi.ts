@@ -2661,6 +2661,11 @@ export class EditorUi {
           <select data-world-game-mode>${gameModeOptions}</select>
         </label>
         <div class="detail-hint">${escapeHtml(gameModeDescription)}</div>
+        <label class="detail-row">
+          <span>Kill Z</span>
+          <input type="number" data-world-number="killZ" step="0.5"
+            value="${escapeHtml(String(settings.killZ))}" />
+        </label>
       </div>
       <div class="detail-section">
         <div class="detail-section-title">Lighting</div>
@@ -2734,10 +2739,15 @@ export class EditorUi {
       });
 
     this.worldSettingsBody
-      .querySelector<HTMLInputElement>('[data-world-number="ambientIntensity"]')
-      ?.addEventListener("change", (event) => {
-        const value = Number((event.currentTarget as HTMLInputElement).value);
-        if (Number.isFinite(value)) this.app.setWorldSettings({ ambientIntensity: value });
+      .querySelectorAll<HTMLInputElement>("[data-world-number]")
+      .forEach((input) => {
+        input.addEventListener("change", (event) => {
+          const key = (event.currentTarget as HTMLInputElement).dataset.worldNumber;
+          const value = Number((event.currentTarget as HTMLInputElement).value);
+          if (!Number.isFinite(value)) return;
+          if (key === "ambientIntensity") this.app.setWorldSettings({ ambientIntensity: value });
+          if (key === "killZ") this.app.setWorldSettings({ killZ: value });
+        });
       });
 
     this.worldSettingsBody

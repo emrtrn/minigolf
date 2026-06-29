@@ -266,6 +266,8 @@ export interface EditorWorldSettings {
   backgroundColor: string;
   ambientColor: string;
   ambientIntensity: number;
+  /** World Y threshold that respawns the possessed pawn when crossed. */
+  killZ: number;
   /** Selected runtime Game Mode id (resolved to a default when unknown/absent). */
   gameMode: string;
 }
@@ -311,6 +313,7 @@ export function worldSettingsEqual(
     left.backgroundColor.toLowerCase() === right.backgroundColor.toLowerCase() &&
     left.ambientColor.toLowerCase() === right.ambientColor.toLowerCase() &&
     left.ambientIntensity === right.ambientIntensity &&
+    left.killZ === right.killZ &&
     left.gameMode === right.gameMode
   );
 }

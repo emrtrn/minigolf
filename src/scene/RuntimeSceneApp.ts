@@ -64,6 +64,7 @@ import {
   createSceneRuntimeCore,
   DEFAULT_SCENE_BACKGROUND_COLOR,
   DEFAULT_SCENE_GRAVITY,
+  DEFAULT_SCENE_KILL_Z,
   DEFAULT_SCENE_SUN_ID,
   ensureDefaultSceneLights,
   fitDirectionalShadowToBounds,
@@ -394,6 +395,8 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
    */
   private activeGameMode: GameModeDefinition | null = null;
   private gravityY = DEFAULT_SCENE_GRAVITY[1];
+  private killZ = DEFAULT_SCENE_KILL_Z;
+  private readonly pawnRespawnTransforms = new Map<string, TransformComponent>();
   private inputMode: InputMode = "ui";
   /** UMG Lite runtime UI host; null when the layout authors no HUD/pause widget. */
   private uiSubsystem: RuntimeUiSubsystem | null = null;
@@ -577,6 +580,7 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
       this.gamepadInput.poll();
       this.gameModeSession?.beforeEngineUpdate?.(deltaMs / 1000);
       this.engineApp.update(deltaMs / 1000);
+      this.applyKillZ();
       // Consume the `menu` edge after input advances, before the Game Mode reads
       // input, so opening a screen suppresses this frame's camera/movement.
       this.updateUiInput();
@@ -760,8 +764,10 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
     this.activeProject = await loadActiveProject();
     this.assetLoader = new AssetLoader(this.activeProject.manifest);
     this.layout = await loadRoomLayout(this.activeProject.manifest.editor.defaultScene);
-    this.gravityY = resolveSceneWorldSettings(this.layout).gravity[1];
-    this.physicsSubsystem.setGravity(resolveSceneWorldSettings(this.layout).gravity);
+    const worldSettings = resolveSceneWorldSettings(this.layout);
+    this.gravityY = worldSettings.gravity[1];
+    this.killZ = worldSettings.killZ;
+    this.physicsSubsystem.setGravity(worldSettings.gravity);
     this.ensureDefaultLights();
     // Resolve placed Actor Script classes -> entities before models load, so their
     // mesh assets join the load list (loadActorMeshModels reads these entities).
@@ -1422,6 +1428,7 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
     session.spawnDefaultPawn();
     session.possess();
     this.gameModeSession = session;
+    this.cachePawnRespawnTransform(session.playerState.pawnEntityId);
 
     // Characters the Game Mode did not possess keep their single authored clip.
     const possessedEntityId = session.playerState.pawnEntityId;
@@ -1435,6 +1442,46 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
       );
       if (mixer) this.animationSubsystem.add(mixer);
     }
+  }
+
+  private cachePawnRespawnTransform(entityId: string | null): void {
+    if (!entityId) return;
+    const base = this.transformForCharacterEntity(entityId);
+    if (!base) return;
+    const start = this.layout ? findPlayerStartTransform(this.layout) : null;
+    const respawn = cloneTransform(base);
+    if (start) {
+      respawn.position = [...start.position];
+      if (start.yawDeg !== null) respawn.rotation = [0, start.yawDeg, 0];
+    }
+    this.pawnRespawnTransforms.set(entityId, respawn);
+  }
+
+  private applyKillZ(): void {
+    const entityId = this.gameModeSession?.playerState.pawnEntityId;
+    if (!entityId) return;
+    const ref = this.characterRefs.find((candidate) => candidate.entityId === entityId);
+    if (!ref || ref.object.position.y > this.killZ) return;
+    const target = this.pawnRespawnTransforms.get(entityId) ?? this.transformForCharacterEntity(entityId);
+    if (!target) return;
+    const reset = cloneTransform(target);
+    this.locomotionReports.delete(entityId);
+    this.characterMovementSubsystem.resetEntityTransform(entityId, reset);
+    this.syncEntityTransform(entityId, reset);
+  }
+
+  private transformForCharacterEntity(entityId: string): TransformComponent | null {
+    const ref = this.characterRefs.find((candidate) => candidate.entityId === entityId);
+    if (!ref) return null;
+    if (ref.entity) {
+      const transform = readTransformComponent(ref.entity);
+      return transform ? cloneTransform(transform) : null;
+    }
+    return {
+      position: [...ref.placement.position],
+      rotation: readRotation(ref.placement),
+      scale: readScale(ref.placement),
+    };
   }
 
   /**
@@ -2354,6 +2401,14 @@ function parseInstanceEntityId(entityId: string): { assetId: string; placementIn
   return {
     assetId: decodeURIComponent(entityId.slice("instance:".length, separator)),
     placementIndex: index,
+  };
+}
+
+function cloneTransform(transform: TransformComponent): TransformComponent {
+  return {
+    position: [...transform.position],
+    rotation: [...transform.rotation],
+    scale: [...transform.scale],
   };
 }
 

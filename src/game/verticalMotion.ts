@@ -4,8 +4,8 @@
  * one state per entity and feeds it the per-tick inputs, writing the returned
  * `y` into the transform.
  *
- * Floor detection here is a fixed `floorY` (the simple, deterministic option);
- * prop-aware ground probing is deferred to G3 (collision response).
+ * The floor is supplied by the caller. A missing floor leaves the character in
+ * free fall until a ground probe reports a landing surface.
  */
 
 export interface VerticalMotionState {
@@ -22,8 +22,8 @@ export interface VerticalMotionStep {
   readonly gravityY: number;
   /** Upward velocity applied when a grounded jump fires. */
   readonly jumpSpeed: number;
-  /** Floor height the entity rests on / clamps to. */
-  readonly floorY: number;
+  /** Floor height the entity rests on / clamps to. `null` means no floor below. */
+  readonly floorY: number | null;
   /** Tick duration in seconds. */
   readonly dt: number;
   /** True only on the tick the jump action is pressed (edge, not held). */
@@ -38,8 +38,9 @@ export function groundedAt(y: number): VerticalMotionState {
 /**
  * Advances vertical motion one tick: a jump impulse only fires from the ground
  * on the press edge (so there is no mid-air double jump), gravity then
- * integrates the velocity, and crossing the floor clamps back to `floorY` and
- * re-grounds (zeroing velocity). A non-positive `dt` leaves height unchanged.
+ * integrates the velocity, and crossing a supplied floor clamps back to `floorY`
+ * and re-grounds (zeroing velocity). A non-positive `dt` leaves height
+ * unchanged.
  */
 export function stepVerticalMotion(
   prev: VerticalMotionState,
@@ -50,7 +51,7 @@ export function stepVerticalMotion(
   const dt = step.dt > 0 ? step.dt : 0;
   velocityY += step.gravityY * dt;
   let y = prev.y + velocityY * dt;
-  if (y <= step.floorY) {
+  if (step.floorY !== null && y <= step.floorY) {
     return { y: step.floorY, velocityY: 0, grounded: true };
   }
   return { y, velocityY, grounded: false };

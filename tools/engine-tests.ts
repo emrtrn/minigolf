@@ -101,7 +101,13 @@ import {
   resolveSpringArmCollision,
 } from "../src/game/springArmCamera";
 import { groundedAt, stepVerticalMotion } from "../src/game/verticalMotion";
-import { resolvePlanarMovement, type Aabb3 } from "../src/game/collision";
+import {
+  filterWalkableBlockers,
+  findGroundAt,
+  findLandingGround,
+  resolvePlanarMovement,
+  type Aabb3,
+} from "../src/game/collision";
 import {
   applyMiniGolfPutt,
   createMiniGolfBallState,
@@ -217,6 +223,7 @@ import {
   DEFAULT_SCENE_AMBIENT_INTENSITY,
   DEFAULT_SCENE_BACKGROUND_COLOR,
   DEFAULT_SCENE_GRAVITY,
+  DEFAULT_SCENE_KILL_Z,
   DEFAULT_SCENE_LIGHT_COLOR,
   DEFAULT_SCENE_STATIC_OBJECTS_CAST_SHADOWS,
   DEFAULT_SCENE_STATIC_OBJECTS_RECEIVE_SHADOWS,
@@ -546,7 +553,7 @@ const layout: RoomLayout = {
       audio: { clipId: "collision-chime", volume: 0.35, loop: false, spatial: false },
     },
   ],
-  worldSettings: { staticObjectsCastShadow: true, ambientIntensity: 1 },
+  worldSettings: { staticObjectsCastShadow: true, ambientIntensity: 1, killZ: -30 },
 };
 ensureDefaultSceneLights(layout);
 const assetManifest = JSON.parse(
@@ -612,6 +619,7 @@ check("derived entity ids cover every placement/character/light", () => {
 });
 check("world settings preserved", () => {
   assert.equal(doc.worldSettings?.ambientIntensity, layout.worldSettings?.ambientIntensity);
+  assert.equal(doc.worldSettings?.killZ, layout.worldSettings?.killZ);
 });
 
 check("scene runtime world settings resolve defaults and layout overrides", () => {
@@ -622,6 +630,7 @@ check("scene runtime world settings resolve defaults and layout overrides", () =
     ambientColor: DEFAULT_SCENE_AMBIENT_COLOR,
     ambientIntensity: DEFAULT_SCENE_AMBIENT_INTENSITY,
     gravity: DEFAULT_SCENE_GRAVITY,
+    killZ: DEFAULT_SCENE_KILL_Z,
   });
 
   assert.deepEqual(
@@ -638,6 +647,7 @@ check("scene runtime world settings resolve defaults and layout overrides", () =
         ambientColor: "#202020",
         ambientIntensity: 0.4,
         gravity: [0, -20, 0],
+        killZ: -35,
       },
     }),
     {
@@ -647,6 +657,7 @@ check("scene runtime world settings resolve defaults and layout overrides", () =
       ambientColor: "#202020",
       ambientIntensity: 0.4,
       gravity: [0, -20, 0],
+      killZ: -35,
     },
   );
 });
@@ -4362,16 +4373,17 @@ check("input-move behavior: Space jumps from the ground, then gravity returns it
   assert.ok(landedAgain);
 });
 
-check("save validator allowlist keeps a valid worldSettings.gravity, rejects a bad one", () => {
+check("save validator allowlist keeps valid world gravity and killZ, rejects bad values", () => {
   const layout = validateLayout({
     schema: 1,
     name: "g2-gravity",
     loadGroups: [],
     instances: [],
     characters: [],
-    worldSettings: { gravity: [0, -12.5, 0] },
+    worldSettings: { gravity: [0, -12.5, 0], killZ: -25.25 },
   }) as RoomLayout;
   assert.deepEqual(layout.worldSettings?.gravity, [0, -12.5, 0]);
+  assert.equal(layout.worldSettings?.killZ, -25.25);
 
   assert.throws(() =>
     validateLayout({
@@ -4381,6 +4393,16 @@ check("save validator allowlist keeps a valid worldSettings.gravity, rejects a b
       instances: [],
       characters: [],
       worldSettings: { gravity: [0, -12.5] },
+    }),
+  );
+  assert.throws(() =>
+    validateLayout({
+      schema: 1,
+      name: "bad-kill-z",
+      loadGroups: [],
+      instances: [],
+      characters: [],
+      worldSettings: { killZ: "low" },
     }),
   );
 });
@@ -4712,6 +4734,22 @@ check("miniGolf: drag aim clamps power and normalizes diagonal direction", () =>
   assert.ok(Math.abs(Math.hypot(aim.direction[0], aim.direction[1]) - 1) <= 1e-12);
   assert.ok(aim.direction[0] > 0);
   assert.ok(aim.direction[1] < 0);
+});
+
+check("ground probe finds walkable tops, landing crossings, and filters step-height blockers", () => {
+  const floor: Aabb3 = { min: [-5, -0.2, -5], max: [5, 0, 5] };
+  const lowPlatform: Aabb3 = { min: [-0.5, 0, -0.5], max: [0.5, 0.3, 0.5] };
+  const wall: Aabb3 = { min: [1, 0, -0.5], max: [1.5, 1.2, 0.5] };
+  const options = {
+    footprintHalf: [0.25, 0.25] as [number, number],
+    maxStepUp: 0.45,
+    maxStepDown: 0.2,
+  };
+
+  assert.equal(findGroundAt([0, 0, 0], [floor, lowPlatform], options)?.floorY, 0.3);
+  assert.equal(findGroundAt([2, 0.3, 0], [lowPlatform], options), null);
+  assert.equal(findLandingGround(1.1, 0.2, [0, 0.2, 0], [lowPlatform], options)?.floorY, 0.3);
+  assert.deepEqual(filterWalkableBlockers(0, [floor, lowPlatform, wall], 0.45), [wall]);
 });
 
 check("physics subsystem exposes static blocker AABBs and collider half-extents", () => {
@@ -7016,6 +7054,59 @@ check("CharacterMovement subsystem applies jump and gravity from component props
     landed = transform?.position[1] === 0;
   }
   assert.equal(landed, true);
+});
+
+check("CharacterMovement subsystem steps onto low platforms and falls off unsupported edges", () => {
+  const actions = new ActionMap({ KeyW: "move-forward" });
+  const platform: Aabb3 = { min: [-0.5, 0, -0.5], max: [0.5, 0.3, 0.5] };
+  const physics = {
+    staticBlockerAabbs: () => [platform],
+    colliderHalfExtents: () => [0.3, 0.9, 0.3] as [number, number, number],
+  };
+  const entity: Entity = {
+    id: "actor:platformer",
+    components: {
+      Transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+      CharacterMovement: {
+        maxWalkSpeed: 4,
+        sprintMultiplier: 2,
+        jumpSpeed: 5,
+        gravityScale: 1,
+        capsuleRadius: 0.3,
+        capsuleHalfHeight: 0.9,
+        maxStepHeight: 0.45,
+      },
+    },
+  };
+  let transform: TransformComponent | null = null;
+  let report: LocomotionInput | null = null;
+  const movement = new CharacterMovementSubsystem(
+    actions,
+    (_id, next) => {
+      transform = next;
+    },
+    physics,
+    {
+      getGravityY: () => -10,
+      isPlayerControlled: () => true,
+      reportLocomotion: (_id, next) => {
+        report = next;
+      },
+    },
+  );
+  movement.setEntities([entity]);
+
+  actions.advance();
+  movement.update({ deltaSeconds: 1 / 60, elapsedSeconds: 1 / 60, frame: 1 });
+  assert.equal((transform ?? assert.fail("transform")).position[1], 0.3);
+  assert.equal(report?.grounded, true);
+
+  actions.handleDown("KeyW");
+  actions.advance();
+  movement.update({ deltaSeconds: 0.5, elapsedSeconds: 0.5, frame: 2 });
+  assert.ok((transform ?? assert.fail("transform")).position[2] < -0.5);
+  assert.ok(transform.position[1] < 0.3);
+  assert.equal(report?.grounded, false);
 });
 
 check("applyMouseLook turns with the pointer delta and clamps pitch", () => {

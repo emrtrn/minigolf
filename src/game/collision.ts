@@ -27,6 +27,21 @@ export interface PlanarDelta {
   readonly dz: number;
 }
 
+export interface GroundProbeOptions {
+  /** Half-size of the character footprint on X/Z. */
+  readonly footprintHalf: readonly [number, number];
+  /** Maximum surface height the character can step up to while grounded. */
+  readonly maxStepUp: number;
+  /** Small downward snap distance for walking down shallow steps without falling. */
+  readonly maxStepDown: number;
+}
+
+export interface GroundHit {
+  /** The character root/feet Y that rests on this surface. */
+  readonly floorY: number;
+  readonly blocker: Aabb3;
+}
+
 /** Half-open interval overlap: touching edges (equal) do not count, so a flush slide is allowed. */
 function overlaps(minA: number, maxA: number, minB: number, maxB: number): boolean {
   return minA < maxB && maxA > minB;
@@ -71,4 +86,71 @@ export function resolvePlanarMovement(
   }
 
   return { dx: x - px, dz: z - pz };
+}
+
+export function filterWalkableBlockers(
+  footY: number,
+  blockers: readonly Aabb3[],
+  maxStepUp: number,
+): Aabb3[] {
+  const stepTop = footY + Math.max(0, maxStepUp);
+  return blockers.filter((blocker) => blocker.max[1] > stepTop);
+}
+
+export function findGroundAt(
+  position: readonly [number, number, number],
+  blockers: readonly Aabb3[],
+  options: GroundProbeOptions,
+): GroundHit | null {
+  const [px, py, pz] = position;
+  const [hx, hz] = options.footprintHalf;
+  const minY = py - Math.max(0, options.maxStepDown);
+  const maxY = py + Math.max(0, options.maxStepUp);
+  return highestWalkableSurface(
+    blockers,
+    px,
+    pz,
+    hx,
+    hz,
+    (top) => top >= minY && top <= maxY,
+  );
+}
+
+export function findLandingGround(
+  previousFootY: number,
+  nextFootY: number,
+  position: readonly [number, number, number],
+  blockers: readonly Aabb3[],
+  options: GroundProbeOptions,
+): GroundHit | null {
+  if (nextFootY > previousFootY) return null;
+  const [px, , pz] = position;
+  const [hx, hz] = options.footprintHalf;
+  return highestWalkableSurface(
+    blockers,
+    px,
+    pz,
+    hx,
+    hz,
+    (top) => top <= previousFootY && top >= nextFootY,
+  );
+}
+
+function highestWalkableSurface(
+  blockers: readonly Aabb3[],
+  px: number,
+  pz: number,
+  hx: number,
+  hz: number,
+  acceptsTop: (top: number) => boolean,
+): GroundHit | null {
+  let best: GroundHit | null = null;
+  for (const blocker of blockers) {
+    if (!overlaps(px - hx, px + hx, blocker.min[0], blocker.max[0])) continue;
+    if (!overlaps(pz - hz, pz + hz, blocker.min[2], blocker.max[2])) continue;
+    const top = blocker.max[1];
+    if (!acceptsTop(top)) continue;
+    if (!best || top > best.floorY) best = { floorY: top, blocker };
+  }
+  return best;
 }

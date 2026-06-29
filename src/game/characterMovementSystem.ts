@@ -11,7 +11,13 @@ import {
   rotateYawToward,
 } from "./playerMovement";
 import { groundedAt, stepVerticalMotion, type VerticalMotionState } from "./verticalMotion";
-import { resolvePlanarMovement, type PlanarDelta } from "./collision";
+import {
+  filterWalkableBlockers,
+  findGroundAt,
+  findLandingGround,
+  resolvePlanarMovement,
+  type PlanarDelta,
+} from "./collision";
 import type { LocomotionInput } from "./locomotionAnimation";
 
 export const CHARACTER_MOVEMENT_SUBSYSTEM_ID = "characterMovement";
@@ -35,6 +41,8 @@ export interface CharacterMovementSubsystemOptions {
 }
 
 const DEFAULT_GRAVITY_Y = -9.81;
+const DEFAULT_MAX_STEP_HEIGHT = 0.45;
+const DEFAULT_MAX_STEP_DOWN = 0.2;
 
 export class CharacterMovementSubsystem implements Subsystem {
   readonly id = CHARACTER_MOVEMENT_SUBSYSTEM_ID;
@@ -75,6 +83,14 @@ export class CharacterMovementSubsystem implements Subsystem {
   clear(): void {
     this.runtimes = [];
     this.vertical.clear();
+  }
+
+  resetEntityTransform(entityId: EntityId, transform: TransformComponent): void {
+    const runtime = this.runtimes.find((entry) => entry.id === entityId);
+    if (!runtime) return;
+    runtime.transform = cloneTransform(transform);
+    const floorY = transform.position[1];
+    this.vertical.set(entityId, { state: groundedAt(floorY), floorY });
   }
 
   update(engine: EngineUpdateContext): void {
@@ -151,13 +167,33 @@ export class CharacterMovementSubsystem implements Subsystem {
       vertical = { state: groundedAt(floorY), floorY };
       this.vertical.set(runtime.id, vertical);
     }
+    const previousY = vertical.state.y;
+    const ground = this.groundAt(runtime);
+    if (vertical.state.grounded) {
+      if (this.actions.pressed("jump")) {
+        vertical.floorY = ground?.floorY ?? vertical.floorY;
+      } else if (ground) {
+        vertical.floorY = ground.floorY;
+        vertical.state = groundedAt(ground.floorY);
+      } else {
+        vertical.floorY = previousY;
+        vertical.state = { y: previousY, velocityY: 0, grounded: false };
+      }
+    }
     vertical.state = stepVerticalMotion(vertical.state, {
       gravityY: this.getGravityY() * movement.gravityScale,
       jumpSpeed: movement.jumpSpeed,
-      floorY: vertical.floorY,
+      floorY: vertical.state.grounded ? vertical.floorY : null,
       dt: engine.deltaSeconds,
       jump: this.actions.pressed("jump"),
     });
+    if (!vertical.state.grounded) {
+      const landing = this.landingGround(runtime, previousY, vertical.state.y);
+      if (landing) {
+        vertical.floorY = landing.floorY;
+        vertical.state = groundedAt(landing.floorY);
+      }
+    }
     runtime.transform.position[1] = vertical.state.y;
     return vertical.state;
   }
@@ -167,11 +203,53 @@ export class CharacterMovementSubsystem implements Subsystem {
     planar: PlanarDelta,
   ): PlanarDelta {
     if (!this.physics) return planar;
-    const blockers = this.physics.staticBlockerAabbs();
+    const blockers = filterWalkableBlockers(
+      runtime.transform.position[1],
+      this.physics.staticBlockerAabbs(),
+      this.maxStepHeight(runtime),
+    );
     if (blockers.length === 0) return planar;
     const half = this.physics.colliderHalfExtents(runtime.id);
     if (!half) return planar;
-    return resolvePlanarMovement(runtime.transform.position, planar, half, blockers);
+    const centerPosition: [number, number, number] = [
+      runtime.transform.position[0],
+      runtime.transform.position[1] + half[1],
+      runtime.transform.position[2],
+    ];
+    return resolvePlanarMovement(centerPosition, planar, half, blockers);
+  }
+
+  private groundAt(runtime: CharacterMovementRuntime) {
+    const blockers = this.physics?.staticBlockerAabbs();
+    if (!blockers || blockers.length === 0) return null;
+    return findGroundAt(runtime.transform.position, blockers, {
+      footprintHalf: this.footprintHalf(runtime),
+      maxStepUp: this.maxStepHeight(runtime),
+      maxStepDown: DEFAULT_MAX_STEP_DOWN,
+    });
+  }
+
+  private landingGround(
+    runtime: CharacterMovementRuntime,
+    previousY: number,
+    nextY: number,
+  ) {
+    const blockers = this.physics?.staticBlockerAabbs();
+    if (!blockers || blockers.length === 0) return null;
+    return findLandingGround(previousY, nextY, runtime.transform.position, blockers, {
+      footprintHalf: this.footprintHalf(runtime),
+      maxStepUp: this.maxStepHeight(runtime),
+      maxStepDown: DEFAULT_MAX_STEP_DOWN,
+    });
+  }
+
+  private footprintHalf(runtime: CharacterMovementRuntime): [number, number] {
+    const radius = Math.max(runtime.movement.capsuleRadius, 0.001);
+    return [radius, radius];
+  }
+
+  private maxStepHeight(runtime: CharacterMovementRuntime): number {
+    return Math.max(runtime.movement.maxStepHeight ?? DEFAULT_MAX_STEP_HEIGHT, 0);
   }
 }
 

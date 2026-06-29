@@ -11,6 +11,7 @@
 import {
   Box3,
   BoxGeometry,
+  BufferGeometry,
   CapsuleGeometry,
   ConeGeometry,
   CylinderGeometry,
@@ -32,7 +33,6 @@ import {
   Vector2,
   Vector3,
   WebGLRenderer,
-  type BufferGeometry,
 } from "three";
 import { MeshoptDecoder } from "meshoptimizer";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -294,6 +294,7 @@ export class StaticMeshEditor {
       this.altDown = false;
       this.markDirty();
       this.renderDetails();
+      if (this.activeTarget === "collision") this.rebuildOverlays();
     });
     controls.addEventListener("objectChange", () => this.onGizmoChange());
     this.scene.add(controls.getHelper());
@@ -541,6 +542,7 @@ export class StaticMeshEditor {
       ${menuItem("add-box", "Add Box Simplified Collision")}
       ${menuItem("add-sphere", "Add Sphere Simplified Collision")}
       ${menuItem("add-capsule", "Add Capsule Simplified Collision")}
+      ${menuItem("add-cylinder", "Add Cylinder Simplified Collision")}
       <div class="sm-menu-sep"></div>
       ${menuItem("kdop10", "Add 10DOP-X Simplified Collision")}
       ${menuItem("kdop10y", "Add 10DOP-Y Simplified Collision")}
@@ -582,6 +584,9 @@ export class StaticMeshEditor {
         break;
       case "add-capsule":
         this.addPrimitive("capsule");
+        break;
+      case "add-cylinder":
+        this.addPrimitive("cylinder");
         break;
       case "delete":
         this.deleteSelected();
@@ -632,11 +637,13 @@ export class StaticMeshEditor {
   private addPrimitive(shape: CollisionPrimitiveShape): void {
     const size = this.modelBounds.getSize(new Vector3());
     const center = this.modelBounds.getCenter(new Vector3());
+    const defaults = defaultPrimitiveTransform(shape, size);
     const primitive: CollisionPrimitive = {
       shape,
-      size: [round(size.x || 1), round(size.y || 1), round(size.z || 1)],
+      size: defaults.size,
     };
     if (center.lengthSq() > 1e-6) primitive.center = [round(center.x), round(center.y), round(center.z)];
+    if (defaults.rotation) primitive.rotation = defaults.rotation;
     this.collision.primitives.push(primitive);
     this.selectedPrimitive = this.collision.primitives.length - 1;
     this.activeTarget = "collision";
@@ -1404,12 +1411,29 @@ function modeButton(mode: GizmoMode, icon: string, title: string): string {
   return `<button type="button" class="sm-tool-btn sm-mode-btn" data-sm-mode="${mode}" title="${title}">${icon}</button>`;
 }
 
-/** Unit-sized solid geometry for a shape (its bounding box is 1×1×1). */
-function unitGeometryForShape(shape: CollisionPrimitiveShape): BufferGeometry {
-  if (shape === "sphere") return new SphereGeometry(0.5, 20, 14);
-  if (shape === "capsule") return new CapsuleGeometry(0.5, 0.0001, 8, 16);
-  if (shape === "cylinder") return new CylinderGeometry(0.5, 0.5, 1, 24);
-  if (shape === "cone") return new ConeGeometry(0.5, 1, 24);
+/** Unit-space solid geometry for a primitive; the root scale stores authored size. */
+function solidGeometryForPrimitive(primitive: CollisionPrimitive): BufferGeometry {
+  if (primitive.shape === "sphere") {
+    const geometry = new SphereGeometry(1, 16, 10);
+    const radius = normalizedSphereRadius(primitive.size);
+    geometry.scale(radius.x, radius.y, radius.z);
+    return geometry;
+  }
+  if (primitive.shape === "capsule") {
+    const dims = normalizedCapsuleDimensions(primitive.size);
+    const length =
+      dims.radiusY > 1e-6 ? Math.max((dims.capCenterY * 2) / dims.radiusY, 0.0001) : 0.0001;
+    const geometry = new CapsuleGeometry(1, length, 6, 12);
+    geometry.scale(dims.radiusX, dims.radiusY, dims.radiusZ);
+    return geometry;
+  }
+  if (primitive.shape === "cylinder") {
+    const dims = normalizedRadialDimensions(primitive.size);
+    const geometry = new CylinderGeometry(1, 1, 1, 16);
+    geometry.scale(dims.radiusX, 1, dims.radiusZ);
+    return geometry;
+  }
+  if (primitive.shape === "cone") return new ConeGeometry(0.5, 1, 24);
   return new BoxGeometry(1, 1, 1);
 }
 
@@ -1418,6 +1442,215 @@ function unitGeometryForUvw(type: UvwMapType): BufferGeometry {
   if (type === "cylinder") return new CylinderGeometry(0.5, 0.5, 1, 24);
   if (type === "planar") return new BoxGeometry(1, 0.01, 1);
   return new BoxGeometry(1, 1, 1);
+}
+
+interface PrimitiveTransformDefaults {
+  size: Vec3;
+  rotation?: Vec3;
+}
+
+interface NormalizedSphereRadius {
+  x: number;
+  y: number;
+  z: number;
+}
+
+interface NormalizedRadialDimensions {
+  radiusX: number;
+  radiusZ: number;
+}
+
+interface NormalizedCapsuleDimensions extends NormalizedRadialDimensions {
+  radiusY: number;
+  capCenterY: number;
+}
+
+const COLLISION_WIRE_STEPS = 24;
+
+function defaultPrimitiveTransform(
+  shape: CollisionPrimitiveShape,
+  boundsSize: Vector3,
+): PrimitiveTransformDefaults {
+  const size: Vec3 = [
+    round(boundsSize.x || 1),
+    round(boundsSize.y || 1),
+    round(boundsSize.z || 1),
+  ];
+  if (shape === "sphere") {
+    const diameter = round(Math.max(size[0], size[1], size[2], 0.001));
+    return { size: [diameter, diameter, diameter] };
+  }
+  if (shape === "capsule" || shape === "cylinder") {
+    return defaultRadialPrimitiveTransform(shape, size);
+  }
+  return { size };
+}
+
+function defaultRadialPrimitiveTransform(
+  shape: "capsule" | "cylinder",
+  boundsSize: Vec3,
+): PrimitiveTransformDefaults {
+  const axes = [boundsSize[0], boundsSize[1], boundsSize[2]];
+  let lengthAxis = 0;
+  for (let index = 1; index < axes.length; index += 1) {
+    if (axes[index]! > axes[lengthAxis]!) lengthAxis = index;
+  }
+  const crossAxes = axes.filter((_, index) => index !== lengthAxis);
+  const diameter = round(Math.max(...crossAxes, 0.001));
+  const minCapsuleHeight = shape === "capsule" ? diameter * 2 : diameter;
+  const height = round(Math.max(axes[lengthAxis]!, minCapsuleHeight, 0.001));
+  const rotation =
+    lengthAxis === 0 ? ([0, 0, 90] as Vec3) : lengthAxis === 2 ? ([90, 0, 0] as Vec3) : undefined;
+  const result: PrimitiveTransformDefaults = { size: [diameter, height, diameter] };
+  if (rotation) result.rotation = rotation;
+  return result;
+}
+
+function normalizedAxis(size: Vec3, index: 0 | 1 | 2): number {
+  return Math.max(Math.abs(size[index] || 1), 0.001);
+}
+
+function normalizedSphereRadius(size: Vec3): NormalizedSphereRadius {
+  const sx = normalizedAxis(size, 0);
+  const sy = normalizedAxis(size, 1);
+  const sz = normalizedAxis(size, 2);
+  const radius = Math.max(sx, sy, sz) / 2;
+  return { x: radius / sx, y: radius / sy, z: radius / sz };
+}
+
+function normalizedRadialDimensions(size: Vec3): NormalizedRadialDimensions {
+  const sx = normalizedAxis(size, 0);
+  const sz = normalizedAxis(size, 2);
+  const radius = Math.max(sx, sz) / 2;
+  return { radiusX: radius / sx, radiusZ: radius / sz };
+}
+
+function normalizedCapsuleDimensions(size: Vec3): NormalizedCapsuleDimensions {
+  const sx = normalizedAxis(size, 0);
+  const sy = normalizedAxis(size, 1);
+  const sz = normalizedAxis(size, 2);
+  const radius = Math.max(sx, sz) / 2;
+  const halfHeight = Math.max(0, sy / 2 - radius);
+  return {
+    radiusX: radius / sx,
+    radiusY: radius / sy,
+    radiusZ: radius / sz,
+    capCenterY: halfHeight / sy,
+  };
+}
+
+function wireGeometryForPrimitive(
+  primitive: CollisionPrimitive,
+  solidGeometry: BufferGeometry,
+): BufferGeometry {
+  const segments = wireSegmentsForPrimitive(primitive);
+  if (!segments) return new EdgesGeometry(solidGeometry);
+  return new BufferGeometry().setFromPoints(
+    segments.map((point) => new Vector3(point[0], point[1], point[2])),
+  );
+}
+
+function wireSegmentsForPrimitive(primitive: CollisionPrimitive): Vec3[] | null {
+  if (primitive.shape === "sphere") return sphereWireSegments(primitive.size);
+  if (primitive.shape === "capsule") return capsuleWireSegments(primitive.size);
+  if (primitive.shape === "cylinder") return cylinderWireSegments(primitive.size);
+  return null;
+}
+
+function sphereWireSegments(size: Vec3): Vec3[] {
+  const radius = normalizedSphereRadius(size);
+  return [
+    ...ellipseSegments("xy", 0, radius.x, radius.y),
+    ...ellipseSegments("xz", 0, radius.x, radius.z),
+    ...ellipseSegments("yz", 0, radius.y, radius.z),
+  ];
+}
+
+function capsuleWireSegments(size: Vec3): Vec3[] {
+  const dims = normalizedCapsuleDimensions(size);
+  if (dims.capCenterY <= 1e-5) return sphereWireSegments(size);
+  return [
+    ...ellipseSegments("xz", -dims.capCenterY, dims.radiusX, dims.radiusZ),
+    ...ellipseSegments("xz", dims.capCenterY, dims.radiusX, dims.radiusZ),
+    ...capsuleProfileSegments("x", dims.capCenterY, dims.radiusX, dims.radiusY),
+    ...capsuleProfileSegments("z", dims.capCenterY, dims.radiusZ, dims.radiusY),
+    [-dims.radiusX, -dims.capCenterY, 0],
+    [-dims.radiusX, dims.capCenterY, 0],
+    [dims.radiusX, -dims.capCenterY, 0],
+    [dims.radiusX, dims.capCenterY, 0],
+    [0, -dims.capCenterY, -dims.radiusZ],
+    [0, dims.capCenterY, -dims.radiusZ],
+    [0, -dims.capCenterY, dims.radiusZ],
+    [0, dims.capCenterY, dims.radiusZ],
+  ];
+}
+
+function cylinderWireSegments(size: Vec3): Vec3[] {
+  const dims = normalizedRadialDimensions(size);
+  const top = ellipseSegments("xz", 0.5, dims.radiusX, dims.radiusZ);
+  const bottom = ellipseSegments("xz", -0.5, dims.radiusX, dims.radiusZ);
+  const verticals: Vec3[] = [];
+  for (let i = 0; i < 8; i += 1) {
+    const angle = (i / 8) * Math.PI * 2;
+    const x = Math.cos(angle) * dims.radiusX;
+    const z = Math.sin(angle) * dims.radiusZ;
+    verticals.push([x, -0.5, z], [x, 0.5, z]);
+  }
+  return [...top, ...bottom, ...verticals];
+}
+
+function ellipseSegments(
+  plane: "xy" | "xz" | "yz",
+  offset: number,
+  radiusA: number,
+  radiusB: number,
+): Vec3[] {
+  const segments: Vec3[] = [];
+  for (let i = 0; i < COLLISION_WIRE_STEPS; i += 1) {
+    const a = (i / COLLISION_WIRE_STEPS) * Math.PI * 2;
+    const b = ((i + 1) / COLLISION_WIRE_STEPS) * Math.PI * 2;
+    segments.push(ellipsePoint(plane, offset, radiusA, radiusB, a));
+    segments.push(ellipsePoint(plane, offset, radiusA, radiusB, b));
+  }
+  return segments;
+}
+
+function ellipsePoint(
+  plane: "xy" | "xz" | "yz",
+  offset: number,
+  radiusA: number,
+  radiusB: number,
+  angle: number,
+): Vec3 {
+  const a = Math.cos(angle) * radiusA;
+  const b = Math.sin(angle) * radiusB;
+  if (plane === "xy") return [a, b, offset];
+  if (plane === "xz") return [a, offset, b];
+  return [offset, a, b];
+}
+
+function capsuleProfileSegments(
+  axis: "x" | "z",
+  capCenterY: number,
+  radiusHorizontal: number,
+  radiusY: number,
+): Vec3[] {
+  const segments: Vec3[] = [];
+  const point = (horizontal: number, y: number): Vec3 =>
+    axis === "x" ? [horizontal, y, 0] : [0, y, horizontal];
+  for (let i = 0; i < COLLISION_WIRE_STEPS / 2; i += 1) {
+    const topA = (i / (COLLISION_WIRE_STEPS / 2)) * Math.PI;
+    const topB = ((i + 1) / (COLLISION_WIRE_STEPS / 2)) * Math.PI;
+    const bottomA = Math.PI + topA;
+    const bottomB = Math.PI + topB;
+    segments.push(
+      point(Math.cos(topA) * radiusHorizontal, capCenterY + Math.sin(topA) * radiusY),
+      point(Math.cos(topB) * radiusHorizontal, capCenterY + Math.sin(topB) * radiusY),
+      point(Math.cos(bottomA) * radiusHorizontal, -capCenterY + Math.sin(bottomA) * radiusY),
+      point(Math.cos(bottomB) * radiusHorizontal, -capCenterY + Math.sin(bottomB) * radiusY),
+    );
+  }
+  return segments;
 }
 
 function buildUvwOverlay(uvw: AssetUvwDef, selected: boolean): PrimitiveOverlay {
@@ -1451,8 +1684,8 @@ function buildPrimitiveOverlay(primitive: CollisionPrimitive, selected: boolean)
   const solidGeometry =
     primitive.shape === "convex" && primitive.points && primitive.points.length >= 4
       ? new ConvexGeometry(primitive.points.map((point) => new Vector3(point[0], point[1], point[2])))
-      : unitGeometryForShape(primitive.shape);
-  const wireGeometry = new EdgesGeometry(solidGeometry);
+      : solidGeometryForPrimitive(primitive);
+  const wireGeometry = wireGeometryForPrimitive(primitive, solidGeometry);
   const wireMaterial = new LineBasicMaterial({
     color: selected ? WIRE_SELECTED_COLOR : WIRE_COLOR,
     depthTest: false,

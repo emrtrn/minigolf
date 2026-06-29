@@ -291,6 +291,8 @@ export interface LayoutWorldSettings {
   ambientIntensity?: number;
   /** World gravity (units/s^2); negative Y pulls down. Absent means the default. */
   gravity?: Vec3;
+  /** World Y threshold that kills/respawns the possessed pawn. Absent means the default. */
+  killZ?: number;
   /**
    * Selected runtime Game Mode id (Unreal's GameMode analogue). Absent means the
    * built-in default camera mode; the runtime resolves unknown ids to that

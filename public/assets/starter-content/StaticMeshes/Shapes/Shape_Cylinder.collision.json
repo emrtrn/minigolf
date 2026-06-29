@@ -1,5 +1,24 @@
 {
-  "primitives": [],
+  "primitives": [
+    {
+      "shape": "cylinder",
+      "size": [
+        1,
+        1,
+        1
+      ],
+      "center": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        -179.96
+      ]
+    }
+  ],
   "complexity": "projectDefault",
   "preset": "blockAll"
 }

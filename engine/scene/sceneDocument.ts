@@ -8,6 +8,7 @@ export interface SceneWorldSettings {
   ambientIntensity?: number;
   staticObjectsCastShadow?: boolean;
   staticObjectsReceiveShadow?: boolean;
+  killZ?: number;
 }
 
 export interface SceneDocument {
