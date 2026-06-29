@@ -58,7 +58,7 @@ function Get-CurrentBranch {
 
 function Get-DirtyStatus {
   param([string]$Repo)
-  return Invoke-Git $Repo @("status", "--porcelain") -Capture
+  return @(Invoke-Git $Repo @("status", "--porcelain") -Capture)
 }
 
 function Get-RemoteUrl {
@@ -99,7 +99,7 @@ function Sync-ForgeMain {
     throw "Forge must be on main before syncing. Current branch: $branch"
   }
 
-  $dirty = Get-DirtyStatus $Repo
+  $dirty = @(Get-DirtyStatus $Repo)
   if ($dirty.Count -gt 0) {
     throw "Forge has uncommitted changes. Commit or stash them first:`n$($dirty -join "`n")"
   }
@@ -170,7 +170,7 @@ function Sync-GameRepo {
     throw "$Repo must be on main before syncing. Current branch: $branch"
   }
 
-  $dirty = Get-DirtyStatus $Repo
+  $dirty = @(Get-DirtyStatus $Repo)
   if ($dirty.Count -gt 0) {
     throw "$Repo has uncommitted changes. Commit or stash them first:`n$($dirty -join "`n")"
   }
