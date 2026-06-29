@@ -1,5 +1,45 @@
 {
-  "primitives": [],
-  "complexity": "complexAsSimple",
+  "primitives": [
+    {
+      "shape": "box",
+      "size": [
+        0.0965,
+        0.0851,
+        0.9999
+      ],
+      "center": [
+        0.4556,
+        0.0994,
+        0
+      ]
+    },
+    {
+      "shape": "box",
+      "size": [
+        0.9999,
+        0.0751,
+        0.9999
+      ],
+      "center": [
+        0,
+        0.0255,
+        0
+      ]
+    },
+    {
+      "shape": "box",
+      "size": [
+        0.0965,
+        0.0851,
+        0.9999
+      ],
+      "center": [
+        -0.4506,
+        0.0994,
+        0
+      ]
+    }
+  ],
+  "complexity": "projectDefault",
   "preset": "blockAll"
 }

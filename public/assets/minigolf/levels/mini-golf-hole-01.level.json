@@ -1608,6 +1608,10 @@
           "scale": 1
         }
       ]
+    },
+    {
+      "assetId": "minigolf-hill-square",
+      "placements": []
     }
   ],
   "characters": [],
@@ -1753,6 +1757,9 @@
     "skyLightCapture": {
       "intensity": 0.45
     }
+  },
+  "cloudLayer": {
+    "density": 0.5
   },
   "postProcess": {
     "toneMapping": "aces",

@@ -1,5 +1,63 @@
 {
-  "primitives": [],
-  "complexity": "complexAsSimple",
+  "primitives": [
+    {
+      "shape": "box",
+      "size": [
+        0.0976,
+        0.138,
+        0.9999
+      ],
+      "center": [
+        0.4498,
+        0.0975,
+        0
+      ]
+    },
+    {
+      "shape": "box",
+      "size": [
+        0.9999,
+        0.072,
+        0.9999
+      ],
+      "center": [
+        0,
+        0.0283,
+        0
+      ]
+    },
+    {
+      "shape": "box",
+      "size": [
+        0.0976,
+        0.138,
+        0.9999
+      ],
+      "center": [
+        -0.4487,
+        0.0975,
+        0
+      ]
+    },
+    {
+      "shape": "cylinder",
+      "size": [
+        0.6924,
+        0.9999,
+        0.1524
+      ],
+      "center": [
+        0,
+        -0.1855,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        90
+      ]
+    }
+  ],
+  "complexity": "projectDefault",
   "preset": "blockAll"
 }
