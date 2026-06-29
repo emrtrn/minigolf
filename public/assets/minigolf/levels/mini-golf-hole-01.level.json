@@ -29,7 +29,7 @@
         {
           "position": [
             0,
-            0,
+            -0.18,
             0
           ],
           "name": "Tee Start",
@@ -48,7 +48,7 @@
         {
           "position": [
             0,
-            0,
+            -0.18,
             -1
           ],
           "name": "Fairway 01",
@@ -58,7 +58,7 @@
         {
           "position": [
             0,
-            0,
+            -0.18,
             -2
           ],
           "name": "Fairway 02",
@@ -68,7 +68,7 @@
         {
           "position": [
             0,
-            0,
+            -0.18,
             -3
           ],
           "name": "Fairway 03",
@@ -78,7 +78,7 @@
         {
           "position": [
             0,
-            0,
+            -0.18,
             -5
           ],
           "name": "Fairway 03",
@@ -88,7 +88,7 @@
         {
           "position": [
             0,
-            0,
+            -0.18,
             -6
           ],
           "name": "Fairway 03",
@@ -98,7 +98,7 @@
         {
           "position": [
             0,
-            0,
+            -0.18,
             -7
           ],
           "name": "Fairway 03",
@@ -113,7 +113,7 @@
         {
           "position": [
             0,
-            0,
+            -0.18,
             -8
           ],
           "name": "Cup Trigger Visual",
@@ -134,7 +134,7 @@
         {
           "position": [
             0,
-            0,
+            -0.18,
             -9
           ],
           "name": "Hole End",
@@ -166,7 +166,7 @@
         {
           "position": [
             0,
-            0.18,
+            0,
             0.7
           ],
           "name": "Ball Spawn Visual",
@@ -186,7 +186,7 @@
         {
           "position": [
             0,
-            0.2,
+            0.02,
             -8
           ],
           "name": "Cup Flag",
@@ -210,7 +210,7 @@
         {
           "position": [
             0,
-            0,
+            -0.18,
             -4
           ],
           "rotationYDeg": 0,
@@ -223,7 +223,6 @@
   "worldSettings": {
     "staticObjectsCastShadow": true,
     "backgroundColor": "#9fd4ff",
-    "ambientColor": "#ffffff",
     "ambientIntensity": 0.65,
     "gravity": [
       0,
