@@ -103,6 +103,13 @@ import {
 import { groundedAt, stepVerticalMotion } from "../src/game/verticalMotion";
 import { resolvePlanarMovement, type Aabb3 } from "../src/game/collision";
 import {
+  applyMiniGolfPutt,
+  createMiniGolfBallState,
+  miniGolfSurfaceHeight,
+  stepMiniGolfBall,
+  type MiniGolfCourse,
+} from "../src/game/miniGolfBallPhysics";
+import {
   classifyLocomotion,
   locomotionConfigForSkeleton,
   pickLocomotionBlendSpace,
@@ -4412,6 +4419,82 @@ check("resolvePlanarMovement: stops at the blocker in the path among several", (
   const far: Aabb3 = { min: [3, -1, -5], max: [4, 1, 5] };
   const moved = resolvePlanarMovement([0, 0, 0], { dx: 1.2, dz: 0 }, [0.5, 0.5, 0.5], [far, near]);
   assert.ok(Math.abs(moved.dx) <= 1e-12); // flush against the near wall (x stays 0)
+});
+
+// Mini Golf v1 vertical-slice physics: pure, deterministic, no Three/DOM/Rapier.
+check("miniGolf: putt normalizes direction, clamps power, and clears rest", () => {
+  const ball = applyMiniGolfPutt(createMiniGolfBallState([0, 0, 0]), [10, 0], 2, {
+    maxPuttSpeed: 6,
+    puttPowerExponent: 1,
+  });
+  assert.equal(ball.resting, false);
+  assert.ok(Math.abs(ball.vel[0] - 6) <= 1e-12);
+  assert.equal(ball.vel[2], 0);
+});
+
+check("miniGolf: rolling friction brings the ball to rest deterministically", () => {
+  const course: MiniGolfCourse = {};
+  const ball = stepMiniGolfBall(createMiniGolfBallState([0, 0, 0], [1, 0, 0]), course, 2, {
+    rollingFriction: 1,
+    restSpeed: 0.04,
+  });
+  assert.equal(ball.resting, true);
+  assert.ok(Math.abs(ball.vel[0]) <= 1e-12);
+  assert.ok(ball.pos[0] > 0.45 && ball.pos[0] < 0.55);
+});
+
+check("miniGolf: slope accelerates the ball downhill and updates surface height", () => {
+  const course: MiniGolfCourse = {
+    defaultSurface: { height: 1, slope: [0.1, 0], friction: 0 },
+  };
+  const ball = stepMiniGolfBall(createMiniGolfBallState([0, 1, 0]), course, 0.25, {
+    rollingFriction: 0,
+  });
+  assert.equal(ball.resting, false);
+  assert.ok(ball.vel[0] < 0);
+  assert.ok(ball.pos[0] < 0);
+  assert.equal(ball.pos[1], miniGolfSurfaceHeight(course.defaultSurface!, ball.pos[0], ball.pos[2]));
+});
+
+check("miniGolf: AABB walls bounce the ball with restitution", () => {
+  const course: MiniGolfCourse = {
+    walls: [{ bounds: { min: [0.9, -1], max: [1.1, 1] }, restitution: 0.5 }],
+  };
+  const ball = stepMiniGolfBall(createMiniGolfBallState([0, 0, 0], [2, 0, 0]), course, 0.5, {
+    ballRadius: 0.1,
+    rollingFriction: 0,
+  });
+  assert.ok(ball.pos[0] < 0.85);
+  assert.ok(ball.vel[0] < 0);
+  assert.ok(Math.abs(ball.vel[0] + 1) <= 1e-9);
+});
+
+check("miniGolf: cup captures slow balls and lets fast lip-outs pass", () => {
+  const course: MiniGolfCourse = {
+    cup: { center: [1, 0, 0], radius: 0.25, captureSpeed: 0.7 },
+  };
+  const slow = stepMiniGolfBall(createMiniGolfBallState([0.7, 0, 0], [0.4, 0, 0]), course, 1, {
+    rollingFriction: 0,
+  });
+  assert.equal(slow.inCup, true);
+  assert.deepEqual(slow.pos, [1, 0, 0]);
+
+  const fast = stepMiniGolfBall(createMiniGolfBallState([0.7, 0, 0], [2, 0, 0]), course, 0.5, {
+    rollingFriction: 0,
+  });
+  assert.equal(fast.inCup, false);
+  assert.ok(fast.pos[0] > 1.2);
+});
+
+check("miniGolf: out-of-bounds resets to the last safe position and adds a penalty", () => {
+  const course: MiniGolfCourse = { bounds: { min: [-1, -1], max: [1, 1] } };
+  const ball = stepMiniGolfBall(createMiniGolfBallState([0, 0, 0], [3, 0, 0]), course, 1, {
+    rollingFriction: 0,
+  });
+  assert.equal(ball.outOfBounds, true);
+  assert.equal(ball.penaltyStrokes, 1);
+  assert.equal(ball.resting, true);
+  assert.deepEqual(ball.pos, [0, 0, 0]);
 });
 
 check("physics subsystem exposes static blocker AABBs and collider half-extents", () => {

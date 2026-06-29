@@ -1,7 +1,7 @@
 # Mini Golf — Oyun Tasarım Dokümanı (GDD)
 
 > Tarih: 2026-06-26
-> Durum: Tasarım / v1 planı. Kod uygulanmadı.
+> Durum: Faz 0 uygulamada. Top fiziği saf çekirdeği eklendi; runtime dikey dilimi devam ediyor.
 > Amaç: Forge platformu üzerine kurulacak **ilk oyun** olan Mini Golf'ün
 > vizyonunu, oynanışını, fizik modelini, kapsamını ve Forge uyum sınırlarını
 > tanımlamak.
@@ -242,8 +242,10 @@ Bu katman zaten data-driven ve headless; mini golf kuralları bir
 ## 10. Kapsam ve faz planı
 
 ### Faz 0 — Dikey dilim (1 delik)
-- [ ] Top fiziği saf çekirdek (sürtünme, eğim, duvar sekme, rest, delik
-      yakalama) + birim testleri.
+- [x] Top fiziği saf çekirdek (sürtünme, eğim, duvar sekme, rest, delik
+      yakalama) + birim testleri. `2026-06-29`: `src/game/miniGolfBallPhysics.ts`
+      eklendi; engine testleri eklendi. Not: tam `npm run test:engine` koşusu mevcut
+      asset manifest eksikleri nedeniyle erken duruyor.
 - [ ] Sürükle-güç girdisi + güç/yön HUD.
 - [ ] Yörünge kamera (orbit + takip).
 - [ ] 1 elle kurulmuş delik layout'u (tee → yol → delik, birkaç engel).
