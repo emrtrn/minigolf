@@ -79,16 +79,6 @@
           "position": [
             0,
             0,
-            -4
-          ],
-          "name": "Fairway 03",
-          "rotationYDeg": 0,
-          "scale": 1
-        },
-        {
-          "position": [
-            0,
-            0,
             -5
           ],
           "name": "Fairway 03",
@@ -213,6 +203,20 @@
     {
       "assetId": "minigolf-corner",
       "placements": []
+    },
+    {
+      "assetId": "minigolf-hill-round",
+      "placements": [
+        {
+          "position": [
+            0,
+            0,
+            -4
+          ],
+          "rotationYDeg": 0,
+          "scale": 1
+        }
+      ]
     }
   ],
   "characters": [],
