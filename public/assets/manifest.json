@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated": "2026-06-19",
+  "generated": "2026-06-29",
   "ktx2": false,
   "assets": [
     {
@@ -25262,6 +25262,4346 @@
         "bytes": 7620504
       },
       "license": "Unknown"
+    },
+    {
+      "id": "minigolf-ball-blue",
+      "name": "Ball Blue",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/ball-blue.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "ball",
+        "blue"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 58356
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-ball-green",
+      "name": "Ball Green",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/ball-green.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "ball",
+        "green"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 58360
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-ball-red",
+      "name": "Ball Red",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/ball-red.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "ball",
+        "red"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 58356
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-block-borders",
+      "name": "Block Borders",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/block-borders.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "block",
+        "borders"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 4144
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-block",
+      "name": "Block",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/block.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "block"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 2900
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-bump-down-walls",
+      "name": "Bump Down Walls",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/bump-down-walls.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "bump",
+        "down",
+        "walls"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 11364
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-bump-down",
+      "name": "Bump Down",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/bump-down.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "bump",
+        "down"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 10144
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-bump-walls",
+      "name": "Bump Walls",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/bump-walls.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "bump",
+        "walls"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 12580
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-bump",
+      "name": "Bump",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/bump.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "bump"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 11364
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-castle",
+      "name": "Castle",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/castle.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "castle"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 16760
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-club-blue",
+      "name": "Club Blue",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/club-blue.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "club",
+        "blue"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 11680
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-club-green",
+      "name": "Club Green",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/club-green.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "club",
+        "green"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 11344
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-club-red",
+      "name": "Club Red",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/club-red.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "club",
+        "red"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 11340
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-corner",
+      "name": "Corner",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/corner.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "corner"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 3792
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-crest",
+      "name": "Crest",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/crest.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "crest"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 5304
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-end",
+      "name": "End",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/end.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "end"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 4080
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-flag-blue",
+      "name": "Flag Blue",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/flag-blue.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "flag",
+        "blue"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 9388
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-flag-green",
+      "name": "Flag Green",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/flag-green.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "flag",
+        "green"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 9392
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-flag-large-blue",
+      "name": "Flag Large Blue",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/flag-large-blue.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "flag",
+        "large",
+        "blue"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 9408
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-flag-large-green",
+      "name": "Flag Large Green",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/flag-large-green.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "flag",
+        "large",
+        "green"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 9412
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-flag-large-red",
+      "name": "Flag Large Red",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/flag-large-red.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "flag",
+        "large",
+        "red"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 9404
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-flag-red",
+      "name": "Flag Red",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/flag-red.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "flag",
+        "red"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 9384
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-gap",
+      "name": "Gap",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/gap.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "gap"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 6500
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-hill-corner",
+      "name": "Hill Corner",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/hill-corner.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "hill",
+        "corner"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 4528
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-hill-round",
+      "name": "Hill Round",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/hill-round.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "hill",
+        "round"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 15976
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-hill-square",
+      "name": "Hill Square",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/hill-square.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "hill",
+        "square"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 4716
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-hole-open",
+      "name": "Hole Open",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/hole-open.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "hole",
+        "open"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 5304
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-hole-round",
+      "name": "Hole Round",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/hole-round.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "hole",
+        "round"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 13116
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-hole-square",
+      "name": "Hole Square",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/hole-square.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "hole",
+        "square"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 6512
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-inner-corner",
+      "name": "Inner Corner",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/inner-corner.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "inner",
+        "corner"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 3808
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-narrow-block",
+      "name": "Narrow Block",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/narrow-block.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "narrow",
+        "block"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 7108
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-narrow-round",
+      "name": "Narrow Round",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/narrow-round.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "narrow",
+        "round"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 9400
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-narrow-square",
+      "name": "Narrow Square",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/narrow-square.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "narrow",
+        "square"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 5112
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-obstacle-block",
+      "name": "Obstacle Block",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/obstacle-block.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "obstacle",
+        "block"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 6108
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-obstacle-diamond",
+      "name": "Obstacle Diamond",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/obstacle-diamond.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "obstacle",
+        "diamond"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 4912
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-obstacle-triangle",
+      "name": "Obstacle Triangle",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/obstacle-triangle.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "obstacle",
+        "triangle"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 5904
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-open",
+      "name": "Open",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/open.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "open"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 2884
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-ramp-high",
+      "name": "Ramp High",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/ramp-high.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "ramp",
+        "high"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 4132
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-ramp-large-side",
+      "name": "Ramp Large Side",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/ramp-large-side.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "ramp",
+        "large",
+        "side"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 22632
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-ramp-large",
+      "name": "Ramp Large",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/ramp-large.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "ramp",
+        "large"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 29508
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-ramp-low",
+      "name": "Ramp Low",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/ramp-low.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "ramp",
+        "low"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 4128
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-ramp-medium",
+      "name": "Ramp Medium",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/ramp-medium.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "ramp",
+        "medium"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 4132
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-ramp-sharp",
+      "name": "Ramp Sharp",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/ramp-sharp.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "ramp",
+        "sharp"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 4512
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-ramp-side",
+      "name": "Ramp Side",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/ramp-side.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "ramp",
+        "side"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 22616
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-ramp-square",
+      "name": "Ramp Square",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/ramp-square.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "ramp",
+        "square"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 4816
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-ramp",
+      "name": "Ramp",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/ramp.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "ramp"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 29488
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-round-corner-a",
+      "name": "Round Corner A",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/round-corner-a.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "round",
+        "corner",
+        "a"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 10776
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-round-corner-b",
+      "name": "Round Corner B",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/round-corner-b.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "round",
+        "corner",
+        "b"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 7112
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-round-corner-c",
+      "name": "Round Corner C",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/round-corner-c.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "round",
+        "corner",
+        "c"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 9876
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-round-large-corner-open",
+      "name": "Round Large Corner Open",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/round-large-corner-open.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "round",
+        "large",
+        "corner",
+        "open"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 9836
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-round-large-corner",
+      "name": "Round Large Corner",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/round-large-corner.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "round",
+        "large",
+        "corner"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 17940
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-side",
+      "name": "Side",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/side.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "side"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 3484
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-skew-corner",
+      "name": "Skew Corner",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/skew-corner.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "skew",
+        "corner"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 11364
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-skew-large-corner-open",
+      "name": "Skew Large Corner Open",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/skew-large-corner-open.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "skew",
+        "large",
+        "corner",
+        "open"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 10500
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-skew-large-corner",
+      "name": "Skew Large Corner",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/skew-large-corner.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "skew",
+        "large",
+        "corner"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 19248
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave-cap-back",
+      "name": "Spline Concave Cap Back",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave-cap-back.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave",
+        "cap",
+        "back"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 2524
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave-cap-front",
+      "name": "Spline Concave Cap Front",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave-cap-front.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave",
+        "cap",
+        "front"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 2532
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave-corner-large-ramp",
+      "name": "Spline Concave Corner Large Ramp",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave-corner-large-ramp.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave",
+        "corner",
+        "large",
+        "ramp"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 41628
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave-corner-large",
+      "name": "Spline Concave Corner Large",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave-corner-large.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave",
+        "corner",
+        "large"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 41564
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave-corner-small-ramp",
+      "name": "Spline Concave Corner Small Ramp",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave-corner-small-ramp.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave",
+        "corner",
+        "small",
+        "ramp"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 25284
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave-corner-small",
+      "name": "Spline Concave Corner Small",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave-corner-small.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave",
+        "corner",
+        "small"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 25232
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave-curve",
+      "name": "Spline Concave Curve",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave-curve.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave",
+        "curve"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 30628
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave-looping",
+      "name": "Spline Concave Looping",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave-looping.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave",
+        "looping"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 74276
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave-straight-bend-large",
+      "name": "Spline Concave Straight Bend Large",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave-straight-bend-large.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave",
+        "straight",
+        "bend",
+        "large"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 41600
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave-straight-bend",
+      "name": "Spline Concave Straight Bend",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave-straight-bend.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave",
+        "straight",
+        "bend"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 25236
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave-straight-bump-down",
+      "name": "Spline Concave Straight Bump Down",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave-straight-bump-down.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave",
+        "straight",
+        "bump",
+        "down"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 30700
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave-straight-bump-up",
+      "name": "Spline Concave Straight Bump Up",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave-straight-bump-up.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave",
+        "straight",
+        "bump",
+        "up"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 30692
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave-straight-hill-beginning",
+      "name": "Spline Concave Straight Hill Beginning",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave-straight-hill-beginning.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave",
+        "straight",
+        "hill",
+        "beginning"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 30732
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave-straight-hill-complete-half",
+      "name": "Spline Concave Straight Hill Complete Half",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave-straight-hill-complete-half.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave",
+        "straight",
+        "hill",
+        "complete",
+        "half"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 30728
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave-straight-hill-complete",
+      "name": "Spline Concave Straight Hill Complete",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave-straight-hill-complete.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave",
+        "straight",
+        "hill",
+        "complete"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 30712
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave-straight-hill-end",
+      "name": "Spline Concave Straight Hill End",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave-straight-hill-end.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave",
+        "straight",
+        "hill",
+        "end"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 30728
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave-straight-skew-left-side",
+      "name": "Spline Concave Straight Skew Left Side",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave-straight-skew-left-side.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave",
+        "straight",
+        "skew",
+        "left",
+        "side"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 30732
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave-straight-skew-left",
+      "name": "Spline Concave Straight Skew Left",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave-straight-skew-left.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave",
+        "straight",
+        "skew",
+        "left"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 30716
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave-straight-skew-right-side",
+      "name": "Spline Concave Straight Skew Right Side",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave-straight-skew-right-side.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave",
+        "straight",
+        "skew",
+        "right",
+        "side"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 30736
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave-straight-skew-right",
+      "name": "Spline Concave Straight Skew Right",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave-straight-skew-right.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave",
+        "straight",
+        "skew",
+        "right"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 30716
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave-straight",
+      "name": "Spline Concave Straight",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave-straight.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave",
+        "straight"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 30636
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-concave",
+      "name": "Spline Concave",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-concave.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "concave"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 7020
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default-cap-back",
+      "name": "Spline Default Cap Back",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default-cap-back.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default",
+        "cap",
+        "back"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 2160
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default-cap-front",
+      "name": "Spline Default Cap Front",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default-cap-front.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default",
+        "cap",
+        "front"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 2168
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default-corner-large-ramp",
+      "name": "Spline Default Corner Large Ramp",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default-corner-large-ramp.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default",
+        "corner",
+        "large",
+        "ramp"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 20864
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default-corner-large",
+      "name": "Spline Default Corner Large",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default-corner-large.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default",
+        "corner",
+        "large"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 20796
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default-corner-small-ramp",
+      "name": "Spline Default Corner Small Ramp",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default-corner-small-ramp.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default",
+        "corner",
+        "small",
+        "ramp"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 12664
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default-corner-small",
+      "name": "Spline Default Corner Small",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default-corner-small.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default",
+        "corner",
+        "small"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 12616
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default-curve",
+      "name": "Spline Default Curve",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default-curve.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default",
+        "curve"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 15576
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default-looping",
+      "name": "Spline Default Looping",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default-looping.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default",
+        "looping"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 36368
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default-straight-bend-large",
+      "name": "Spline Default Straight Bend Large",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default-straight-bend-large.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default",
+        "straight",
+        "bend",
+        "large"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 20836
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default-straight-bend",
+      "name": "Spline Default Straight Bend",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default-straight-bend.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default",
+        "straight",
+        "bend"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 12620
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default-straight-bump-down",
+      "name": "Spline Default Straight Bump Down",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default-straight-bump-down.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default",
+        "straight",
+        "bump",
+        "down"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 15652
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default-straight-bump-up",
+      "name": "Spline Default Straight Bump Up",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default-straight-bump-up.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default",
+        "straight",
+        "bump",
+        "up"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 15644
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default-straight-hill-beginning",
+      "name": "Spline Default Straight Hill Beginning",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default-straight-hill-beginning.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default",
+        "straight",
+        "hill",
+        "beginning"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 15680
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default-straight-hill-complete-half",
+      "name": "Spline Default Straight Hill Complete Half",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default-straight-hill-complete-half.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default",
+        "straight",
+        "hill",
+        "complete",
+        "half"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 15676
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default-straight-hill-complete",
+      "name": "Spline Default Straight Hill Complete",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default-straight-hill-complete.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default",
+        "straight",
+        "hill",
+        "complete"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 15660
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default-straight-hill-end",
+      "name": "Spline Default Straight Hill End",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default-straight-hill-end.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default",
+        "straight",
+        "hill",
+        "end"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 15676
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default-straight-skew-left-side",
+      "name": "Spline Default Straight Skew Left Side",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default-straight-skew-left-side.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default",
+        "straight",
+        "skew",
+        "left",
+        "side"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 15680
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default-straight-skew-left",
+      "name": "Spline Default Straight Skew Left",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default-straight-skew-left.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default",
+        "straight",
+        "skew",
+        "left"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 15664
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default-straight-skew-right-side",
+      "name": "Spline Default Straight Skew Right Side",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default-straight-skew-right-side.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default",
+        "straight",
+        "skew",
+        "right",
+        "side"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 15684
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default-straight-skew-right",
+      "name": "Spline Default Straight Skew Right",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default-straight-skew-right.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default",
+        "straight",
+        "skew",
+        "right"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 15664
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default-straight",
+      "name": "Spline Default Straight",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default-straight.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default",
+        "straight"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 15588
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-spline-default",
+      "name": "Spline Default",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/spline-default.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "spline",
+        "default"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 4220
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-split-start",
+      "name": "Split Start",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/split-start.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "split",
+        "start"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 6200
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-split-t",
+      "name": "Split T",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/split-t.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "split",
+        "t"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 5204
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-split-walls-to-open",
+      "name": "Split Walls To Open",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/split-walls-to-open.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "split",
+        "walls",
+        "to",
+        "open"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 6124
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-split",
+      "name": "Split",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/split.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "split"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 5892
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-square-corner-a",
+      "name": "Square Corner A",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/square-corner-a.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "square",
+        "corner",
+        "a"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 8228
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-start",
+      "name": "Start",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/start.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "start"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 5088
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-straight",
+      "name": "Straight",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/straight.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "straight"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 4096
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-structure-gate-building",
+      "name": "Structure Gate Building",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/structure-gate-building.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "structure",
+        "gate",
+        "building"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 13880
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-structure-gate-wide",
+      "name": "Structure Gate Wide",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/structure-gate-wide.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "structure",
+        "gate",
+        "wide"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 4644
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-structure-gate",
+      "name": "Structure Gate",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/structure-gate.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "structure",
+        "gate"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 5232
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-structure-gates",
+      "name": "Structure Gates",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/structure-gates.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "structure",
+        "gates"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 7748
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-structure-windmill",
+      "name": "Structure Windmill",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/structure-windmill.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "structure",
+        "windmill"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 25152
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-support-bottom",
+      "name": "Support Bottom",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/support-bottom.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "support",
+        "bottom"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 7360
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-support-low-bottom",
+      "name": "Support Low Bottom",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/support-low-bottom.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "support",
+        "low",
+        "bottom"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 7372
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-support-low",
+      "name": "Support Low",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/support-low.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "support",
+        "low"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 4216
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-support",
+      "name": "Support",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/support.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "support"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 4204
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-supports-bottom",
+      "name": "Supports Bottom",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/supports-bottom.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "supports",
+        "bottom"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 24752
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-supports-low-bottom",
+      "name": "Supports Low Bottom",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/supports-low-bottom.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "supports",
+        "low",
+        "bottom"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 24764
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-supports-low",
+      "name": "Supports Low",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/supports-low.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "supports",
+        "low"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 21608
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-supports",
+      "name": "Supports",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/supports.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "supports"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 21596
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-tunnel-double",
+      "name": "Tunnel Double",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/tunnel-double.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "tunnel",
+        "double"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 10132
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-tunnel-narrow",
+      "name": "Tunnel Narrow",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/tunnel-narrow.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "tunnel",
+        "narrow"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 7628
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-tunnel-wide",
+      "name": "Tunnel Wide",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/tunnel-wide.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "tunnel",
+        "wide"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 7020
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-wall-left",
+      "name": "Wall Left",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/wall-left.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "wall",
+        "left"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 4600
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-wall-right",
+      "name": "Wall Right",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/wall-right.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "wall",
+        "right"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 4604
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-walls-to-open",
+      "name": "Walls To Open",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/walls-to-open.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "walls",
+        "to",
+        "open"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 4508
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-windmill",
+      "name": "Windmill",
+      "assetType": "staticMesh",
+      "category": "minigolf",
+      "path": "assets/minigolf/models/windmill.glb",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "windmill"
+      ],
+      "placeable": true,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": true,
+        "allowScale": true
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": true,
+        "receiveShadow": true,
+        "collision": true,
+        "bytes": 27096
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-colormap",
+      "name": "Minigolf Colormap",
+      "assetType": "texture",
+      "category": "minigolf",
+      "path": "assets/minigolf/textures/colormap.png",
+      "tags": [
+        "minigolf",
+        "kenney",
+        "texture",
+        "colormap"
+      ],
+      "placeable": false,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": false,
+        "allowScale": false
+      },
+      "runtime": {
+        "loadGroup": "minigolf",
+        "castShadow": false,
+        "receiveShadow": false,
+        "collision": false,
+        "bytes": 8706
+      },
+      "source": {
+        "origin": "kenney",
+        "pack": "kenney_minigolf-kit",
+        "packVersion": "1.0"
+      },
+      "license": "Kenney Asset Pack; see source package License.txt"
+    },
+    {
+      "id": "minigolf-level-hole-01",
+      "name": "Mini Golf Hole 01",
+      "assetType": "level",
+      "category": "minigolf",
+      "path": "assets/minigolf/levels/mini-golf-hole-01.level.json",
+      "tags": [
+        "minigolf",
+        "level",
+        "hole",
+        "test"
+      ],
+      "placeable": false,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": false,
+        "allowScale": false
+      },
+      "runtime": {
+        "loadGroup": "minigolf-levels",
+        "castShadow": false,
+        "receiveShadow": false,
+        "collision": false,
+        "bytes": 6812
+      },
+      "source": {
+        "origin": "project",
+        "pack": "minigolf",
+        "packVersion": "0.1"
+      },
+      "license": "Project-authored level"
     }
   ]
 }

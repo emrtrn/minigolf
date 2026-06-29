@@ -1,17 +1,17 @@
 {
   "schema": 1,
-  "name": "forge-template",
+  "name": "minigolf",
   "type": "three-game",
   "version": "0.1.0",
   "entry": "src/main.ts",
   "publicDir": "public",
   "editor": {
-    "defaultScene": "assets/starter-content/Levels/TestLevel.level.json",
+    "defaultScene": "assets/minigolf/levels/mini-golf-hole-01.level.json",
     "assetManifest": "assets/manifest.json",
     "gridSize": 1,
-    "gridEnabled": false,
+    "gridEnabled": true,
     "snapRotationDeg": 15,
-    "snapRotationEnabled": false,
+    "snapRotationEnabled": true,
     "snapScale": 0.1,
     "snapScaleEnabled": true
   },
