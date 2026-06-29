@@ -1397,78 +1397,6 @@
             0
           ],
           "scale": 1
-        },
-        {
-          "position": [
-            2,
-            -0.18,
-            -5
-          ],
-          "name": "Hole 4 Diamond Bumper",
-          "metadata": {
-            "hole": 4
-          },
-          "rotationYDeg": 45,
-          "rotation": [
-            0,
-            90,
-            0
-          ],
-          "scale": 1
-        },
-        {
-          "position": [
-            4,
-            -0.18,
-            -5
-          ],
-          "name": "Hole 4 Diamond Bumper",
-          "metadata": {
-            "hole": 4
-          },
-          "rotationYDeg": 45,
-          "rotation": [
-            0,
-            90,
-            0
-          ],
-          "scale": 1
-        },
-        {
-          "position": [
-            6,
-            -0.18,
-            -5
-          ],
-          "name": "Hole 4 Diamond Bumper",
-          "metadata": {
-            "hole": 4
-          },
-          "rotationYDeg": 45,
-          "rotation": [
-            0,
-            90,
-            0
-          ],
-          "scale": 1
-        },
-        {
-          "position": [
-            8,
-            -0.18,
-            -5
-          ],
-          "name": "Hole 4 Diamond Bumper",
-          "metadata": {
-            "hole": 4
-          },
-          "rotationYDeg": 45,
-          "rotation": [
-            0,
-            90,
-            0
-          ],
-          "scale": 1
         }
       ]
     },
@@ -1826,14 +1754,6 @@
       "intensity": 0.45
     }
   },
-  "cloudLayer": {
-    "color": "#ffffff",
-    "coverage": 0.2,
-    "density": 0.25,
-    "softness": 0.45,
-    "scale": 3,
-    "speed": 0.08
-  },
   "postProcess": {
     "toneMapping": "aces",
     "antialias": "smaa",
@@ -1853,9 +1773,9 @@
       "id": "sun",
       "type": "directional",
       "position": [
-        4,
-        8,
-        4
+        0,
+        2,
+        -5
       ],
       "name": "Sun",
       "rotation": [
