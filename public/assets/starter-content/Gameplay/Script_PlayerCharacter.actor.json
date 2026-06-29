@@ -14,7 +14,7 @@
       "id": "meshRenderer",
       "component": "MeshRenderer",
       "props": {
-        "assetId": "hilda-regular-00"
+        "assetId": "ual1-standard-rm"
       },
       "parent": "collider"
     },

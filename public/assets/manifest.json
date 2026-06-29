@@ -25262,52 +25262,6 @@
         "bytes": 7620504
       },
       "license": "Unknown"
-    },
-    {
-      "id": "ual2-standard",
-      "name": "UAL2 Standard",
-      "assetType": "skeletalMesh",
-      "category": "SkeletalMeshes",
-      "path": "assets/starter-content/SkeletalMeshes/UAL2_Standard.glb",
-      "tags": [],
-      "placeable": true,
-      "placement": {
-        "surface": "character",
-        "snapToWall": false,
-        "allowRotation": true,
-        "allowScale": true
-      },
-      "runtime": {
-        "loadGroup": "SkeletalMeshes",
-        "castShadow": true,
-        "receiveShadow": true,
-        "collision": true,
-        "bytes": 8091444
-      },
-      "license": "Unknown"
-    },
-    {
-      "id": "hilda-regular-00",
-      "name": "Hilda Regular 00",
-      "assetType": "skeletalMesh",
-      "category": "SkeletalMeshes",
-      "path": "assets/starter-content/SkeletalMeshes/hilda_regular_00.glb",
-      "tags": [],
-      "placeable": true,
-      "placement": {
-        "surface": "character",
-        "snapToWall": false,
-        "allowRotation": true,
-        "allowScale": true
-      },
-      "runtime": {
-        "loadGroup": "SkeletalMeshes",
-        "castShadow": true,
-        "receiveShadow": true,
-        "collision": true,
-        "bytes": 10794472
-      },
-      "license": "Unknown"
     }
   ]
 }
