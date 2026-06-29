@@ -1428,10 +1428,7 @@ function solidGeometryForPrimitive(primitive: CollisionPrimitive): BufferGeometr
     return geometry;
   }
   if (primitive.shape === "cylinder") {
-    const dims = normalizedRadialDimensions(primitive.size);
-    const geometry = new CylinderGeometry(1, 1, 1, 16);
-    geometry.scale(dims.radiusX, 1, dims.radiusZ);
-    return geometry;
+    return new CylinderGeometry(0.5, 0.5, 1, 16);
   }
   if (primitive.shape === "cone") return new ConeGeometry(0.5, 1, 24);
   return new BoxGeometry(1, 1, 1);
@@ -1518,13 +1515,6 @@ function normalizedSphereRadius(size: Vec3): NormalizedSphereRadius {
   return { x: radius / sx, y: radius / sy, z: radius / sz };
 }
 
-function normalizedRadialDimensions(size: Vec3): NormalizedRadialDimensions {
-  const sx = normalizedAxis(size, 0);
-  const sz = normalizedAxis(size, 2);
-  const radius = Math.max(sx, sz) / 2;
-  return { radiusX: radius / sx, radiusZ: radius / sz };
-}
-
 function normalizedCapsuleDimensions(size: Vec3): NormalizedCapsuleDimensions {
   const sx = normalizedAxis(size, 0);
   const sy = normalizedAxis(size, 1);
@@ -1553,7 +1543,7 @@ function wireGeometryForPrimitive(
 function wireSegmentsForPrimitive(primitive: CollisionPrimitive): Vec3[] | null {
   if (primitive.shape === "sphere") return sphereWireSegments(primitive.size);
   if (primitive.shape === "capsule") return capsuleWireSegments(primitive.size);
-  if (primitive.shape === "cylinder") return cylinderWireSegments(primitive.size);
+  if (primitive.shape === "cylinder") return cylinderWireSegments();
   return null;
 }
 
@@ -1585,15 +1575,14 @@ function capsuleWireSegments(size: Vec3): Vec3[] {
   ];
 }
 
-function cylinderWireSegments(size: Vec3): Vec3[] {
-  const dims = normalizedRadialDimensions(size);
-  const top = ellipseSegments("xz", 0.5, dims.radiusX, dims.radiusZ);
-  const bottom = ellipseSegments("xz", -0.5, dims.radiusX, dims.radiusZ);
+function cylinderWireSegments(): Vec3[] {
+  const top = ellipseSegments("xz", 0.5, 0.5, 0.5);
+  const bottom = ellipseSegments("xz", -0.5, 0.5, 0.5);
   const verticals: Vec3[] = [];
   for (let i = 0; i < 8; i += 1) {
     const angle = (i / 8) * Math.PI * 2;
-    const x = Math.cos(angle) * dims.radiusX;
-    const z = Math.sin(angle) * dims.radiusZ;
+    const x = Math.cos(angle) * 0.5;
+    const z = Math.sin(angle) * 0.5;
     verticals.push([x, -0.5, z], [x, 0.5, z]);
   }
   return [...top, ...bottom, ...verticals];
