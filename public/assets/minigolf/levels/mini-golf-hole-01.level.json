@@ -1,9 +1,7 @@
 {
   "schema": 1,
   "name": "mini-golf-course-01",
-  "loadGroups": [
-    "minigolf"
-  ],
+  "loadGroups": [],
   "instances": [
     {
       "assetId": "marker:playerStart",
@@ -1306,6 +1304,62 @@
       ]
     },
     {
+      "assetId": "minigolf-gap",
+      "placements": [
+        {
+          "position": [
+            -2,
+            -0.18,
+            -6
+          ],
+          "name": "Hole 4 Water Gap",
+          "collision": false,
+          "metadata": {
+            "minigolfRole": "hazard",
+            "hole": 4,
+            "hazardHalfWidth": 0.42,
+            "hazardHalfDepth": 0.42
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            2,
+            -0.18,
+            -4
+          ],
+          "name": "Hole 6 Water Gap",
+          "collision": false,
+          "metadata": {
+            "minigolfRole": "hazard",
+            "hole": 6,
+            "hazardHalfWidth": 0.42,
+            "hazardHalfDepth": 0.42
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            8,
+            -0.18,
+            -5
+          ],
+          "name": "Hole 9 Water Gap",
+          "collision": false,
+          "metadata": {
+            "minigolfRole": "hazard",
+            "hole": 9,
+            "hazardHalfWidth": 0.42,
+            "hazardHalfDepth": 0.42
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        }
+      ]
+    },
+    {
       "assetId": "minigolf-obstacle-diamond",
       "placements": [
         {
@@ -1448,14 +1502,6 @@
           "scale": 1
         }
       ]
-    },
-    {
-      "assetId": "minigolf-wall-left",
-      "placements": []
-    },
-    {
-      "assetId": "minigolf-wall-right",
-      "placements": []
     },
     {
       "assetId": "minigolf-ball-red",
@@ -1617,11 +1663,7 @@
       ]
     },
     {
-      "assetId": "minigolf-corner",
-      "placements": []
-    },
-    {
-      "assetId": "minigolf-castle",
+      "assetId": "minigolf-windmill",
       "placements": [
         {
           "position": [
@@ -1630,6 +1672,11 @@
             -4
           ],
           "rotationYDeg": 0,
+          "rotation": [
+            0,
+            180,
+            0
+          ],
           "scale": 1
         }
       ]

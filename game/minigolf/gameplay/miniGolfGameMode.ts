@@ -43,6 +43,7 @@ const MESH_SURFACE_MIN_FOOTPRINT = 0.004;
 const MESH_SURFACE_SAMPLE_PADDING = 0.002;
 const MESH_SURFACE_SLOPE_SAMPLE_STEP = 0.12;
 const MESH_SURFACE_MAX_SLOPE = 0.8;
+const LOCAL_BEST_STORAGE_PREFIX = "minigolf.bestTotalStrokes";
 const MINI_GOLF_RUNTIME_PHYSICS: Partial<MiniGolfPhysicsConfig> = {
   ...DEFAULT_MINI_GOLF_PHYSICS,
   ballRadius: BALL_VISUAL_RADIUS,
@@ -61,6 +62,19 @@ interface MiniGolfHole {
   readonly cup: MiniGolfPlacementRef | null;
 }
 
+export interface MiniGolfHoleResult {
+  readonly number: number;
+  readonly par: number;
+  readonly strokes: number;
+  readonly score: number;
+}
+
+export interface MiniGolfCourseSummary {
+  readonly totalPar: number;
+  readonly totalStrokes: number;
+  readonly score: number;
+}
+
 class MiniGolfSingleHoleSession implements GameModeSession {
   readonly playerState: PlayerState = {
     pawnEntityId: null,
@@ -75,6 +89,8 @@ class MiniGolfSingleHoleSession implements GameModeSession {
   private activeHoleIndex = 0;
   private course: MiniGolfCourse = {};
   private hud: MiniGolfHud | null = null;
+  private scorecard: MiniGolfScorecard | null = null;
+  private transitionCard: MiniGolfTransitionCard | null = null;
   private drag: { pointerId: number; start: Vec2; current: Vec2; aim: MiniGolfAim } | null = null;
   private holeStrokes = 0;
   private totalStrokes = 0;
@@ -83,6 +99,7 @@ class MiniGolfSingleHoleSession implements GameModeSession {
   private par = 3;
   private transitionTimer = 0;
   private readonly completedHoles = new Set<number>();
+  private readonly holeResults: MiniGolfHoleResult[] = [];
   private cameraYaw = 0;
   private readonly cameraForward = new Vector3();
 
@@ -101,6 +118,8 @@ class MiniGolfSingleHoleSession implements GameModeSession {
     this.context.setPointerLookMode("right-drag");
     this.context.markCameraControlled();
     this.hud = new MiniGolfHud();
+    this.scorecard = new MiniGolfScorecard();
+    this.transitionCard = new MiniGolfTransitionCard();
     this.context.canvas.addEventListener("pointerdown", this.handlePointerDown);
     this.context.canvas.addEventListener("pointermove", this.handlePointerMove);
     this.context.canvas.addEventListener("pointerup", this.handlePointerUp);
@@ -151,6 +170,10 @@ class MiniGolfSingleHoleSession implements GameModeSession {
     this.context.canvas.removeEventListener("pointercancel", this.handlePointerUp);
     this.hud?.dispose();
     this.hud = null;
+    this.scorecard?.dispose();
+    this.scorecard = null;
+    this.transitionCard?.dispose();
+    this.transitionCard = null;
     this.drag = null;
   }
 
@@ -310,11 +333,28 @@ class MiniGolfSingleHoleSession implements GameModeSession {
     const hole = this.currentHole();
     if (!hole || this.completedHoles.has(hole.number)) return;
     this.completedHoles.add(hole.number);
-    this.scoreRelativeToPar += this.holeStrokes - hole.par;
+    const result: MiniGolfHoleResult = {
+      number: hole.number,
+      par: hole.par,
+      strokes: this.holeStrokes,
+      score: miniGolfScoreRelativeToPar(this.holeStrokes, hole.par),
+    };
+    this.holeResults[this.activeHoleIndex] = result;
+    this.scoreRelativeToPar += result.score;
     this.context.dispatchGameEvent({ kind: "set", variable: "score", value: this.scoreRelativeToPar });
     this.context.dispatchGameEvent({ kind: "objective", id: `hole-${hole.number}` });
+    this.transitionCard?.show(result, this.activeHoleIndex < this.holes.length - 1);
     if (this.activeHoleIndex < this.holes.length - 1) {
       this.transitionTimer = HOLE_TRANSITION_DELAY_SECONDS;
+    } else {
+      const summary = summarizeMiniGolfCourse(this.holeResults);
+      const best = writeMiniGolfBestScore(this.context.layout.name, summary.totalStrokes);
+      this.scorecard?.show({
+        results: this.holeResults,
+        summary,
+        bestStrokes: best.bestStrokes,
+        newBest: best.newBest,
+      });
     }
   }
 
@@ -444,6 +484,128 @@ class MiniGolfHud {
   }
 }
 
+class MiniGolfScorecard {
+  private readonly root = document.createElement("div");
+  private readonly title = document.createElement("div");
+  private readonly summary = document.createElement("div");
+  private readonly table = document.createElement("div");
+  private readonly best = document.createElement("div");
+
+  constructor() {
+    this.root.style.cssText = [
+      "position:fixed",
+      "right:16px",
+      "top:16px",
+      "z-index:19",
+      "width:min(360px,calc(100vw - 32px))",
+      "max-height:calc(100vh - 32px)",
+      "overflow:auto",
+      "padding:14px",
+      "border-radius:8px",
+      "background:rgba(12,18,22,0.88)",
+      "color:#fff",
+      "font:600 13px system-ui,sans-serif",
+      "letter-spacing:0",
+      "pointer-events:none",
+      "box-shadow:0 12px 32px rgba(0,0,0,0.32)",
+      "display:none",
+    ].join(";");
+    this.title.style.cssText = "font-size:18px;font-weight:800;margin-bottom:8px";
+    this.summary.style.cssText = "display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px;color:rgba(255,255,255,0.88)";
+    this.table.style.cssText = "display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0;border-top:1px solid rgba(255,255,255,0.18)";
+    this.best.style.cssText = "margin-top:10px;color:rgba(255,255,255,0.76);font-weight:600";
+    this.root.append(this.title, this.summary, this.table, this.best);
+    document.body.append(this.root);
+  }
+
+  show(state: {
+    readonly results: readonly MiniGolfHoleResult[];
+    readonly summary: MiniGolfCourseSummary;
+    readonly bestStrokes: number | null;
+    readonly newBest: boolean;
+  }): void {
+    this.title.textContent = "Course Complete";
+    this.summary.replaceChildren(
+      scorecardMetric("Total", `${state.summary.totalStrokes}`),
+      scorecardMetric("Par", `${state.summary.totalPar}`),
+      scorecardMetric("Score", formatMiniGolfScore(state.summary.score)),
+    );
+    this.table.replaceChildren(
+      scorecardCell("Hole", true),
+      scorecardCell("Par", true),
+      scorecardCell("Strokes", true),
+      scorecardCell("Score", true),
+      ...state.results.flatMap((result) => [
+        scorecardCell(`${result.number}`),
+        scorecardCell(`${result.par}`),
+        scorecardCell(`${result.strokes}`),
+        scorecardCell(formatMiniGolfScore(result.score)),
+      ]),
+    );
+    this.best.textContent =
+      state.bestStrokes === null
+        ? "Best: --"
+        : state.newBest
+          ? `New best: ${state.bestStrokes}`
+          : `Best: ${state.bestStrokes}`;
+    this.root.style.display = "block";
+  }
+
+  dispose(): void {
+    this.root.remove();
+  }
+}
+
+class MiniGolfTransitionCard {
+  private readonly root = document.createElement("div");
+  private readonly title = document.createElement("div");
+  private readonly detail = document.createElement("div");
+  private hideTimer: number | null = null;
+
+  constructor() {
+    this.root.style.cssText = [
+      "position:fixed",
+      "left:50%",
+      "top:18px",
+      "z-index:20",
+      "min-width:min(320px,calc(100vw - 32px))",
+      "padding:12px 16px",
+      "border-radius:8px",
+      "background:rgba(255,255,255,0.92)",
+      "color:#172024",
+      "font:700 14px system-ui,sans-serif",
+      "letter-spacing:0",
+      "pointer-events:none",
+      "box-shadow:0 12px 28px rgba(0,0,0,0.22)",
+      "transform:translate(-50%,-130%)",
+      "transition:transform 180ms ease,opacity 180ms ease",
+      "opacity:0",
+    ].join(";");
+    this.title.style.cssText = "font-size:18px;font-weight:850";
+    this.detail.style.cssText = "margin-top:3px;color:rgba(23,32,36,0.72);font-weight:650";
+    this.root.append(this.title, this.detail);
+    document.body.append(this.root);
+  }
+
+  show(result: MiniGolfHoleResult, hasNextHole: boolean): void {
+    if (this.hideTimer !== null) window.clearTimeout(this.hideTimer);
+    this.title.textContent = `Hole ${result.number} - ${miniGolfResultName(result.score)}`;
+    this.detail.textContent = `${result.strokes} strokes  Par ${result.par}  Score ${formatMiniGolfScore(result.score)}${hasNextHole ? "  Next hole" : ""}`;
+    this.root.style.opacity = "1";
+    this.root.style.transform = "translate(-50%,0)";
+    this.hideTimer = window.setTimeout(() => {
+      this.root.style.opacity = "0";
+      this.root.style.transform = "translate(-50%,-130%)";
+      this.hideTimer = null;
+    }, hasNextHole ? 1100 : 2400);
+  }
+
+  dispose(): void {
+    if (this.hideTimer !== null) window.clearTimeout(this.hideTimer);
+    this.root.remove();
+  }
+}
+
 function collectMiniGolfHoles(layout: RoomLayout): readonly MiniGolfHole[] {
   const tees = findPlacementsByRole(layout, "tee");
   if (tees.length === 0) return [];
@@ -508,8 +670,10 @@ export function buildMiniGolfCourse(
       bounds: box.bounds,
       ...(box.restitution !== undefined ? { restitution: box.restitution } : {}),
     }));
+  const hazards = collectHazards(layout, options.hole);
   return {
     bounds: courseBounds,
+    hazards,
     walls,
     surfaces,
     defaultSurface: { height: surfaceHeight + BALL_VISUAL_RADIUS, friction: 1 },
@@ -551,6 +715,28 @@ function collectCourseCollisionBoxes(
     }
   }
   return boxes;
+}
+
+function collectHazards(layout: RoomLayout, hole: number | undefined): MiniGolfAabb2[] {
+  const hazards: MiniGolfAabb2[] = [];
+  for (const instance of layout.instances) {
+    for (const placement of instance.placements) {
+      const role = placement.metadata?.minigolfRole;
+      if (role !== "hazard" && role !== "water") continue;
+      if (!placementBelongsToHole(placement, hole)) continue;
+      hazards.push(hazardAabbFromPlacement(placement));
+    }
+  }
+  return hazards;
+}
+
+function hazardAabbFromPlacement(placement: LayoutPlacement): MiniGolfAabb2 {
+  const halfWidth = numberMeta(placement, "hazardHalfWidth", 0.45);
+  const halfDepth = numberMeta(placement, "hazardHalfDepth", 0.45);
+  return {
+    min: [placement.position[0] - halfWidth, placement.position[2] - halfDepth],
+    max: [placement.position[0] + halfWidth, placement.position[2] + halfDepth],
+  };
 }
 
 function primitiveCourseBox(
@@ -757,6 +943,77 @@ function nearlyEqual(a: number, b: number): boolean {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+export function miniGolfScoreRelativeToPar(strokes: number, par: number): number {
+  return Math.trunc(strokes) - Math.trunc(par);
+}
+
+export function summarizeMiniGolfCourse(results: readonly MiniGolfHoleResult[]): MiniGolfCourseSummary {
+  return results.reduce<MiniGolfCourseSummary>(
+    (summary, result) => ({
+      totalPar: summary.totalPar + result.par,
+      totalStrokes: summary.totalStrokes + result.strokes,
+      score: summary.score + result.score,
+    }),
+    { totalPar: 0, totalStrokes: 0, score: 0 },
+  );
+}
+
+export function formatMiniGolfScore(score: number): string {
+  return score > 0 ? `+${score}` : `${score}`;
+}
+
+export function miniGolfResultName(score: number): string {
+  if (score <= -2) return "Eagle";
+  if (score === -1) return "Birdie";
+  if (score === 0) return "Par";
+  if (score === 1) return "Bogey";
+  if (score === 2) return "Double Bogey";
+  return `${formatMiniGolfScore(score)}`;
+}
+
+function scorecardMetric(label: string, value: string): HTMLElement {
+  const element = document.createElement("div");
+  element.style.cssText = "min-width:72px";
+  const labelElement = document.createElement("div");
+  labelElement.style.cssText = "font-size:11px;color:rgba(255,255,255,0.58);font-weight:700;text-transform:uppercase";
+  labelElement.textContent = label;
+  const valueElement = document.createElement("div");
+  valueElement.style.cssText = "font-size:18px;font-weight:800";
+  valueElement.textContent = value;
+  element.append(labelElement, valueElement);
+  return element;
+}
+
+function scorecardCell(text: string, heading = false): HTMLElement {
+  const element = document.createElement("div");
+  element.textContent = text;
+  element.style.cssText = [
+    "padding:6px 4px",
+    "border-bottom:1px solid rgba(255,255,255,0.12)",
+    heading ? "color:rgba(255,255,255,0.62);font-size:11px;text-transform:uppercase" : "color:#fff",
+    "text-align:right",
+  ].join(";");
+  return element;
+}
+
+function writeMiniGolfBestScore(
+  courseName: string,
+  totalStrokes: number,
+): { readonly bestStrokes: number | null; readonly newBest: boolean } {
+  const key = `${LOCAL_BEST_STORAGE_PREFIX}.${courseName}`;
+  try {
+    const previous = window.localStorage.getItem(key);
+    const previousScore = previous !== null ? Number.parseInt(previous, 10) : null;
+    if (previousScore === null || !Number.isFinite(previousScore) || totalStrokes < previousScore) {
+      window.localStorage.setItem(key, `${totalStrokes}`);
+      return { bestStrokes: totalStrokes, newBest: true };
+    }
+    return { bestStrokes: previousScore, newBest: false };
+  } catch {
+    return { bestStrokes: null, newBest: false };
+  }
 }
 
 export const MINI_GOLF_PLAYER_CONTROLLER: PlayerControllerDefinition = {

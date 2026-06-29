@@ -110,7 +110,13 @@ import {
   type MiniGolfCourse,
 } from "../game/minigolf/gameplay/miniGolfBallPhysics";
 import { computeMiniGolfAim } from "../game/minigolf/gameplay/miniGolfAim";
-import { buildMiniGolfCourse } from "../game/minigolf/gameplay/miniGolfGameMode";
+import {
+  buildMiniGolfCourse,
+  formatMiniGolfScore,
+  miniGolfResultName,
+  miniGolfScoreRelativeToPar,
+  summarizeMiniGolfCourse,
+} from "../game/minigolf/gameplay/miniGolfGameMode";
 import {
   classifyLocomotion,
   locomotionConfigForSkeleton,
@@ -4592,6 +4598,52 @@ check("miniGolf: course builder can scope collision and cup data to one hole", (
   assert.ok(course.bounds);
   assert.ok(course.bounds.min[0] > 9);
   assert.ok(course.surfaces?.every((surface) => surface.bounds!.min[0] > 9));
+});
+
+check("miniGolf: course summary totals strokes, par, and relative score", () => {
+  const results = [
+    { number: 1, par: 3, strokes: 2, score: miniGolfScoreRelativeToPar(2, 3) },
+    { number: 2, par: 4, strokes: 5, score: miniGolfScoreRelativeToPar(5, 4) },
+    { number: 3, par: 5, strokes: 5, score: miniGolfScoreRelativeToPar(5, 5) },
+  ];
+  assert.deepEqual(summarizeMiniGolfCourse(results), {
+    totalPar: 12,
+    totalStrokes: 12,
+    score: 0,
+  });
+  assert.equal(formatMiniGolfScore(-1), "-1");
+  assert.equal(formatMiniGolfScore(0), "0");
+  assert.equal(formatMiniGolfScore(2), "+2");
+  assert.equal(miniGolfResultName(-1), "Birdie");
+  assert.equal(miniGolfResultName(0), "Par");
+  assert.equal(miniGolfResultName(2), "Double Bogey");
+});
+
+check("miniGolf: course builder reads hazard metadata for the active hole", () => {
+  const layout: RoomLayout = {
+    schema: 1,
+    name: "minigolf-hazards",
+    loadGroups: [],
+    instances: [
+      {
+        assetId: "hazard",
+        placements: [
+          {
+            position: [2, 0, -3],
+            metadata: { minigolfRole: "hazard", hole: 1, hazardHalfWidth: 0.25, hazardHalfDepth: 0.5 },
+          },
+          {
+            position: [8, 0, -3],
+            metadata: { minigolfRole: "hazard", hole: 2, hazardHalfWidth: 0.5, hazardHalfDepth: 0.5 },
+          },
+        ],
+      },
+    ],
+    characters: [],
+    lights: [],
+  };
+  const course = buildMiniGolfCourse(layout, () => undefined, [], { hole: 1 });
+  assert.deepEqual(course.hazards, [{ min: [1.75, -3.5], max: [2.25, -2.5] }]);
 });
 
 check("miniGolf: AABB walls bounce the ball with restitution", () => {

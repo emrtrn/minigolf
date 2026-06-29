@@ -14,6 +14,6 @@
       ]
     }
   ],
-  "complexity": "projectDefault",
+  "complexity": "complexAsSimple",
   "preset": "blockAll"
 }

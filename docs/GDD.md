@@ -271,13 +271,18 @@ Bu katman zaten data-driven ve headless; mini golf kuralları bir
       ilk kurs seed'ine genişletildi; düz hatlar hill/bump/ramp/diamond bumper ve
       dar geçit varyasyonlarıyla ayrıldı. Not: hareketli yel değirmeni v1.x'te
       kalıyor, statik kurs seed'i hazır.
-- [ ] Par/skorlama, kurs sonu skor tablosu, yerel en iyi. `2026-06-29`:
+- [x] Par/skorlama, kurs sonu skor tablosu, yerel en iyi. `2026-06-29`:
       `minigolf.singleHole`, çok delikli akışa genişletildi; aktif delik, delik
       vuruşu, toplam vuruş ve par'a göre skor HUD'da izlenir, cup sonrası sıradaki
-      deliğe geçer. Kalan: kurs sonu tablo ve yerel en iyi.
-- [ ] Out-of-bounds / su cezası + reset. `2026-06-29`: aktif delik sınırına göre
-      reset/ceza akışı çok delikli kursa taşındı. Kalan: su hazard trigger'ları.
-- [ ] UI cila (geçiş kartı, birdie/par dili), ses.
+      deliğe geçer. Devam: kurs sonu skor tablosu, toplam/par/skor özeti ve kurs
+      adına bağlı yerel en iyi toplam vuruş kaydı eklendi.
+- [x] Out-of-bounds / su cezası + reset. `2026-06-29`: aktif delik sınırına göre
+      reset/ceza akışı çok delikli kursa taşındı; `minigolfRole: "hazard"`
+      metadata'sı runtime hazard AABB'lerine bağlandı ve 4/6/9. deliklere gap
+      hazard marker'ları eklendi.
+- [ ] UI cila (geçiş kartı, birdie/par dili), ses. `2026-06-29`: delik bitiş
+      kartı ve Eagle/Birdie/Par/Bogey dili eklendi. Kalan: mini golf'e uygun
+      vuruş/cup/hazard ses asset'leri ve playback bağlantısı.
 - **Kabul:** 9 delik tek oturumda oynanır; toplam skor + rekor.
 
 ### v1.x — Sonrası (kapsam dışı, backlog)
