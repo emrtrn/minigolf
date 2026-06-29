@@ -266,9 +266,17 @@ Bu katman zaten data-driven ve headless; mini golf kuralları bir
 - **Kabul:** Tek delik baştan sona oynanır; vuruş sayılır; delik biter.
 
 ### Faz 1 — Kurs (9 delik)
-- [ ] 9 delik layout (artan zorluk: düz → köşe → rampa → engel → yel değirmeni).
-- [ ] Par/skorlama, kurs sonu skor tablosu, yerel en iyi.
-- [ ] Out-of-bounds / su cezası + reset.
+- [x] 9 delik seed layout (artan zorluk: düz → hill/bump → rampa → engel → dar geçit).
+      `2026-06-29`: `mini-golf-hole-01.level.json`, 9 tee/cup/objective içeren
+      ilk kurs seed'ine genişletildi; düz hatlar hill/bump/ramp/diamond bumper ve
+      dar geçit varyasyonlarıyla ayrıldı. Not: hareketli yel değirmeni v1.x'te
+      kalıyor, statik kurs seed'i hazır.
+- [ ] Par/skorlama, kurs sonu skor tablosu, yerel en iyi. `2026-06-29`:
+      `minigolf.singleHole`, çok delikli akışa genişletildi; aktif delik, delik
+      vuruşu, toplam vuruş ve par'a göre skor HUD'da izlenir, cup sonrası sıradaki
+      deliğe geçer. Kalan: kurs sonu tablo ve yerel en iyi.
+- [ ] Out-of-bounds / su cezası + reset. `2026-06-29`: aktif delik sınırına göre
+      reset/ceza akışı çok delikli kursa taşındı. Kalan: su hazard trigger'ları.
 - [ ] UI cila (geçiş kartı, birdie/par dili), ses.
 - **Kabul:** 9 delik tek oturumda oynanır; toplam skor + rekor.
 

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "name": "mini-golf-hole-01",
+  "name": "mini-golf-course-01",
   "loadGroups": [
     "minigolf"
   ],
@@ -12,7 +12,7 @@
           "position": [
             0,
             0.25,
-            6
+            7
           ],
           "name": "Editor Camera Start",
           "collision": false,
@@ -28,14 +28,135 @@
       "placements": [
         {
           "position": [
+            -8,
+            -0.18,
+            0
+          ],
+          "name": "Hole 1 Tee",
+          "metadata": {
+            "minigolfRole": "tee",
+            "hole": 1,
+            "par": 3
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -6,
+            -0.18,
+            0
+          ],
+          "name": "Hole 2 Tee",
+          "metadata": {
+            "minigolfRole": "tee",
+            "hole": 2,
+            "par": 3
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -4,
+            -0.18,
+            0
+          ],
+          "name": "Hole 3 Tee",
+          "metadata": {
+            "minigolfRole": "tee",
+            "hole": 3,
+            "par": 4
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -2,
+            -0.18,
+            0
+          ],
+          "name": "Hole 4 Tee",
+          "metadata": {
+            "minigolfRole": "tee",
+            "hole": 4,
+            "par": 4
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
             0,
             -0.18,
             0
           ],
-          "name": "Tee Start",
+          "name": "Hole 5 Tee",
           "metadata": {
             "minigolfRole": "tee",
-            "hole": 1
+            "hole": 5,
+            "par": 4
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            2,
+            -0.18,
+            0
+          ],
+          "name": "Hole 6 Tee",
+          "metadata": {
+            "minigolfRole": "tee",
+            "hole": 6,
+            "par": 5
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            4,
+            -0.08,
+            0
+          ],
+          "name": "Hole 7 Tee",
+          "metadata": {
+            "minigolfRole": "tee",
+            "hole": 7,
+            "par": 5
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            6,
+            -0.18,
+            0
+          ],
+          "name": "Hole 8 Tee",
+          "metadata": {
+            "minigolfRole": "tee",
+            "hole": 8,
+            "par": 5
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            8,
+            -0.18,
+            0
+          ],
+          "name": "Hole 9 Tee",
+          "metadata": {
+            "minigolfRole": "tee",
+            "hole": 9,
+            "par": 6
           },
           "rotationYDeg": 0,
           "scale": 1
@@ -47,11 +168,352 @@
       "placements": [
         {
           "position": [
+            -8,
+            -0.18,
+            -1
+          ],
+          "name": "Hole 1 Fairway 1",
+          "metadata": {
+            "hole": 1
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -8,
+            -0.18,
+            -2
+          ],
+          "name": "Hole 1 Fairway 2",
+          "metadata": {
+            "hole": 1
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -8,
+            -0.18,
+            -3
+          ],
+          "name": "Hole 1 Fairway 3",
+          "metadata": {
+            "hole": 1
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -8,
+            -0.18,
+            -4
+          ],
+          "name": "Hole 1 Fairway 4",
+          "metadata": {
+            "hole": 1
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -8,
+            -0.18,
+            -5
+          ],
+          "name": "Hole 1 Fairway 5",
+          "metadata": {
+            "hole": 1
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -8,
+            -0.18,
+            -6
+          ],
+          "name": "Hole 1 Fairway 6",
+          "metadata": {
+            "hole": 1
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -8,
+            -0.18,
+            -7
+          ],
+          "name": "Hole 1 Fairway 7",
+          "metadata": {
+            "hole": 1
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -6,
+            -0.18,
+            -1
+          ],
+          "name": "Hole 2 Fairway 1",
+          "metadata": {
+            "hole": 2
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -6,
+            -0.18,
+            -2
+          ],
+          "name": "Hole 2 Fairway 2",
+          "metadata": {
+            "hole": 2
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -6,
+            -0.18,
+            -3
+          ],
+          "name": "Hole 2 Fairway 3",
+          "metadata": {
+            "hole": 2
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -6,
+            -0.18,
+            -5
+          ],
+          "name": "Hole 2 Fairway 5",
+          "metadata": {
+            "hole": 2
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -6,
+            -0.18,
+            -6
+          ],
+          "name": "Hole 2 Fairway 6",
+          "metadata": {
+            "hole": 2
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -6,
+            -0.18,
+            -7
+          ],
+          "name": "Hole 2 Fairway 7",
+          "metadata": {
+            "hole": 2
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -4,
+            -0.18,
+            -1
+          ],
+          "name": "Hole 3 Fairway 1",
+          "metadata": {
+            "hole": 3
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -4,
+            -0.18,
+            -2
+          ],
+          "name": "Hole 3 Fairway 2",
+          "metadata": {
+            "hole": 3
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -4,
+            -0.18,
+            -3
+          ],
+          "name": "Hole 3 Fairway 3",
+          "metadata": {
+            "hole": 3
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -4,
+            -0.18,
+            -5
+          ],
+          "name": "Hole 3 Fairway 5",
+          "metadata": {
+            "hole": 3
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -4,
+            -0.18,
+            -6
+          ],
+          "name": "Hole 3 Fairway 6",
+          "metadata": {
+            "hole": 3
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -4,
+            -0.18,
+            -7
+          ],
+          "name": "Hole 3 Fairway 7",
+          "metadata": {
+            "hole": 3
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -2,
+            -0.18,
+            -1
+          ],
+          "name": "Hole 4 Fairway 1",
+          "metadata": {
+            "hole": 4
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -2,
+            -0.18,
+            -2
+          ],
+          "name": "Hole 4 Fairway 2",
+          "metadata": {
+            "hole": 4
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -2,
+            -0.18,
+            -3
+          ],
+          "name": "Hole 4 Fairway 3",
+          "metadata": {
+            "hole": 4
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -2,
+            -0.18,
+            -4
+          ],
+          "name": "Hole 4 Fairway 4",
+          "metadata": {
+            "hole": 4
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -2,
+            -0.18,
+            -5
+          ],
+          "name": "Hole 4 Fairway 5",
+          "metadata": {
+            "hole": 4
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -2,
+            -0.18,
+            -6
+          ],
+          "name": "Hole 4 Fairway 6",
+          "metadata": {
+            "hole": 4
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -2,
+            -0.18,
+            -7
+          ],
+          "name": "Hole 4 Fairway 7",
+          "metadata": {
+            "hole": 4
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
             0,
             -0.18,
             -1
           ],
-          "name": "Fairway 01",
+          "name": "Hole 5 Fairway 1",
+          "metadata": {
+            "hole": 5
+          },
           "rotationYDeg": 0,
           "scale": 1
         },
@@ -61,7 +523,10 @@
             -0.18,
             -2
           ],
-          "name": "Fairway 02",
+          "name": "Hole 5 Fairway 2",
+          "metadata": {
+            "hole": 5
+          },
           "rotationYDeg": 0,
           "scale": 1
         },
@@ -69,9 +534,12 @@
           "position": [
             0,
             -0.18,
-            -3
+            -4
           ],
-          "name": "Fairway 03",
+          "name": "Hole 5 Fairway 4",
+          "metadata": {
+            "hole": 5
+          },
           "rotationYDeg": 0,
           "scale": 1
         },
@@ -81,7 +549,10 @@
             -0.18,
             -5
           ],
-          "name": "Fairway 03",
+          "name": "Hole 5 Fairway 5",
+          "metadata": {
+            "hole": 5
+          },
           "rotationYDeg": 0,
           "scale": 1
         },
@@ -91,7 +562,10 @@
             -0.18,
             -6
           ],
-          "name": "Fairway 03",
+          "name": "Hole 5 Fairway 6",
+          "metadata": {
+            "hole": 5
+          },
           "rotationYDeg": 0,
           "scale": 1
         },
@@ -101,7 +575,322 @@
             -0.18,
             -7
           ],
-          "name": "Fairway 03",
+          "name": "Hole 5 Fairway 7",
+          "metadata": {
+            "hole": 5
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            2,
+            -0.18,
+            -1
+          ],
+          "name": "Hole 6 Fairway 1",
+          "metadata": {
+            "hole": 6
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            2,
+            -0.18,
+            -2
+          ],
+          "name": "Hole 6 Fairway 2",
+          "metadata": {
+            "hole": 6
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            2,
+            -0.18,
+            -3
+          ],
+          "name": "Hole 6 Fairway 3",
+          "metadata": {
+            "hole": 6
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            2,
+            -0.18,
+            -5
+          ],
+          "name": "Hole 6 Fairway 5",
+          "metadata": {
+            "hole": 6
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            2,
+            -0.18,
+            -6
+          ],
+          "name": "Hole 6 Fairway 6",
+          "metadata": {
+            "hole": 6
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            2,
+            -0.18,
+            -7
+          ],
+          "name": "Hole 6 Fairway 7",
+          "metadata": {
+            "hole": 6
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            4,
+            -0.08,
+            -1
+          ],
+          "name": "Hole 7 Fairway 1",
+          "metadata": {
+            "hole": 7
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            4,
+            -0.18,
+            -3
+          ],
+          "name": "Hole 7 Fairway 3",
+          "metadata": {
+            "hole": 7
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            4,
+            -0.18,
+            -4
+          ],
+          "name": "Hole 7 Fairway 4",
+          "metadata": {
+            "hole": 7
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            4,
+            -0.18,
+            -5
+          ],
+          "name": "Hole 7 Fairway 5",
+          "metadata": {
+            "hole": 7
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            4,
+            -0.18,
+            -6
+          ],
+          "name": "Hole 7 Fairway 6",
+          "metadata": {
+            "hole": 7
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            4,
+            -0.18,
+            -7
+          ],
+          "name": "Hole 7 Fairway 7",
+          "metadata": {
+            "hole": 7
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            6,
+            -0.18,
+            -1
+          ],
+          "name": "Hole 8 Fairway 1",
+          "metadata": {
+            "hole": 8
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            6,
+            -0.18,
+            -2
+          ],
+          "name": "Hole 8 Fairway 2",
+          "metadata": {
+            "hole": 8
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            6,
+            -0.18,
+            -4
+          ],
+          "name": "Hole 8 Fairway 4",
+          "metadata": {
+            "hole": 8
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            6,
+            -0.18,
+            -5
+          ],
+          "name": "Hole 8 Fairway 5",
+          "metadata": {
+            "hole": 8
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            6,
+            -0.18,
+            -6
+          ],
+          "name": "Hole 8 Fairway 6",
+          "metadata": {
+            "hole": 8
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            6,
+            -0.18,
+            -7
+          ],
+          "name": "Hole 8 Fairway 7",
+          "metadata": {
+            "hole": 8
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            8,
+            -0.18,
+            -1
+          ],
+          "name": "Hole 9 Fairway 1",
+          "metadata": {
+            "hole": 9
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            8,
+            -0.18,
+            -2
+          ],
+          "name": "Hole 9 Fairway 2",
+          "metadata": {
+            "hole": 9
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            8,
+            -0.18,
+            -3
+          ],
+          "name": "Hole 9 Fairway 3",
+          "metadata": {
+            "hole": 9
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            8,
+            -0.18,
+            -5
+          ],
+          "name": "Hole 9 Fairway 5",
+          "metadata": {
+            "hole": 9
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            8,
+            -0.18,
+            -6
+          ],
+          "name": "Hole 9 Fairway 6",
+          "metadata": {
+            "hole": 9
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            8,
+            -0.18,
+            -7
+          ],
+          "name": "Hole 9 Fairway 7",
+          "metadata": {
+            "hole": 9
+          },
           "rotationYDeg": 0,
           "scale": 1
         }
@@ -112,16 +901,144 @@
       "placements": [
         {
           "position": [
-            0,
+            -8,
             -0.18,
             -8
           ],
-          "name": "Cup Trigger Visual",
+          "name": "Hole 1 Cup",
           "metadata": {
             "minigolfRole": "cup",
             "hole": 1,
             "radius": 0.35,
-            "captureSpeed": 0.75
+            "captureSpeed": 0.7999999999999999
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -6,
+            -0.18,
+            -8
+          ],
+          "name": "Hole 2 Cup",
+          "metadata": {
+            "minigolfRole": "cup",
+            "hole": 2,
+            "radius": 0.35,
+            "captureSpeed": 0.7799999999999999
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -4,
+            -0.18,
+            -8
+          ],
+          "name": "Hole 3 Cup",
+          "metadata": {
+            "minigolfRole": "cup",
+            "hole": 3,
+            "radius": 0.35,
+            "captureSpeed": 0.76
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -2,
+            -0.18,
+            -8
+          ],
+          "name": "Hole 4 Cup",
+          "metadata": {
+            "minigolfRole": "cup",
+            "hole": 4,
+            "radius": 0.35,
+            "captureSpeed": 0.74
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            0,
+            -0.18,
+            -8
+          ],
+          "name": "Hole 5 Cup",
+          "metadata": {
+            "minigolfRole": "cup",
+            "hole": 5,
+            "radius": 0.35,
+            "captureSpeed": 0.72
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            2,
+            -0.18,
+            -8
+          ],
+          "name": "Hole 6 Cup",
+          "metadata": {
+            "minigolfRole": "cup",
+            "hole": 6,
+            "radius": 0.35,
+            "captureSpeed": 0.7
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            4,
+            -0.18,
+            -8
+          ],
+          "name": "Hole 7 Cup",
+          "metadata": {
+            "minigolfRole": "cup",
+            "hole": 7,
+            "radius": 0.35,
+            "captureSpeed": 0.6799999999999999
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            6,
+            -0.18,
+            -8
+          ],
+          "name": "Hole 8 Cup",
+          "metadata": {
+            "minigolfRole": "cup",
+            "hole": 8,
+            "radius": 0.35,
+            "captureSpeed": 0.6599999999999999
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            8,
+            -0.18,
+            -8
+          ],
+          "name": "Hole 9 Cup",
+          "metadata": {
+            "minigolfRole": "cup",
+            "hole": 9,
+            "radius": 0.35,
+            "captureSpeed": 0.6399999999999999
           },
           "rotationYDeg": 0,
           "scale": 1
@@ -133,17 +1050,401 @@
       "placements": [
         {
           "position": [
-            0,
+            -8,
             -0.18,
             -9
           ],
-          "name": "Hole End",
-          "rotationYDeg": 0,
+          "name": "Hole 1 End",
+          "metadata": {
+            "hole": 1
+          },
+          "rotationYDeg": 180,
           "rotation": [
             0,
             180,
             0
           ],
+          "scale": 1
+        },
+        {
+          "position": [
+            -6,
+            -0.18,
+            -9
+          ],
+          "name": "Hole 2 End",
+          "metadata": {
+            "hole": 2
+          },
+          "rotationYDeg": 180,
+          "rotation": [
+            0,
+            180,
+            0
+          ],
+          "scale": 1
+        },
+        {
+          "position": [
+            -4,
+            -0.18,
+            -9
+          ],
+          "name": "Hole 3 End",
+          "metadata": {
+            "hole": 3
+          },
+          "rotationYDeg": 180,
+          "rotation": [
+            0,
+            180,
+            0
+          ],
+          "scale": 1
+        },
+        {
+          "position": [
+            -2,
+            -0.18,
+            -9
+          ],
+          "name": "Hole 4 End",
+          "metadata": {
+            "hole": 4
+          },
+          "rotationYDeg": 180,
+          "rotation": [
+            0,
+            180,
+            0
+          ],
+          "scale": 1
+        },
+        {
+          "position": [
+            0,
+            -0.18,
+            -9
+          ],
+          "name": "Hole 5 End",
+          "metadata": {
+            "hole": 5
+          },
+          "rotationYDeg": 180,
+          "rotation": [
+            0,
+            180,
+            0
+          ],
+          "scale": 1
+        },
+        {
+          "position": [
+            2,
+            -0.18,
+            -9
+          ],
+          "name": "Hole 6 End",
+          "metadata": {
+            "hole": 6
+          },
+          "rotationYDeg": 180,
+          "rotation": [
+            0,
+            180,
+            0
+          ],
+          "scale": 1
+        },
+        {
+          "position": [
+            4,
+            -0.18,
+            -9
+          ],
+          "name": "Hole 7 End",
+          "metadata": {
+            "hole": 7
+          },
+          "rotationYDeg": 180,
+          "rotation": [
+            0,
+            180,
+            0
+          ],
+          "scale": 1
+        },
+        {
+          "position": [
+            6,
+            -0.18,
+            -9
+          ],
+          "name": "Hole 8 End",
+          "metadata": {
+            "hole": 8
+          },
+          "rotationYDeg": 180,
+          "rotation": [
+            0,
+            180,
+            0
+          ],
+          "scale": 1
+        },
+        {
+          "position": [
+            8,
+            -0.18,
+            -9
+          ],
+          "name": "Hole 9 End",
+          "metadata": {
+            "hole": 9
+          },
+          "rotationYDeg": 180,
+          "rotation": [
+            0,
+            180,
+            0
+          ],
+          "scale": 1
+        }
+      ]
+    },
+    {
+      "assetId": "minigolf-hill-round",
+      "placements": [
+        {
+          "position": [
+            -6,
+            -0.18,
+            -4
+          ],
+          "name": "Hole 3 Hill",
+          "metadata": {
+            "hole": 3
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            2,
+            -0.18,
+            -4
+          ],
+          "name": "Hole 6 Hill",
+          "metadata": {
+            "hole": 6
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            8,
+            -0.18,
+            -4
+          ],
+          "name": "Hole 9 Hill",
+          "metadata": {
+            "hole": 9
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        }
+      ]
+    },
+    {
+      "assetId": "minigolf-bump",
+      "placements": [
+        {
+          "position": [
+            0,
+            -0.18,
+            -3
+          ],
+          "name": "Hole 5 Bump",
+          "metadata": {
+            "hole": 5
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            6,
+            -0.18,
+            -3
+          ],
+          "name": "Hole 8 Bump",
+          "metadata": {
+            "hole": 8
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        }
+      ]
+    },
+    {
+      "assetId": "minigolf-ramp-low",
+      "placements": [
+        {
+          "position": [
+            4,
+            -0.18,
+            -2
+          ],
+          "name": "Hole 7 Ramp",
+          "metadata": {
+            "hole": 7
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        }
+      ]
+    },
+    {
+      "assetId": "minigolf-obstacle-diamond",
+      "placements": [
+        {
+          "position": [
+            -2,
+            -0.18,
+            -5
+          ],
+          "name": "Hole 4 Diamond Bumper",
+          "metadata": {
+            "hole": 4
+          },
+          "rotationYDeg": 45,
+          "rotation": [
+            0,
+            90,
+            0
+          ],
+          "scale": 1
+        },
+        {
+          "position": [
+            0,
+            -0.18,
+            -5
+          ],
+          "name": "Hole 4 Diamond Bumper",
+          "metadata": {
+            "hole": 4
+          },
+          "rotationYDeg": 45,
+          "rotation": [
+            0,
+            90,
+            0
+          ],
+          "scale": 1
+        },
+        {
+          "position": [
+            2,
+            -0.18,
+            -5
+          ],
+          "name": "Hole 4 Diamond Bumper",
+          "metadata": {
+            "hole": 4
+          },
+          "rotationYDeg": 45,
+          "rotation": [
+            0,
+            90,
+            0
+          ],
+          "scale": 1
+        },
+        {
+          "position": [
+            4,
+            -0.18,
+            -5
+          ],
+          "name": "Hole 4 Diamond Bumper",
+          "metadata": {
+            "hole": 4
+          },
+          "rotationYDeg": 45,
+          "rotation": [
+            0,
+            90,
+            0
+          ],
+          "scale": 1
+        },
+        {
+          "position": [
+            6,
+            -0.18,
+            -5
+          ],
+          "name": "Hole 4 Diamond Bumper",
+          "metadata": {
+            "hole": 4
+          },
+          "rotationYDeg": 45,
+          "rotation": [
+            0,
+            90,
+            0
+          ],
+          "scale": 1
+        },
+        {
+          "position": [
+            8,
+            -0.18,
+            -5
+          ],
+          "name": "Hole 4 Diamond Bumper",
+          "metadata": {
+            "hole": 4
+          },
+          "rotationYDeg": 45,
+          "rotation": [
+            0,
+            90,
+            0
+          ],
+          "scale": 1
+        }
+      ]
+    },
+    {
+      "assetId": "minigolf-narrow-square",
+      "placements": [
+        {
+          "position": [
+            6,
+            -0.18,
+            -6
+          ],
+          "name": "Hole 8 Narrow Gate",
+          "metadata": {
+            "hole": 8
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            8,
+            -0.18,
+            -6
+          ],
+          "name": "Hole 9 Narrow Gate",
+          "metadata": {
+            "hole": 9
+          },
+          "rotationYDeg": 0,
           "scale": 1
         }
       ]
@@ -157,23 +1458,18 @@
       "placements": []
     },
     {
-      "assetId": "minigolf-obstacle-diamond",
-      "placements": []
-    },
-    {
       "assetId": "minigolf-ball-red",
       "placements": [
         {
           "position": [
+            -8,
             0,
-            0,
-            0.7
+            0.25
           ],
-          "name": "Ball Spawn Visual",
+          "name": "Runtime Ball Visual",
           "collision": false,
           "metadata": {
-            "minigolfRole": "ball-spawn",
-            "hole": 1
+            "minigolfRole": "ball-spawn"
           },
           "rotationYDeg": 0,
           "scale": 1
@@ -185,15 +1481,135 @@
       "placements": [
         {
           "position": [
-            0,
+            -8,
             0.02,
             -8
           ],
-          "name": "Cup Flag",
+          "name": "Hole 1 Flag",
           "collision": false,
           "metadata": {
             "minigolfRole": "flag",
             "hole": 1
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -6,
+            0.02,
+            -8
+          ],
+          "name": "Hole 2 Flag",
+          "collision": false,
+          "metadata": {
+            "minigolfRole": "flag",
+            "hole": 2
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -4,
+            0.02,
+            -8
+          ],
+          "name": "Hole 3 Flag",
+          "collision": false,
+          "metadata": {
+            "minigolfRole": "flag",
+            "hole": 3
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            -2,
+            0.02,
+            -8
+          ],
+          "name": "Hole 4 Flag",
+          "collision": false,
+          "metadata": {
+            "minigolfRole": "flag",
+            "hole": 4
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            0,
+            0.02,
+            -8
+          ],
+          "name": "Hole 5 Flag",
+          "collision": false,
+          "metadata": {
+            "minigolfRole": "flag",
+            "hole": 5
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            2,
+            0.02,
+            -8
+          ],
+          "name": "Hole 6 Flag",
+          "collision": false,
+          "metadata": {
+            "minigolfRole": "flag",
+            "hole": 6
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            4,
+            0.02,
+            -8
+          ],
+          "name": "Hole 7 Flag",
+          "collision": false,
+          "metadata": {
+            "minigolfRole": "flag",
+            "hole": 7
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            6,
+            0.02,
+            -8
+          ],
+          "name": "Hole 8 Flag",
+          "collision": false,
+          "metadata": {
+            "minigolfRole": "flag",
+            "hole": 8
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            8,
+            0.02,
+            -8
+          ],
+          "name": "Hole 9 Flag",
+          "collision": false,
+          "metadata": {
+            "minigolfRole": "flag",
+            "hole": 9
           },
           "rotationYDeg": 0,
           "scale": 1
@@ -205,11 +1621,11 @@
       "placements": []
     },
     {
-      "assetId": "minigolf-hill-round",
+      "assetId": "minigolf-castle",
       "placements": [
         {
           "position": [
-            0,
+            -4,
             -0.18,
             -4
           ],
@@ -233,14 +1649,74 @@
     "gameRules": {
       "variables": [
         {
+          "id": "currentHole",
+          "initial": 1,
+          "label": "Hole"
+        },
+        {
           "id": "strokes",
           "initial": 0,
-          "label": "Strokes"
+          "label": "Hole Strokes"
+        },
+        {
+          "id": "totalStrokes",
+          "initial": 0,
+          "label": "Total Strokes"
+        },
+        {
+          "id": "score",
+          "initial": 0,
+          "label": "Score"
         },
         {
           "id": "par",
           "initial": 3,
           "label": "Par"
+        },
+        {
+          "id": "par-1",
+          "initial": 3,
+          "label": "Hole 1 Par"
+        },
+        {
+          "id": "par-2",
+          "initial": 3,
+          "label": "Hole 2 Par"
+        },
+        {
+          "id": "par-3",
+          "initial": 4,
+          "label": "Hole 3 Par"
+        },
+        {
+          "id": "par-4",
+          "initial": 4,
+          "label": "Hole 4 Par"
+        },
+        {
+          "id": "par-5",
+          "initial": 4,
+          "label": "Hole 5 Par"
+        },
+        {
+          "id": "par-6",
+          "initial": 5,
+          "label": "Hole 6 Par"
+        },
+        {
+          "id": "par-7",
+          "initial": 5,
+          "label": "Hole 7 Par"
+        },
+        {
+          "id": "par-8",
+          "initial": 5,
+          "label": "Hole 8 Par"
+        },
+        {
+          "id": "par-9",
+          "initial": 6,
+          "label": "Hole 9 Par"
         }
       ],
       "objectives": [
@@ -248,6 +1724,46 @@
           "id": "hole-1",
           "target": 1,
           "label": "Hole 1"
+        },
+        {
+          "id": "hole-2",
+          "target": 1,
+          "label": "Hole 2"
+        },
+        {
+          "id": "hole-3",
+          "target": 1,
+          "label": "Hole 3"
+        },
+        {
+          "id": "hole-4",
+          "target": 1,
+          "label": "Hole 4"
+        },
+        {
+          "id": "hole-5",
+          "target": 1,
+          "label": "Hole 5"
+        },
+        {
+          "id": "hole-6",
+          "target": 1,
+          "label": "Hole 6"
+        },
+        {
+          "id": "hole-7",
+          "target": 1,
+          "label": "Hole 7"
+        },
+        {
+          "id": "hole-8",
+          "target": 1,
+          "label": "Hole 8"
+        },
+        {
+          "id": "hole-9",
+          "target": 1,
+          "label": "Hole 9"
         }
       ],
       "winWhenObjectivesComplete": true
@@ -316,7 +1832,7 @@
         -5
       ],
       "name": "Mini Golf Reflection Capture",
-      "radius": 8,
+      "radius": 14,
       "intensity": 0.25,
       "resolution": 256,
       "near": 0.1,

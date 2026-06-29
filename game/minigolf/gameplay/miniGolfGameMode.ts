@@ -31,6 +31,7 @@ export const MINI_GOLF_GAME_MODE_ID = "minigolf.singleHole";
 
 const MAX_DRAG_PIXELS = 180;
 const BALL_HIT_RADIUS_PIXELS = 48;
+const HOLE_TRANSITION_DELAY_SECONDS = 1.15;
 const BALL_VISUAL_RADIUS = 0.035;
 const ORBIT_DISTANCE = 5.8;
 const ORBIT_HEIGHT = 3.2;
@@ -53,6 +54,13 @@ interface MiniGolfPlacementRef {
   readonly placement: LayoutPlacement;
 }
 
+interface MiniGolfHole {
+  readonly number: number;
+  readonly par: number;
+  readonly tee: MiniGolfPlacementRef;
+  readonly cup: MiniGolfPlacementRef | null;
+}
+
 class MiniGolfSingleHoleSession implements GameModeSession {
   readonly playerState: PlayerState = {
     pawnEntityId: null,
@@ -63,12 +71,18 @@ class MiniGolfSingleHoleSession implements GameModeSession {
 
   private ballRef: MiniGolfPlacementRef | null = null;
   private ball: MiniGolfBallState | null = null;
+  private holes: readonly MiniGolfHole[] = [];
+  private activeHoleIndex = 0;
   private course: MiniGolfCourse = {};
   private hud: MiniGolfHud | null = null;
   private drag: { pointerId: number; start: Vec2; current: Vec2; aim: MiniGolfAim } | null = null;
-  private strokes = 0;
+  private holeStrokes = 0;
+  private totalStrokes = 0;
+  private scoreRelativeToPar = 0;
   private penaltyStrokes = 0;
   private par = 3;
+  private transitionTimer = 0;
+  private readonly completedHoles = new Set<number>();
   private cameraYaw = 0;
   private readonly cameraForward = new Vector3();
 
@@ -76,17 +90,9 @@ class MiniGolfSingleHoleSession implements GameModeSession {
 
   spawnDefaultPawn(): void {
     this.ballRef = findPlacementByRole(this.context.layout, "ball-spawn");
-    const pos = this.ballRef?.placement.position ?? findPlacementByRole(this.context.layout, "tee")?.placement.position;
-    if (!pos) return;
-    this.course = buildMiniGolfCourse(
-      this.context.layout,
-      this.context.getAssetCollisionDef,
-      this.context.staticBlockerAabbs(),
-    );
-    const ballY = this.course.defaultSurface?.height ?? BALL_VISUAL_RADIUS;
-    this.ball = createMiniGolfBallState([pos[0], ballY, pos[2]]);
-    this.par = readPar(this.context.layout);
-    if (this.ballRef) this.syncBallVisual();
+    this.holes = collectMiniGolfHoles(this.context.layout);
+    if (this.holes.length === 0) return;
+    this.startHole(0);
   }
 
   possess(): void {
@@ -105,6 +111,11 @@ class MiniGolfSingleHoleSession implements GameModeSession {
 
   update(deltaSeconds: number): void {
     this.gameState.elapsedSeconds += deltaSeconds;
+    if (this.transitionTimer > 0) {
+      this.transitionTimer = Math.max(0, this.transitionTimer - deltaSeconds);
+      if (this.transitionTimer === 0) this.startHole(this.activeHoleIndex + 1);
+    }
+
     if (this.context.getInputMode() !== "ui") {
       const look = this.context.consumeLookDelta();
       this.cameraYaw += look.dx * ORBIT_SENSITIVITY;
@@ -145,6 +156,7 @@ class MiniGolfSingleHoleSession implements GameModeSession {
 
   private handlePointerDown = (event: PointerEvent): void => {
     if (event.button !== 0 || this.context.getInputMode() === "ui") return;
+    if (this.transitionTimer > 0) return;
     if (!this.ball || !this.ball.resting || this.ball.inCup) return;
     if (!this.pointerHitsBall(event.clientX, event.clientY)) return;
     event.preventDefault();
@@ -183,8 +195,10 @@ class MiniGolfSingleHoleSession implements GameModeSession {
     }
     if (!this.ball || aim.power < 0.03) return;
     this.ball = applyMiniGolfPutt(this.ball, aim.direction, aim.power);
-    this.strokes += 1;
+    this.holeStrokes += 1;
+    this.totalStrokes += 1;
     this.context.dispatchGameEvent({ kind: "add", variable: "strokes", amount: 1 });
+    this.context.dispatchGameEvent({ kind: "add", variable: "totalStrokes", amount: 1 });
     this.syncBallVisual();
   };
 
@@ -235,12 +249,19 @@ class MiniGolfSingleHoleSession implements GameModeSession {
   }
 
   private updateHud(): void {
+    const hole = this.currentHole();
     this.hud?.update({
-      strokes: this.strokes,
+      currentHole: hole?.number ?? 1,
+      totalHoles: Math.max(1, this.holes.length),
+      strokes: this.holeStrokes,
+      totalStrokes: this.totalStrokes,
+      scoreRelativeToPar: this.scoreRelativeToPar,
       par: this.par,
       power: this.drag?.aim.power ?? 0,
       dragging: Boolean(this.drag),
       inCup: this.ball?.inCup ?? false,
+      transitioning: this.transitionTimer > 0,
+      courseComplete: Boolean(this.ball?.inCup) && this.activeHoleIndex >= this.holes.length - 1,
       ballScreen: this.ballScreenPosition(),
       dragStart: this.drag?.start ?? null,
       dragCurrent: this.drag?.current ?? null,
@@ -252,12 +273,53 @@ class MiniGolfSingleHoleSession implements GameModeSession {
     const penaltyDelta = next.penaltyStrokes - this.penaltyStrokes;
     if (penaltyDelta > 0) {
       this.penaltyStrokes = next.penaltyStrokes;
-      this.strokes += penaltyDelta;
+      this.holeStrokes += penaltyDelta;
+      this.totalStrokes += penaltyDelta;
       this.context.dispatchGameEvent({ kind: "add", variable: "strokes", amount: penaltyDelta });
+      this.context.dispatchGameEvent({ kind: "add", variable: "totalStrokes", amount: penaltyDelta });
     }
     if (!previous.inCup && next.inCup) {
-      this.context.dispatchGameEvent({ kind: "objective", id: "hole-1" });
+      this.completeCurrentHole();
     }
+  }
+
+  private startHole(index: number): void {
+    const hole = this.holes[index];
+    if (!hole) return;
+    this.activeHoleIndex = index;
+    this.par = hole.par;
+    this.holeStrokes = 0;
+    this.penaltyStrokes = 0;
+    this.transitionTimer = 0;
+    this.course = buildMiniGolfCourse(
+      this.context.layout,
+      this.context.getAssetCollisionDef,
+      this.context.staticBlockerAabbs(),
+      { hole: hole.number },
+    );
+    const pos = hole.tee.placement.position;
+    const ballY = this.course.defaultSurface?.height ?? BALL_VISUAL_RADIUS;
+    this.ball = createMiniGolfBallState([pos[0], ballY, pos[2]]);
+    this.context.dispatchGameEvent({ kind: "set", variable: "strokes", value: 0 });
+    this.context.dispatchGameEvent({ kind: "set", variable: "par", value: this.par });
+    this.context.dispatchGameEvent({ kind: "set", variable: "currentHole", value: hole.number });
+    this.syncBallVisual();
+  }
+
+  private completeCurrentHole(): void {
+    const hole = this.currentHole();
+    if (!hole || this.completedHoles.has(hole.number)) return;
+    this.completedHoles.add(hole.number);
+    this.scoreRelativeToPar += this.holeStrokes - hole.par;
+    this.context.dispatchGameEvent({ kind: "set", variable: "score", value: this.scoreRelativeToPar });
+    this.context.dispatchGameEvent({ kind: "objective", id: `hole-${hole.number}` });
+    if (this.activeHoleIndex < this.holes.length - 1) {
+      this.transitionTimer = HOLE_TRANSITION_DELAY_SECONDS;
+    }
+  }
+
+  private currentHole(): MiniGolfHole | null {
+    return this.holes[this.activeHoleIndex] ?? null;
   }
 
   private syncBallVisual(): void {
@@ -325,22 +387,33 @@ class MiniGolfHud {
   }
 
   update(state: {
+    readonly currentHole: number;
+    readonly totalHoles: number;
     readonly strokes: number;
+    readonly totalStrokes: number;
+    readonly scoreRelativeToPar: number;
     readonly par: number;
     readonly power: number;
     readonly dragging: boolean;
     readonly inCup: boolean;
+    readonly transitioning: boolean;
+    readonly courseComplete: boolean;
     readonly ballScreen: Vec2 | null;
     readonly dragStart: Vec2 | null;
     readonly dragCurrent: Vec2 | null;
   }): void {
-    this.text.textContent = `Hole 1  Par ${state.par}  Strokes ${state.strokes}`;
+    const score = state.scoreRelativeToPar > 0 ? `+${state.scoreRelativeToPar}` : `${state.scoreRelativeToPar}`;
+    this.text.textContent = `Hole ${state.currentHole}/${state.totalHoles}  Par ${state.par}  Strokes ${state.strokes}  Total ${state.totalStrokes}  Score ${score}`;
     this.fill.style.width = `${Math.round(state.power * 100)}%`;
-    this.hint.textContent = state.inCup
-      ? "In cup"
-      : state.dragging
-        ? "Release to putt"
-        : "Drag from the ball";
+    this.hint.textContent = state.courseComplete
+      ? "Course complete"
+      : state.transitioning
+        ? "Next hole"
+        : state.inCup
+          ? "In cup"
+          : state.dragging
+            ? "Release to putt"
+            : "Drag from the ball";
     this.updateAimLine(state);
   }
 
@@ -371,36 +444,63 @@ class MiniGolfHud {
   }
 }
 
-function findPlacementByRole(layout: RoomLayout, role: string): MiniGolfPlacementRef | null {
-  for (const instance of layout.instances) {
-    const placementIndex = instance.placements.findIndex(
-      (placement) => placement.metadata?.minigolfRole === role,
-    );
-    if (placementIndex >= 0) {
+function collectMiniGolfHoles(layout: RoomLayout): readonly MiniGolfHole[] {
+  const tees = findPlacementsByRole(layout, "tee");
+  if (tees.length === 0) return [];
+  return tees
+    .map((tee, index) => {
+      const number = holeNumber(tee.placement) ?? index + 1;
       return {
-        assetId: instance.assetId,
-        placementIndex,
-        placement: instance.placements[placementIndex]!,
+        number,
+        par: numberMeta(tee.placement, "par", readPar(layout, number)),
+        tee,
+        cup: findPlacementByRole(layout, "cup", number),
       };
+    })
+    .sort((a, b) => a.number - b.number);
+}
+
+function findPlacementByRole(
+  layout: RoomLayout,
+  role: string,
+  hole?: number,
+): MiniGolfPlacementRef | null {
+  return findPlacementsByRole(layout, role, hole)[0] ?? null;
+}
+
+function findPlacementsByRole(
+  layout: RoomLayout,
+  role: string,
+  hole?: number,
+): MiniGolfPlacementRef[] {
+  const refs: MiniGolfPlacementRef[] = [];
+  for (const instance of layout.instances) {
+    for (let placementIndex = 0; placementIndex < instance.placements.length; placementIndex += 1) {
+      const placement = instance.placements[placementIndex]!;
+      if (placement.metadata?.minigolfRole !== role) continue;
+      if (hole !== undefined && holeNumber(placement) !== hole) continue;
+      refs.push({ assetId: instance.assetId, placementIndex, placement });
     }
   }
-  return null;
+  return refs;
 }
 
 export function buildMiniGolfCourse(
   layout: RoomLayout,
   getAssetCollisionDef: (assetId: string) => AssetCollisionDef | undefined,
   staticBlockers: readonly Aabb3[] = [],
+  options: { readonly hole?: number } = {},
 ): MiniGolfCourse {
-  const cup = findPlacementByRole(layout, "cup")?.placement;
-  const collisionBoxes = collectCourseCollisionBoxes(layout, getAssetCollisionDef);
+  const cup = findPlacementByRole(layout, "cup", options.hole)?.placement;
+  const collisionBoxes = collectCourseCollisionBoxes(layout, getAssetCollisionDef, options.hole);
+  const courseBounds = courseBoundsFromPlacements(layout, options.hole);
   const surfaceBoxes = collisionBoxes.filter((box) => box.kind === "surface");
   const surfaceHeight = collisionBoxes
     .filter((box) => box.kind === "surface")
     .reduce((height, box) => Math.max(height, box.top), 0);
   const surfaces = [
     ...surfaceBoxes.map((box) => surfaceFromCourseBox(box)),
-    ...meshSurfacesFromBlockers(staticBlockers, collisionBoxes),
+    ...meshSurfacesFromBlockers(staticBlockers, collisionBoxes, courseBounds),
   ];
   const walls = collisionBoxes
     .filter((box) => box.kind === "wall" && box.top > surfaceHeight + WALL_TOP_CLEARANCE)
@@ -408,16 +508,8 @@ export function buildMiniGolfCourse(
       bounds: box.bounds,
       ...(box.restitution !== undefined ? { restitution: box.restitution } : {}),
     }));
-  const playable = layout.instances
-    .flatMap((instance) => instance.placements)
-    .filter((placement) => placement.metadata?.role !== "camera-start");
-  const xs = playable.map((placement) => placement.position[0]);
-  const zs = playable.map((placement) => placement.position[2]);
   return {
-    bounds: {
-      min: [Math.min(...xs, -1) - 0.55, Math.min(...zs, -8) - 1],
-      max: [Math.max(...xs, 1) + 0.55, Math.max(...zs, 1) + 1],
-    },
+    bounds: courseBounds,
     walls,
     surfaces,
     defaultSurface: { height: surfaceHeight + BALL_VISUAL_RADIUS, friction: 1 },
@@ -443,6 +535,7 @@ interface CourseCollisionBox {
 function collectCourseCollisionBoxes(
   layout: RoomLayout,
   getAssetCollisionDef: (assetId: string) => AssetCollisionDef | undefined,
+  hole?: number,
 ): CourseCollisionBox[] {
   const boxes: CourseCollisionBox[] = [];
   for (const instance of layout.instances) {
@@ -450,6 +543,7 @@ function collectCourseCollisionBoxes(
     if (!def) continue;
     for (const placement of instance.placements) {
       if (placement.hidden || placement.collision === false) continue;
+      if (!placementBelongsToHole(placement, hole)) continue;
       for (const primitive of def.primitives) {
         const box = primitiveCourseBox(primitive, placement);
         if (box) boxes.push(box);
@@ -504,9 +598,13 @@ function surfaceFromCourseBox(box: CourseCollisionBox): MiniGolfSurface {
 function meshSurfacesFromBlockers(
   staticBlockers: readonly Aabb3[],
   authoredBoxes: readonly CourseCollisionBox[],
+  courseBounds?: MiniGolfAabb2,
 ): MiniGolfSurface[] {
   const blockers = staticBlockers.filter(
-    (blocker) => isMeshSurfaceBlocker(blocker) && !matchesAuthoredCourseBox(blocker, authoredBoxes),
+    (blocker) =>
+      isMeshSurfaceBlocker(blocker) &&
+      !matchesAuthoredCourseBox(blocker, authoredBoxes) &&
+      (!courseBounds || blockerIntersectsAabb2(blocker, courseBounds)),
   );
   if (blockers.length === 0) return [];
   const bounds = unionBlockerBounds(blockers);
@@ -599,9 +697,49 @@ function numberMeta(placement: LayoutPlacement, key: string, fallback: number): 
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
-function readPar(layout: RoomLayout): number {
-  const par = layout.worldSettings?.gameRules?.variables?.find((variable) => variable.id === "par");
-  return par?.initial ?? 3;
+function courseBoundsFromPlacements(layout: RoomLayout, hole: number | undefined): MiniGolfAabb2 {
+  const nonCameraPlacements = layout.instances
+    .flatMap((instance) => instance.placements)
+    .filter((placement) => placement.metadata?.role !== "camera-start");
+  const holePlacements =
+    hole === undefined
+      ? nonCameraPlacements
+      : nonCameraPlacements.filter((placement) => holeNumber(placement) === hole);
+  const boundedPlacements = holePlacements.length > 0 ? holePlacements : nonCameraPlacements;
+  const xs = boundedPlacements.map((placement) => placement.position[0]);
+  const zs = boundedPlacements.map((placement) => placement.position[2]);
+  return {
+    min: [Math.min(...xs, -1) - 0.55, Math.min(...zs, -8) - 1],
+    max: [Math.max(...xs, 1) + 0.55, Math.max(...zs, 1) + 1],
+  };
+}
+
+function readPar(layout: RoomLayout, hole?: number): number {
+  const parId = hole !== undefined ? `par-${hole}` : "par";
+  const par = layout.worldSettings?.gameRules?.variables?.find((variable) => variable.id === parId);
+  if (par) return par.initial ?? 3;
+  const sharedPar = layout.worldSettings?.gameRules?.variables?.find((variable) => variable.id === "par");
+  return sharedPar?.initial ?? 3;
+}
+
+function holeNumber(placement: LayoutPlacement): number | null {
+  const value = placement.metadata?.hole;
+  return typeof value === "number" && Number.isFinite(value) ? Math.max(1, Math.floor(value)) : null;
+}
+
+function placementBelongsToHole(placement: LayoutPlacement, hole: number | undefined): boolean {
+  if (hole === undefined) return true;
+  const placementHole = holeNumber(placement);
+  return placementHole === null || placementHole === hole;
+}
+
+function blockerIntersectsAabb2(blocker: Aabb3, bounds: MiniGolfAabb2): boolean {
+  return (
+    blocker.max[0] >= bounds.min[0] &&
+    blocker.min[0] <= bounds.max[0] &&
+    blocker.max[2] >= bounds.min[1] &&
+    blocker.min[2] <= bounds.max[1]
+  );
 }
 
 function normalize2(value: Vec2): Vec2 {

@@ -4553,6 +4553,47 @@ check("miniGolf: course builder turns authored tall primitives into walls", () =
   assert.equal(wall.bounds.max[1], 0.5);
 });
 
+check("miniGolf: course builder can scope collision and cup data to one hole", () => {
+  const layout: RoomLayout = {
+    schema: 1,
+    name: "minigolf-two-hole-course",
+    loadGroups: [],
+    instances: [
+      {
+        assetId: "floor",
+        placements: [
+          { position: [0, 0.82, 0], metadata: { hole: 1 } },
+          { position: [10, 0.82, 0], metadata: { hole: 2 } },
+        ],
+      },
+      {
+        assetId: "cup",
+        placements: [
+          { position: [0, 0.82, -3], metadata: { minigolfRole: "cup", hole: 1 } },
+          { position: [10, 0.82, -3], metadata: { minigolfRole: "cup", hole: 2 } },
+        ],
+      },
+    ],
+    characters: [],
+    lights: [],
+  };
+  const defs = new Map<string, AssetCollisionDef>([
+    [
+      "floor",
+      {
+        primitives: [{ shape: "box", size: [1, 0.056, 1], center: [0, 0.032, 0] }],
+        complexity: "projectDefault",
+        preset: "blockAll",
+      },
+    ],
+  ]);
+  const course = buildMiniGolfCourse(layout, (assetId) => defs.get(assetId), [], { hole: 2 });
+  assert.equal(course.cup?.center[0], 10);
+  assert.ok(course.bounds);
+  assert.ok(course.bounds.min[0] > 9);
+  assert.ok(course.surfaces?.every((surface) => surface.bounds!.min[0] > 9));
+});
+
 check("miniGolf: AABB walls bounce the ball with restitution", () => {
   const course: MiniGolfCourse = {
     walls: [{ bounds: { min: [0.9, -1], max: [1.1, 1] }, restitution: 0.5 }],
