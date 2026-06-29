@@ -26,6 +26,13 @@ export interface MiniGolfSurface {
   readonly height?: number;
   /** Surface gradient as `[dY/dX, dY/dZ]`; positive X slope accelerates toward -X. */
   readonly slope?: Vec2;
+  /**
+   * Runtime-only height sampler for mesh-derived surfaces. Return `null` when
+   * the point is outside the sampled surface so lower/default surfaces can win.
+   */
+  readonly heightAt?: (x: number, z: number) => number | null;
+  /** Optional runtime-only gradient sampler matching `heightAt`. */
+  readonly slopeAt?: (x: number, z: number) => Vec2 | null;
   readonly origin?: Vec2;
   /** Multiplier for the global rolling friction. */
   readonly friction?: number;
@@ -136,6 +143,8 @@ export function planarSpeed(vel: Vec3): number {
 }
 
 export function miniGolfSurfaceHeight(surface: MiniGolfSurface, x: number, z: number): number {
+  const sampled = surface.heightAt?.(x, z);
+  if (sampled !== null && sampled !== undefined && Number.isFinite(sampled)) return sampled;
   const [ox, oz] = surface.origin ?? [0, 0];
   const [sx, sz] = surface.slope ?? [0, 0];
   return (surface.height ?? 0) + sx * (x - ox) + sz * (z - oz);
@@ -152,7 +161,7 @@ function stepFixed(
   let vz = state.vel[2];
 
   const surface = surfaceAt(course, x, z);
-  const slope = surface.slope ?? [0, 0];
+  const slope = miniGolfSurfaceSlope(surface, x, z);
   vx += -slope[0] * cfg.slopeGravity * dt;
   vz += -slope[1] * cfg.slopeGravity * dt;
 
@@ -215,11 +224,29 @@ function physicsConfig(config: Partial<MiniGolfPhysicsConfig>): MiniGolfPhysicsC
 
 function surfaceAt(course: MiniGolfCourse, x: number, z: number): MiniGolfSurface {
   const surfaces = course.surfaces ?? [];
-  for (let index = surfaces.length - 1; index >= 0; index -= 1) {
+  let best: { surface: MiniGolfSurface; height: number } | null = null;
+  for (let index = 0; index < surfaces.length; index += 1) {
     const surface = surfaces[index]!;
-    if (!surface.bounds || containsAabb(surface.bounds, x, z)) return surface;
+    const height = sampledSurfaceHeight(surface, x, z);
+    if (height === null) continue;
+    if (!best || height >= best.height) best = { surface, height };
   }
+  if (best) return best.surface;
   return course.defaultSurface ?? {};
+}
+
+function sampledSurfaceHeight(surface: MiniGolfSurface, x: number, z: number): number | null {
+  if (surface.bounds && !containsAabb(surface.bounds, x, z)) return null;
+  const sampled = surface.heightAt?.(x, z);
+  if (sampled === null) return null;
+  if (sampled !== undefined) return Number.isFinite(sampled) ? sampled : null;
+  return miniGolfSurfaceHeight(surface, x, z);
+}
+
+function miniGolfSurfaceSlope(surface: MiniGolfSurface, x: number, z: number): Vec2 {
+  const sampled = surface.slopeAt?.(x, z);
+  if (sampled) return sampled;
+  return surface.slope ?? [0, 0];
 }
 
 function resolveWallCollisions(

@@ -4,6 +4,7 @@ import type { LayoutPlacement, RoomLayout } from "@engine/scene/layout";
 import { readRotation, readScale } from "@engine/scene/transform";
 import type { TransformComponent } from "@engine/scene/components";
 import type { AssetCollisionDef, CollisionPrimitive } from "@engine/scene/collision";
+import type { Aabb3 } from "@/game/collision";
 import { computeMiniGolfAim, type MiniGolfAim } from "@/game/miniGolfAim";
 import {
   DEFAULT_MINI_GOLF_PHYSICS,
@@ -14,6 +15,7 @@ import {
   type MiniGolfBallState,
   type MiniGolfCourse,
   type MiniGolfPhysicsConfig,
+  type MiniGolfSurface,
   type Vec2,
 } from "@/game/miniGolfBallPhysics";
 import type {
@@ -35,6 +37,11 @@ const ORBIT_HEIGHT = 3.2;
 const ORBIT_SENSITIVITY = 0.006;
 const SURFACE_BOX_MAX_HEIGHT = 0.075;
 const WALL_TOP_CLEARANCE = 0.035;
+const MESH_SURFACE_MAX_THICKNESS = 0.12;
+const MESH_SURFACE_MIN_FOOTPRINT = 0.004;
+const MESH_SURFACE_SAMPLE_PADDING = 0.002;
+const MESH_SURFACE_SLOPE_SAMPLE_STEP = 0.12;
+const MESH_SURFACE_MAX_SLOPE = 0.8;
 const MINI_GOLF_RUNTIME_PHYSICS: Partial<MiniGolfPhysicsConfig> = {
   ...DEFAULT_MINI_GOLF_PHYSICS,
   ballRadius: BALL_VISUAL_RADIUS,
@@ -71,7 +78,11 @@ class MiniGolfSingleHoleSession implements GameModeSession {
     this.ballRef = findPlacementByRole(this.context.layout, "ball-spawn");
     const pos = this.ballRef?.placement.position ?? findPlacementByRole(this.context.layout, "tee")?.placement.position;
     if (!pos) return;
-    this.course = buildCourse(this.context.layout, this.context.getAssetCollisionDef);
+    this.course = buildMiniGolfCourse(
+      this.context.layout,
+      this.context.getAssetCollisionDef,
+      this.context.staticBlockerAabbs(),
+    );
     const surfaceHeight = this.course.defaultSurface?.height ?? 0;
     this.ball = createMiniGolfBallState([pos[0], surfaceHeight + BALL_VISUAL_RADIUS, pos[2]]);
     this.par = readPar(this.context.layout);
@@ -376,15 +387,21 @@ function findPlacementByRole(layout: RoomLayout, role: string): MiniGolfPlacemen
   return null;
 }
 
-function buildCourse(
+export function buildMiniGolfCourse(
   layout: RoomLayout,
   getAssetCollisionDef: (assetId: string) => AssetCollisionDef | undefined,
+  staticBlockers: readonly Aabb3[] = [],
 ): MiniGolfCourse {
   const cup = findPlacementByRole(layout, "cup")?.placement;
   const collisionBoxes = collectCourseCollisionBoxes(layout, getAssetCollisionDef);
+  const surfaceBoxes = collisionBoxes.filter((box) => box.kind === "surface");
   const surfaceHeight = collisionBoxes
     .filter((box) => box.kind === "surface")
     .reduce((height, box) => Math.max(height, box.top), 0);
+  const surfaces = [
+    ...surfaceBoxes.map((box) => surfaceFromCourseBox(box)),
+    ...meshSurfacesFromBlockers(staticBlockers, collisionBoxes),
+  ];
   const walls = collisionBoxes
     .filter((box) => box.kind === "wall" && box.top > surfaceHeight + WALL_TOP_CLEARANCE)
     .map((box) => ({
@@ -402,6 +419,7 @@ function buildCourse(
       max: [Math.max(...xs, 1) + 0.55, Math.max(...zs, 1) + 1],
     },
     walls,
+    surfaces,
     defaultSurface: { height: surfaceHeight + BALL_VISUAL_RADIUS, friction: 1 },
     ...(cup
       ? {
@@ -475,6 +493,107 @@ function primitiveCourseBox(
   };
 }
 
+function surfaceFromCourseBox(box: CourseCollisionBox): MiniGolfSurface {
+  return {
+    bounds: box.bounds,
+    height: box.top + BALL_VISUAL_RADIUS,
+    friction: 1,
+  };
+}
+
+function meshSurfacesFromBlockers(
+  staticBlockers: readonly Aabb3[],
+  authoredBoxes: readonly CourseCollisionBox[],
+): MiniGolfSurface[] {
+  const blockers = staticBlockers.filter(
+    (blocker) => isMeshSurfaceBlocker(blocker) && !matchesAuthoredCourseBox(blocker, authoredBoxes),
+  );
+  if (blockers.length === 0) return [];
+  const bounds = unionBlockerBounds(blockers);
+  const surface: MiniGolfSurface = {
+    bounds,
+    friction: 1,
+    heightAt: (x, z) => heightFromMeshBlockers(blockers, x, z),
+    slopeAt: (x, z) => slopeFromMeshBlockers(blockers, x, z),
+  };
+  return [surface];
+}
+
+function isMeshSurfaceBlocker(blocker: Aabb3): boolean {
+  const sizeX = blocker.max[0] - blocker.min[0];
+  const sizeY = blocker.max[1] - blocker.min[1];
+  const sizeZ = blocker.max[2] - blocker.min[2];
+  return (
+    Number.isFinite(sizeX) &&
+    Number.isFinite(sizeY) &&
+    Number.isFinite(sizeZ) &&
+    sizeX > MESH_SURFACE_MIN_FOOTPRINT &&
+    sizeZ > MESH_SURFACE_MIN_FOOTPRINT &&
+    sizeY >= 0 &&
+    sizeY <= MESH_SURFACE_MAX_THICKNESS
+  );
+}
+
+function matchesAuthoredCourseBox(blocker: Aabb3, boxes: readonly CourseCollisionBox[]): boolean {
+  return boxes.some(
+    (box) =>
+      nearlyEqual(blocker.min[0], box.bounds.min[0]) &&
+      nearlyEqual(blocker.max[0], box.bounds.max[0]) &&
+      nearlyEqual(blocker.min[2], box.bounds.min[1]) &&
+      nearlyEqual(blocker.max[2], box.bounds.max[1]) &&
+      nearlyEqual(blocker.max[1], box.top),
+  );
+}
+
+function unionBlockerBounds(blockers: readonly Aabb3[]): MiniGolfAabb2 {
+  let minX = Infinity;
+  let minZ = Infinity;
+  let maxX = -Infinity;
+  let maxZ = -Infinity;
+  for (const blocker of blockers) {
+    minX = Math.min(minX, blocker.min[0]);
+    minZ = Math.min(minZ, blocker.min[2]);
+    maxX = Math.max(maxX, blocker.max[0]);
+    maxZ = Math.max(maxZ, blocker.max[2]);
+  }
+  return { min: [minX, minZ], max: [maxX, maxZ] };
+}
+
+function heightFromMeshBlockers(
+  blockers: readonly Aabb3[],
+  x: number,
+  z: number,
+): number | null {
+  let height: number | null = null;
+  for (const blocker of blockers) {
+    if (
+      x < blocker.min[0] - MESH_SURFACE_SAMPLE_PADDING ||
+      x > blocker.max[0] + MESH_SURFACE_SAMPLE_PADDING ||
+      z < blocker.min[2] - MESH_SURFACE_SAMPLE_PADDING ||
+      z > blocker.max[2] + MESH_SURFACE_SAMPLE_PADDING
+    ) {
+      continue;
+    }
+    const candidate = blocker.max[1] + BALL_VISUAL_RADIUS;
+    height = height === null ? candidate : Math.max(height, candidate);
+  }
+  return height;
+}
+
+function slopeFromMeshBlockers(blockers: readonly Aabb3[], x: number, z: number): Vec2 | null {
+  const center = heightFromMeshBlockers(blockers, x, z);
+  if (center === null) return null;
+  const step = MESH_SURFACE_SLOPE_SAMPLE_STEP;
+  const hx0 = heightFromMeshBlockers(blockers, x - step, z) ?? center;
+  const hx1 = heightFromMeshBlockers(blockers, x + step, z) ?? center;
+  const hz0 = heightFromMeshBlockers(blockers, x, z - step) ?? center;
+  const hz1 = heightFromMeshBlockers(blockers, x, z + step) ?? center;
+  return [
+    clamp((hx1 - hx0) / (step * 2), -MESH_SURFACE_MAX_SLOPE, MESH_SURFACE_MAX_SLOPE),
+    clamp((hz1 - hz0) / (step * 2), -MESH_SURFACE_MAX_SLOPE, MESH_SURFACE_MAX_SLOPE),
+  ];
+}
+
 function numberMeta(placement: LayoutPlacement, key: string, fallback: number): number {
   const value = placement.metadata?.[key];
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
@@ -492,6 +611,14 @@ function normalize2(value: Vec2): Vec2 {
 
 function degreesToRadians(value: number): number {
   return (value * Math.PI) / 180;
+}
+
+function nearlyEqual(a: number, b: number): boolean {
+  return Math.abs(a - b) <= 1e-4;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
 
 export const MINI_GOLF_PLAYER_CONTROLLER: PlayerControllerDefinition = {

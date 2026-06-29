@@ -110,6 +110,7 @@ import {
   type MiniGolfCourse,
 } from "../src/game/miniGolfBallPhysics";
 import { computeMiniGolfAim } from "../src/game/miniGolfAim";
+import { buildMiniGolfCourse } from "../src/game/gameModes/miniGolfGameMode";
 import {
   classifyLocomotion,
   locomotionConfigForSkeleton,
@@ -4455,6 +4456,61 @@ check("miniGolf: slope accelerates the ball downhill and updates surface height"
   assert.ok(ball.vel[0] < 0);
   assert.ok(ball.pos[0] < 0);
   assert.equal(ball.pos[1], miniGolfSurfaceHeight(course.defaultSurface!, ball.pos[0], ball.pos[2]));
+});
+
+check("miniGolf: overlapping sampled surfaces use the highest height", () => {
+  const course: MiniGolfCourse = {
+    defaultSurface: { height: 0, friction: 0 },
+    surfaces: [
+      { bounds: { min: [-1, -1], max: [1, 1] }, height: 0.25, friction: 0 },
+      {
+        bounds: { min: [-0.5, -0.5], max: [0.5, 0.5] },
+        friction: 0,
+        heightAt: (x, z) => (Math.abs(x) <= 0.5 && Math.abs(z) <= 0.5 ? 0.75 : null),
+      },
+    ],
+  };
+  const ball = stepMiniGolfBall(createMiniGolfBallState([0, 0, 0], [0, 0, 0]), course, 1 / 120, {
+    rollingFriction: 0,
+  });
+  assert.equal(ball.pos[1], 0.75);
+});
+
+check("miniGolf: course builder turns complex blocker AABBs into sampled surfaces", () => {
+  const layout: RoomLayout = {
+    schema: 1,
+    name: "minigolf-complex-surface",
+    loadGroups: [],
+    instances: [
+      { assetId: "floor", placements: [{ position: [0, 0.82, 0] }] },
+      { assetId: "hill", placements: [{ position: [0, 0.82, -1] }] },
+    ],
+    characters: [],
+    lights: [],
+  };
+  const floorDef: AssetCollisionDef = {
+    primitives: [{ shape: "box", size: [1, 0.056, 1], center: [0, 0.032, 0] }],
+    complexity: "projectDefault",
+    preset: "blockAll",
+  };
+  const defs = new Map<string, AssetCollisionDef>([
+    ["floor", floorDef],
+    ["hill", { primitives: [], complexity: "complexAsSimple", preset: "blockAll" }],
+  ]);
+  const floorTop = 0.82 + 0.032 + 0.056 / 2;
+  const hillTop = 1.05;
+  const course = buildMiniGolfCourse(
+    layout,
+    (assetId) => defs.get(assetId),
+    [
+      { min: [-0.5, 0.82, -0.5], max: [0.5, floorTop, 0.5] },
+      { min: [-0.35, 0.97, -1.35], max: [0.35, hillTop, -0.65] },
+    ],
+  );
+  const sampled = course.surfaces
+    ?.map((surface) => miniGolfSurfaceHeight(surface, 0, -1))
+    .filter((height) => height > 1);
+  assert.deepEqual(sampled, [hillTop + 0.035]);
 });
 
 check("miniGolf: AABB walls bounce the ball with restitution", () => {
