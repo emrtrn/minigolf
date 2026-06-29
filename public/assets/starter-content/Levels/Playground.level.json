@@ -259,6 +259,7 @@
   "worldSettings": {
     "staticObjectsCastShadow": true,
     "backgroundColor": "#ffffff",
+    "gameMode": "assets/starter-content/Gameplay/Script_GameMode.actor.json",
     "hudWidget": "hud",
     "pauseMenuWidget": "menu",
     "locale": "en"

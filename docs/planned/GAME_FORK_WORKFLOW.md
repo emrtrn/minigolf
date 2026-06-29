@@ -141,6 +141,35 @@ git fetch upstream
 git merge upstream/main
 ```
 
+**Toplu otomasyon — Forge değişikliklerini oyunlara yay:**
+Forge değişikliği commit'lenmiş ama push edilmemişse script Forge `main`'i
+`origin/main`'e push eder. Sonra `C:\Users\emret\Desktop\Games` altındaki git
+repo oyunlarda `upstream/main`'i fast-forward merge eder ve `origin/main`'e push
+eder.
+
+```bat
+cd C:\Users\emret\Desktop\Forge
+tools\sync-forge-to-games.bat
+```
+
+Sadece belirli oyunları güncellemek için:
+
+```bat
+tools\sync-forge-to-games.bat -Projects minigolf
+```
+
+Önce ne yapacağını görmek için:
+
+```bat
+tools\sync-forge-to-games.bat -DryRun
+```
+
+Güvenlik sınırları:
+- Forge veya oyun reposunda uncommitted değişiklik varsa durur.
+- Forge ve oyun repoları `main` branch'inde değilse durur.
+- Oyun merge'i normal `git merge --no-edit upstream/main` çalışır; çakışma varsa
+  Git durur ve manuel çözüm ister.
+
 **İstisna — yanlışlıkla oyunda kodladıysan:**
 ```bash
 # Oyundaki commit SHA'sını al
