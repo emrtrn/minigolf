@@ -225,6 +225,17 @@ interface BrowserAssetItem {
   editable?: EditableAsset;
 }
 
+interface BrowserFolderItem {
+  key: string;
+  label: string;
+  path: string;
+  type: "folder";
+  fileCount: number;
+  descendantFileCount: number;
+}
+
+type BrowserContentItem = BrowserFolderItem | BrowserAssetItem;
+
 interface BrowserAssetIssue {
   code:
     | "loose-file"
@@ -248,6 +259,7 @@ export class EditorUi {
   private contentStatus: HTMLElement;
   private contentSearch: HTMLInputElement;
   private contentTypeFilter: HTMLSelectElement;
+  private contentSizeToggle: HTMLButtonElement;
   private folderTree: HTMLElement;
   private outlinerList: HTMLDivElement;
   private detailsBody: HTMLDivElement;
@@ -272,6 +284,8 @@ export class EditorUi {
   private collapsedFolderPaths = new Set<string>();
   /** Content Browser asset card highlighted as selected (orange). */
   private selectedAssetId: string | null = null;
+  /** Content Browser folder card highlighted as selected. */
+  private selectedContentFolderPath: string | null = null;
   /** Last asset-grid summary status, restored when the selection is cleared. */
   private contentListStatus = "";
   /** Cached 1x1 transparent image used to suppress the native drag thumbnail. */
@@ -279,6 +293,7 @@ export class EditorUi {
   private contentQuery = "";
   private contentType: ContentTypeFilter = CONTENT_FILTER_ALL;
   private contentDrawerOpen = false;
+  private contentDrawerTall = false;
   private contentRefreshTimer = 0;
   private outlinerObjects: EditableSceneObject[] = [];
   private outlinerFilter = "";
@@ -451,6 +466,13 @@ export class EditorUi {
               <option value="${CONTENT_FILTER_ALL}">All types</option>
             </select>
           </div>
+          <button
+            type="button"
+            class="content-size-toggle"
+            data-content-size-toggle
+            aria-pressed="false"
+            title="Toggle drawer height"
+          >Tall</button>
           <button type="button" data-content-refresh>Refresh</button>
         </div>
         <div class="content-drawer-body">
@@ -482,6 +504,7 @@ export class EditorUi {
     this.contentStatus = requireElement(this.root, "[data-content-status]");
     this.contentSearch = requireElement(this.root, "[data-content-search]");
     this.contentTypeFilter = requireElement(this.root, "[data-content-type-filter]");
+    this.contentSizeToggle = requireElement(this.root, "[data-content-size-toggle]");
     this.folderTree = requireElement(this.root, "[data-folder-tree]");
     this.outlinerList = requireElement(this.root, "[data-outliner-list]");
     this.detailsBody = requireElement(this.root, "[data-details-body]");
@@ -714,6 +737,10 @@ export class EditorUi {
       void this.refreshAssetTree();
     });
 
+    this.contentSizeToggle.addEventListener("click", () => {
+      this.setContentDrawerTall(!this.contentDrawerTall);
+    });
+
     // Right-click empty asset-grid space -> create content in the current folder.
     // (Right-clicking a card stops propagation and shows the asset menu instead.)
     this.contentList.addEventListener("contextmenu", (event) => {
@@ -917,6 +944,14 @@ export class EditorUi {
     if (open) void this.refreshAssetTree({ quiet: true });
   }
 
+  private setContentDrawerTall(tall: boolean): void {
+    this.contentDrawerTall = tall;
+    this.contentDrawer.classList.toggle("is-tall", tall);
+    this.contentSizeToggle.classList.toggle("active", tall);
+    this.contentSizeToggle.setAttribute("aria-pressed", String(tall));
+    this.contentSizeToggle.textContent = tall ? "Short" : "Tall";
+  }
+
   /**
    * Reveals an asset in the Content Browser (Toolbar â†’ Browse from an open
    * editor): opens the drawer, navigates to the asset's folder (expanding
@@ -1083,7 +1118,11 @@ export class EditorUi {
     button.addEventListener("contextmenu", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      this.openContentContextMenu(event, node.path);
+      if (node === this.assetTreeRoot) {
+        this.openContentContextMenu(event, node.path);
+      } else {
+        this.openContentFolderContextMenu(event, this.toBrowserFolderItem(node));
+      }
     });
     wrapper.append(button);
 
@@ -1110,23 +1149,25 @@ export class EditorUi {
       this.selectedFolder === this.assetTreeRoot.path
         ? this.assetTreeRoot
         : findProjectDir(this.assetTreeRoot.children ?? [], this.selectedFolder);
-    const files = selected ? flattenProjectFiles([selected]) : [];
-    const items = files
+    const children = selected?.children ?? [];
+    const folders = children
+      .filter((child) => child.type === "dir")
+      .map((folder) => this.toBrowserFolderItem(folder))
+      .filter((item) => this.contentItemMatchesQuery(item));
+    const files = children.filter((child) => child.type === "file");
+    const assets = files
       .filter((file) => this.shouldDisplayAssetFile(file))
       .map((file) => this.toBrowserAssetItem(file))
       .filter((item) => this.contentType === CONTENT_FILTER_ALL || item.type === this.contentType)
-      .filter((item) => {
-        if (!this.contentQuery) return true;
-        return `${item.label} ${item.type} ${item.path}`
-          .toLocaleLowerCase()
-          .includes(this.contentQuery);
-      });
-    const issueCount = items.filter((item) => contentAssetIssues(item).length > 0).length;
+      .filter((item) => this.contentItemMatchesQuery(item));
+    const items: BrowserContentItem[] = [...folders, ...assets];
+    const issueCount = assets.filter((item) => contentAssetIssues(item).length > 0).length;
     const missingManifestAssetCount = this.countMissingManifestAssetFiles();
 
     this.contentPathLabel.textContent = this.selectedFolder || this.assetTreeRoot.path;
     this.contentListStatus = formatContentListStatus(
       items.length,
+      folders.length,
       files.length,
       issueCount,
       missingManifestAssetCount,
@@ -1136,7 +1177,7 @@ export class EditorUi {
     if (items.length === 0) {
       this.contentList.innerHTML = `
         <div class="empty-details">
-          <strong>No matching assets</strong>
+          <strong>No matching content</strong>
           <span>${escapeHtml(this.selectedFolder)}</span>
         </div>
       `;
@@ -1144,7 +1185,9 @@ export class EditorUi {
     }
 
     this.contentList.replaceChildren(
-      ...items.map((item) => this.createAssetCard(item)),
+      ...items.map((item) =>
+        item.type === "folder" ? this.createFolderCard(item) : this.createAssetCard(item),
+      ),
     );
   }
 
@@ -1198,6 +1241,17 @@ export class EditorUi {
     );
   }
 
+  private toBrowserFolderItem(folder: ProjectDirNode): BrowserFolderItem {
+    return {
+      key: folder.path,
+      label: folder.name,
+      path: folder.path,
+      type: "folder",
+      fileCount: folder.children?.filter((child) => child.type === "file").length ?? 0,
+      descendantFileCount: flattenProjectFiles([folder]).length,
+    };
+  }
+
   private toBrowserAssetItem(file: ProjectDirNode): BrowserAssetItem {
     const editable = this.editableAssetByProjectPath().get(file.path);
     const base = {
@@ -1209,6 +1263,11 @@ export class EditorUi {
       type: editable ? assetType(editable) : (inferAssetTypeFromPath(file.path) ?? "file"),
     } satisfies Omit<BrowserAssetItem, "editable">;
     return editable ? { ...base, editable } : base;
+  }
+
+  private contentItemMatchesQuery(item: BrowserContentItem): boolean {
+    if (!this.contentQuery) return true;
+    return `${item.label} ${item.type} ${item.path}`.toLocaleLowerCase().includes(this.contentQuery);
   }
 
   private editableAssetByProjectPath(): Map<string, EditableAsset> {
@@ -1257,8 +1316,17 @@ export class EditorUi {
    *  whole grid (re-renders re-apply the class from `selectedAssetId`). */
   private setSelectedAsset(assetId: string | null): void {
     this.selectedAssetId = assetId;
+    if (assetId !== null) this.selectedContentFolderPath = null;
     for (const card of this.contentList.querySelectorAll<HTMLElement>(".asset-card")) {
       card.classList.toggle("is-selected", card.dataset.assetId === assetId);
+    }
+  }
+
+  private setSelectedContentFolder(path: string | null): void {
+    this.selectedContentFolderPath = path;
+    if (path !== null) this.selectedAssetId = null;
+    for (const card of this.contentList.querySelectorAll<HTMLElement>(".asset-card")) {
+      card.classList.toggle("is-selected", card.dataset.folderPath === path);
     }
   }
 
@@ -1391,6 +1459,48 @@ export class EditorUi {
     return card;
   }
 
+  private createFolderCard(item: BrowserFolderItem): HTMLElement {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "asset-card is-folder";
+    card.classList.toggle("is-selected", item.path === this.selectedContentFolderPath);
+    card.dataset.folderPath = item.path;
+    card.title = item.path;
+    card.innerHTML = `
+      <span class="asset-thumb folder-thumb">DIR</span>
+      <span class="asset-meta">
+        <strong title="${escapeHtml(item.label)}">${escapeHtml(item.label)}</strong>
+        <span class="asset-type-line">Folder</span>
+      </span>
+    `;
+    card.addEventListener("click", () => {
+      this.setSelectedContentFolder(item.path);
+      this.contentStatus.textContent = `${item.label} - Folder`;
+    });
+    card.addEventListener("dblclick", (event) => {
+      event.preventDefault();
+      this.navigateToContentFolder(item.path);
+    });
+    card.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.setSelectedContentFolder(item.path);
+      this.openContentFolderContextMenu(event, item);
+    });
+    return card;
+  }
+
+  private navigateToContentFolder(path: string): void {
+    this.selectedFolder = path;
+    const segments = path.split("/");
+    for (let i = 1; i < segments.length; i += 1) {
+      this.collapsedFolderPaths.delete(segments.slice(0, i).join("/"));
+    }
+    this.clearContentSelection();
+    this.renderFolderTree();
+    this.renderContentAssets();
+  }
+
   private showContentAssetDetails(item: BrowserAssetItem, issues: BrowserAssetIssue[]): void {
     const prefix = `${item.label} Â· ${formatContentTypeBadge(item.type)}`;
     this.contentStatus.textContent =
@@ -1399,8 +1509,9 @@ export class EditorUi {
 
   /** Drops the Content Browser asset selection and restores the grid summary. */
   private clearContentSelection(): void {
-    if (this.selectedAssetId === null) return;
+    if (this.selectedAssetId === null && this.selectedContentFolderPath === null) return;
     this.setSelectedAsset(null);
+    this.setSelectedContentFolder(null);
     this.contentStatus.textContent = this.contentListStatus;
   }
 
@@ -1439,6 +1550,26 @@ export class EditorUi {
       enabled: !activeLevel,
       run: () => void this.deleteContentAsset(item),
     });
+    this.openContextMenu(event, items);
+  }
+
+  /** Right-click menu for a Content Browser folder card/tree row. */
+  private openContentFolderContextMenu(event: MouseEvent, item: BrowserFolderItem): void {
+    const items: ContextMenuItem[] = [
+      { label: "Open", run: () => this.navigateToContentFolder(item.path) },
+      { separator: true },
+      { label: "New Folder", run: () => void this.createContent("folder", item.path) },
+      { label: "Import...", run: () => this.startImport(item.path) },
+      { separator: true },
+      { label: "Rename...", run: () => void this.renameContentFolder(item) },
+      { label: "Copy Path", run: () => void this.copyContentFolderPath(item) },
+      { separator: true },
+      {
+        label: "Delete",
+        danger: true,
+        run: () => void this.deleteContentFolder(item),
+      },
+    ];
     this.openContextMenu(event, items);
   }
 
@@ -1555,6 +1686,91 @@ export class EditorUi {
       await this.refreshAssetTree({ quiet: false });
     } catch (error) {
       this.setStatus(error instanceof Error ? error.message : String(error), "error");
+    }
+  }
+
+  /** Prompts for a new folder name and updates descendant path references server-side. */
+  private async renameContentFolder(item: BrowserFolderItem): Promise<void> {
+    const currentBase = item.path.split("/").at(-1) ?? item.label;
+    const next = window.prompt("Rename folder", currentBase);
+    if (next === null) return;
+    const trimmed = next.trim();
+    if (!trimmed || trimmed === currentBase) return;
+    try {
+      const result = await renameProjectContent(item.path, trimmed);
+      this.selectedFolder = replaceContentPathPrefix(this.selectedFolder, item.path, result.path);
+      if (this.selectedContentFolderPath) {
+        this.selectedContentFolderPath = replaceContentPathPrefix(
+          this.selectedContentFolderPath,
+          item.path,
+          result.path,
+        );
+      }
+      this.collapsedFolderPaths = new Set(
+        [...this.collapsedFolderPaths].map((path) =>
+          replaceContentPathPrefix(path, item.path, result.path),
+        ),
+      );
+      this.setStatus(`Renamed folder to ${result.path}`, "success");
+      if (result.registered) {
+        try {
+          this.editableAssets = await this.app.reloadEditableAssets();
+        } catch {
+          // Keep the stale list; the tree refresh below still shows the new paths.
+        }
+      }
+      await this.refreshAssetTree({ quiet: false });
+    } catch (error) {
+      this.setStatus(error instanceof Error ? error.message : String(error), "error");
+    }
+  }
+
+  /** Confirms, then deletes a folder and asks the server to scrub stale references. */
+  private async deleteContentFolder(item: BrowserFolderItem): Promise<void> {
+    const hasFiles = item.descendantFileCount > 0;
+    const message = hasFiles
+      ? `Delete folder "${item.label}" and ${item.descendantFileCount} file(s)?\n\nForge will remove descendant manifest entries and clean level references to deleted assets/classes so the project can keep loading. This cannot be undone.`
+      : `Delete empty folder "${item.label}"? This cannot be undone.`;
+    if (!window.confirm(message)) return;
+    try {
+      const parent = parentContentPath(item.path) ?? this.assetTreeRoot?.path ?? "";
+      const result = await deleteProjectContent(item.path);
+      if (isSameOrDescendantContentPath(this.selectedFolder, item.path)) {
+        this.selectedFolder = parent;
+      }
+      if (
+        this.selectedContentFolderPath &&
+        isSameOrDescendantContentPath(this.selectedContentFolderPath, item.path)
+      ) {
+        this.selectedContentFolderPath = null;
+      }
+      this.collapsedFolderPaths = new Set(
+        [...this.collapsedFolderPaths].filter((path) => !isSameOrDescendantContentPath(path, item.path)),
+      );
+      this.setStatus(
+        `Deleted ${result.path} (${result.deletedFiles} file(s), ${result.removedAssets} asset(s), ${result.cleanedLayouts} level file(s) cleaned)`,
+        "success",
+      );
+      if (result.registered || result.removedAssets > 0) {
+        try {
+          this.editableAssets = await this.app.reloadEditableAssets();
+        } catch {
+          // Keep the stale list; the tree refresh below drops deleted files.
+        }
+      }
+      await this.refreshAssetTree({ quiet: false });
+    } catch (error) {
+      this.setStatus(error instanceof Error ? error.message : String(error), "error");
+    }
+  }
+
+  /** Copies the folder's public-relative path to the clipboard. */
+  private async copyContentFolderPath(item: BrowserFolderItem): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(item.path);
+      this.setStatus(`Copied ${item.path}`, "success");
+    } catch {
+      this.setStatus(`Path: ${item.path}`, "info");
     }
   }
 
@@ -5302,16 +5518,39 @@ function contentAssetIssueTooltip(issues: readonly BrowserAssetIssue[]): string 
 
 function formatContentListStatus(
   shownCount: number,
+  folderCount: number,
   fileCount: number,
   issueCount: number,
   missingManifestAssetCount: number,
 ): string {
-  const parts = [`${shownCount} shown / ${fileCount} files`];
+  const parts = [`${shownCount} shown / ${folderCount} folders / ${fileCount} files`];
   if (issueCount > 0) parts.push(`${issueCount} with issues`);
   if (missingManifestAssetCount > 0) {
     parts.push(`${missingManifestAssetCount} manifest asset file missing`);
   }
   return parts.join(" Â· ");
+}
+
+function isSameOrDescendantContentPath(path: string, folder: string): boolean {
+  const normalizedPath = normalizeProjectPath(path);
+  const normalizedFolder = normalizeProjectPath(folder);
+  return normalizedPath === normalizedFolder || normalizedPath.startsWith(`${normalizedFolder}/`);
+}
+
+function replaceContentPathPrefix(path: string, fromFolder: string, toFolder: string): string {
+  const normalizedPath = normalizeProjectPath(path);
+  const normalizedFrom = normalizeProjectPath(fromFolder);
+  const normalizedTo = normalizeProjectPath(toFolder);
+  if (normalizedPath === normalizedFrom) return normalizedTo;
+  if (!normalizedPath.startsWith(`${normalizedFrom}/`)) return normalizedPath;
+  return `${normalizedTo}/${normalizedPath.slice(normalizedFrom.length + 1)}`;
+}
+
+function parentContentPath(path: string): string | null {
+  const normalized = normalizeProjectPath(path);
+  const slash = normalized.lastIndexOf("/");
+  if (slash <= 0) return null;
+  return normalized.slice(0, slash);
 }
 
 function formatAssetTypeFallbackLabel(value: string): string {

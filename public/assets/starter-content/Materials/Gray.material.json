@@ -7,12 +7,24 @@
   "baseColorTexture": null,
   "normalTexture": null,
   "maskTexture": null,
+  "roughnessTexture": null,
+  "metalnessTexture": null,
+  "aoTexture": null,
+  "opacityTexture": null,
+  "emissiveTexture": null,
+  "ormTexture": null,
+  "uvTiling": {
+    "x": 1,
+    "y": 1
+  },
   "roughness": 0.8,
   "metalness": 0,
+  "aoIntensity": 1,
   "opacity": 1,
   "alphaMode": "opaque",
   "alphaTest": 0.5,
   "side": "front",
   "emissive": "#000000",
-  "emissiveIntensity": 0
+  "emissiveIntensity": 0,
+  "layerBlend": null
 }

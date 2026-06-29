@@ -796,9 +796,13 @@ body.editor-mode #debug-stats {
   transform: translateY(0);
 }
 
+.editor-content-drawer.is-tall {
+  height: clamp(360px, 58vh, 680px);
+}
+
 .content-drawer-top {
   display: grid;
-  grid-template-columns: 250px minmax(180px, 1fr) minmax(120px, 160px) auto;
+  grid-template-columns: 250px minmax(180px, 1fr) minmax(120px, 160px) auto auto;
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
@@ -845,6 +849,10 @@ body.editor-mode #debug-stats {
   padding: 0 6px;
   color: #ffffff;
   background: #101316;
+}
+
+.editor-shell .content-size-toggle {
+  min-width: 54px;
 }
 
 .content-drawer-body {
@@ -945,10 +953,10 @@ body.editor-mode #debug-stats {
   min-width: 0;
   height: 148px;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) 42px;
-  gap: 6px;
+  grid-template-rows: 96px 30px;
+  gap: 8px;
   border-radius: 6px;
-  padding: 6px;
+  padding: 6px 6px 4px;
   text-align: left;
 }
 
@@ -997,6 +1005,16 @@ body.editor-mode #debug-stats {
   border-color: rgba(74, 214, 160, 0.7);
 }
 
+.editor-shell .asset-card.is-folder .asset-thumb {
+  border-color: rgba(98, 211, 255, 0.36);
+  color: #9edfff;
+  background-color: #101820;
+}
+
+.editor-shell .asset-card.is-folder:hover .asset-thumb {
+  border-color: rgba(98, 211, 255, 0.7);
+}
+
 .asset-active-badge {
   position: absolute;
   top: 6px;
@@ -1030,7 +1048,7 @@ body.editor-mode #debug-stats {
   display: grid;
   place-items: center;
   width: 100%;
-  aspect-ratio: 1;
+  height: 96px;
   min-height: 0;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1057,8 +1075,8 @@ body.editor-mode #debug-stats {
 
 .asset-meta {
   display: grid;
-  grid-template-rows: 16px 18px;
-  gap: 2px;
+  grid-template-rows: 15px 13px;
+  gap: 1px;
   align-content: start;
   min-width: 0;
 }
@@ -1076,7 +1094,7 @@ body.editor-mode #debug-stats {
   white-space: nowrap;
   color: #aeb8bd;
   font-size: 10px;
-  line-height: 16px;
+  line-height: 13px;
 }
 
 .content-drawer-status {
@@ -1149,8 +1167,12 @@ body.editor-mode #debug-stats {
     height: clamp(216px, 36vh, 340px);
   }
 
+  .editor-content-drawer.is-tall {
+    height: clamp(300px, 58vh, 520px);
+  }
+
   .content-drawer-top {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
   }
 
   .content-drawer-title {
@@ -1172,7 +1194,11 @@ body.editor-mode #debug-stats {
 
   .editor-shell .asset-card {
     height: 136px;
-    grid-template-rows: minmax(0, 1fr) 40px;
+    grid-template-rows: 84px 30px;
+  }
+
+  .asset-thumb {
+    height: 84px;
   }
 
   .outliner-row {
