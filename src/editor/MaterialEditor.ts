@@ -52,6 +52,29 @@ export interface MaterialEditorOptions {
   onBrowse?: () => void;
 }
 
+type TextureField =
+  | "baseColorTexture"
+  | "normalTexture"
+  | "roughnessTexture"
+  | "metalnessTexture"
+  | "aoTexture"
+  | "opacityTexture"
+  | "emissiveTexture"
+  | "ormTexture"
+  | "layer1BaseColorTexture"
+  | "layer1NormalTexture"
+  | "layer1RoughnessTexture"
+  | "layer1MetalnessTexture"
+  | "layer1OpacityTexture"
+  | "layer1EmissiveTexture"
+  | "layer1AoTexture"
+  | "layerBlendMaskTexture";
+
+const textureAssetCollator = new Intl.Collator(undefined, {
+  numeric: true,
+  sensitivity: "base",
+});
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -95,6 +118,9 @@ export class MaterialEditor {
   private disposed = false;
   private contextLost = false;
   private lastPreviewShaderError: string | null = null;
+  private textureSearchText = "";
+  private textureSearchUntil = 0;
+  private textureSearchSelect: HTMLSelectElement | null = null;
 
   private constructor(private readonly options: MaterialEditorOptions) {
     this.def = normalizeForgeMaterialDef({ name: options.label }, options.label);
@@ -271,6 +297,12 @@ export class MaterialEditor {
       .forEach((input) => {
         input.addEventListener("input", () => void this.applyField(input));
         input.addEventListener("change", () => void this.applyField(input));
+      });
+    this.detailsHost.querySelectorAll<HTMLSelectElement>("select[data-me-field]")
+      .forEach((select) => {
+        if (isTextureField(select.dataset.meField ?? "")) {
+          select.addEventListener("keydown", (event) => this.handleTextureSelectSearch(event, select));
+        }
       });
   }
 
@@ -482,29 +514,11 @@ export class MaterialEditor {
     `;
   }
 
-  private textureOptions(
-    field:
-      | "baseColorTexture"
-      | "normalTexture"
-      | "roughnessTexture"
-      | "metalnessTexture"
-      | "aoTexture"
-      | "opacityTexture"
-      | "emissiveTexture"
-      | "ormTexture"
-      | "layer1BaseColorTexture"
-      | "layer1NormalTexture"
-      | "layer1RoughnessTexture"
-      | "layer1MetalnessTexture"
-      | "layer1OpacityTexture"
-      | "layer1EmissiveTexture"
-      | "layer1AoTexture"
-      | "layerBlendMaskTexture",
-  ): string {
+  private textureOptions(field: TextureField): string {
     const current = isLayerTextureField(field)
       ? this.layerTextureValue(field)
       : this.def[field];
-    const textures = this.options.assets?.filter((asset) => asset.assetType === "texture") ?? [];
+    const textures = this.sortedTextureAssets();
     return [`<option value="" ${current ? "" : "selected"}>None</option>`]
       .concat(
         textures.map(
@@ -515,6 +529,59 @@ export class MaterialEditor {
         ),
       )
       .join("");
+  }
+
+  private sortedTextureAssets(): MaterialEditorAssetOption[] {
+    return (this.options.assets?.filter((asset) => asset.assetType === "texture") ?? [])
+      .slice()
+      .sort((a, b) => {
+        const byName = textureAssetCollator.compare(a.name, b.name);
+        return byName || textureAssetCollator.compare(a.id, b.id);
+      });
+  }
+
+  private handleTextureSelectSearch(event: KeyboardEvent, select: HTMLSelectElement): void {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    if (this.textureSearchSelect !== select) {
+      this.textureSearchText = "";
+      this.textureSearchSelect = select;
+    }
+    if (event.key === "Escape") {
+      this.textureSearchText = "";
+      return;
+    }
+    if (event.key === "Backspace") {
+      event.preventDefault();
+      this.updateTextureSearch(select, this.textureSearchText.slice(0, -1));
+      return;
+    }
+    if (event.key.length !== 1) return;
+    event.preventDefault();
+    const now = window.performance.now();
+    const prefix = now <= this.textureSearchUntil ? this.textureSearchText : "";
+    this.updateTextureSearch(select, `${prefix}${event.key}`);
+  }
+
+  private updateTextureSearch(select: HTMLSelectElement, text: string): void {
+    this.textureSearchText = text.toLowerCase();
+    this.textureSearchUntil = window.performance.now() + 1200;
+    const asset = this.findTextureSearchMatch(this.textureSearchText);
+    if (!asset || select.value === asset.id) return;
+    select.value = asset.id;
+    void this.applyField(select);
+  }
+
+  private findTextureSearchMatch(query: string): MaterialEditorAssetOption | null {
+    const normalizedQuery = normalizeTextureSearchText(query);
+    if (!normalizedQuery) return null;
+    const textures = this.sortedTextureAssets();
+    return (
+      textures.find((asset) => normalizeTextureSearchText(asset.name).startsWith(normalizedQuery)) ??
+      textures.find((asset) => textureSearchTokens(asset).some((token) => token.startsWith(normalizedQuery))) ??
+      textures.find((asset) => normalizeTextureSearchText(asset.name).includes(normalizedQuery)) ??
+      textures.find((asset) => normalizeTextureSearchText(asset.id).includes(normalizedQuery)) ??
+      null
+    );
   }
 
   private layerTextureValue(field: string): string | null {
@@ -850,6 +917,31 @@ function isLayerTextureField(field: string): field is
   | "layer1AoTexture"
   | "layerBlendMaskTexture" {
   return field.startsWith("layer1") || field === "layerBlendMaskTexture";
+}
+
+function isTextureField(field: string): field is TextureField {
+  return (
+    field === "baseColorTexture" ||
+    field === "normalTexture" ||
+    field === "roughnessTexture" ||
+    field === "metalnessTexture" ||
+    field === "aoTexture" ||
+    field === "opacityTexture" ||
+    field === "emissiveTexture" ||
+    field === "ormTexture" ||
+    isLayerTextureField(field)
+  );
+}
+
+function normalizeTextureSearchText(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function textureSearchTokens(asset: MaterialEditorAssetOption): string[] {
+  return `${asset.name} ${asset.id} ${asset.path}`
+    .toLowerCase()
+    .split(/[^a-z0-9]+/i)
+    .filter(Boolean);
 }
 
 function inferTextureSemantic(

@@ -169,15 +169,16 @@ export async function openProjectLevel(
 }
 
 /**
- * Renames a single asset file via the localhost-only `/__content-rename`
- * endpoint. `name` is the new base name (no extension); the server preserves the
- * file's extension chain and repoints the manifest entry. Returns the new path
- * and whether a manifest entry was updated.
+ * Renames a single asset file or folder via the localhost-only
+ * `/__content-rename` endpoint. For files, `name` is the new base name (no
+ * extension); the server preserves the file's extension chain and repoints the
+ * manifest entry. For folders, descendants keep their relative paths while
+ * manifest/default-scene/path references are rewritten.
  */
 export async function renameProjectContent(
   path: string,
   name: string,
-): Promise<{ path: string; registered: boolean }> {
+): Promise<{ path: string; registered: boolean; kind: "file" | "folder" }> {
   const response = await fetch("/__content-rename", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -187,22 +188,34 @@ export async function renameProjectContent(
     ok?: boolean;
     path?: string;
     registered?: boolean;
+    kind?: "file" | "folder";
     error?: string;
   } | null;
   if (!response.ok || !data?.ok) {
     throw new Error(data?.error ?? `Rename failed: ${response.status} ${response.statusText}`);
   }
-  return { path: data.path ?? "", registered: Boolean(data.registered) };
+  return {
+    path: data.path ?? "",
+    registered: Boolean(data.registered),
+    kind: data.kind ?? "file",
+  };
 }
 
 /**
- * Deletes a single asset file (and its model sidecars / manifest entry) via the
- * localhost-only `/__content-delete` endpoint. Returns whether a manifest entry
- * was removed.
+ * Deletes a single asset file or folder via the localhost-only
+ * `/__content-delete` endpoint. Folder deletes remove descendant manifest
+ * entries and scrub layout references to the removed asset ids / class paths.
  */
 export async function deleteProjectContent(
   path: string,
-): Promise<{ path: string; registered: boolean }> {
+): Promise<{
+  path: string;
+  registered: boolean;
+  kind: "file" | "folder";
+  deletedFiles: number;
+  removedAssets: number;
+  cleanedLayouts: number;
+}> {
   const response = await fetch("/__content-delete", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -212,10 +225,21 @@ export async function deleteProjectContent(
     ok?: boolean;
     path?: string;
     registered?: boolean;
+    kind?: "file" | "folder";
+    deletedFiles?: number;
+    removedAssets?: number;
+    cleanedLayouts?: number;
     error?: string;
   } | null;
   if (!response.ok || !data?.ok) {
     throw new Error(data?.error ?? `Delete failed: ${response.status} ${response.statusText}`);
   }
-  return { path: data.path ?? "", registered: Boolean(data.registered) };
+  return {
+    path: data.path ?? "",
+    registered: Boolean(data.registered),
+    kind: data.kind ?? "file",
+    deletedFiles: data.deletedFiles ?? 1,
+    removedAssets: data.removedAssets ?? (data.registered ? 1 : 0),
+    cleanedLayouts: data.cleanedLayouts ?? 0,
+  };
 }
