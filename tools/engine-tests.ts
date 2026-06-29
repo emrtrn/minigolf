@@ -4513,6 +4513,46 @@ check("miniGolf: course builder turns complex blocker AABBs into sampled surface
   assert.deepEqual(sampled, [hillTop + 0.035]);
 });
 
+check("miniGolf: course builder turns authored tall primitives into walls", () => {
+  const layout: RoomLayout = {
+    schema: 1,
+    name: "minigolf-authored-wall",
+    loadGroups: [],
+    instances: [
+      { assetId: "floor", placements: [{ position: [0, 0.82, 0] }] },
+      { assetId: "wall", placements: [{ position: [0, 0.82, 0] }] },
+    ],
+    characters: [],
+    lights: [],
+  };
+  const defs = new Map<string, AssetCollisionDef>([
+    [
+      "floor",
+      {
+        primitives: [{ shape: "box", size: [1, 0.056, 1], center: [0, 0.032, 0] }],
+        complexity: "projectDefault",
+        preset: "blockAll",
+      },
+    ],
+    [
+      "wall",
+      {
+        primitives: [{ shape: "box", size: [0.12, 0.1467, 1], center: [0.44, 0.0734, 0] }],
+        complexity: "projectDefault",
+        preset: "blockAll",
+      },
+    ],
+  ]);
+  const course = buildMiniGolfCourse(layout, (assetId) => defs.get(assetId));
+  assert.equal(course.walls?.length, 1);
+  const wall = course.walls?.[0];
+  assert.ok(wall);
+  assert.ok(Math.abs(wall.bounds.min[0] - 0.38) <= 1e-12);
+  assert.equal(wall.bounds.min[1], -0.5);
+  assert.equal(wall.bounds.max[0], 0.5);
+  assert.equal(wall.bounds.max[1], 0.5);
+});
+
 check("miniGolf: AABB walls bounce the ball with restitution", () => {
   const course: MiniGolfCourse = {
     walls: [{ bounds: { min: [0.9, -1], max: [1.1, 1] }, restitution: 0.5 }],

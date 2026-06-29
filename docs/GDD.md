@@ -255,8 +255,14 @@ Bu katman zaten data-driven ve headless; mini golf kuralları bir
       Play runtime'a bağlandı.
 - [x] Yörünge kamera (orbit + takip). `2026-06-29`: aynı Game Mode içinde top
       odaklı orbit kamera ve hareket sırasında takip eklendi.
-- [ ] 1 elle kurulmuş delik layout'u (tee → yol → delik, birkaç engel).
-- [ ] Vuruş sayacı + delik tamamlama (Game Rules).
+- [x] 1 elle kurulmuş delik layout'u (tee → yol → delik, birkaç engel).
+      `2026-06-29`: `public/assets/minigolf/levels/mini-golf-hole-01.level.json`
+      tek delik dikey dilimi olarak raylar, hill parçası, diamond bumper, cup,
+      flag ve top spawn metadata'sı ile güncellendi.
+- [x] Vuruş sayacı + delik tamamlama (Game Rules). `2026-06-29`:
+      `worldSettings.gameRules` içinde `strokes`, `par` ve `hole-1` objective'i
+      tanımlı; `minigolf.singleHole` vuruş ve cup event'lerini Game Rules'a
+      dispatch eder.
 - **Kabul:** Tek delik baştan sona oynanır; vuruş sayılır; delik biter.
 
 ### Faz 1 — Kurs (9 delik)

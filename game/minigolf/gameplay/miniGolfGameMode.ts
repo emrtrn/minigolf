@@ -83,8 +83,8 @@ class MiniGolfSingleHoleSession implements GameModeSession {
       this.context.getAssetCollisionDef,
       this.context.staticBlockerAabbs(),
     );
-    const surfaceHeight = this.course.defaultSurface?.height ?? 0;
-    this.ball = createMiniGolfBallState([pos[0], surfaceHeight + BALL_VISUAL_RADIUS, pos[2]]);
+    const ballY = this.course.defaultSurface?.height ?? BALL_VISUAL_RADIUS;
+    this.ball = createMiniGolfBallState([pos[0], ballY, pos[2]]);
     this.par = readPar(this.context.layout);
     if (this.ballRef) this.syncBallVisual();
   }
