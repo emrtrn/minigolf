@@ -5,7 +5,7 @@ import { readRotation, readScale } from "@engine/scene/transform";
 import type { TransformComponent } from "@engine/scene/components";
 import type { AssetCollisionDef, CollisionPrimitive } from "@engine/scene/collision";
 import type { Aabb3 } from "@/game/collision";
-import { computeMiniGolfAim, type MiniGolfAim } from "@/game/miniGolfAim";
+import { computeMiniGolfAim, type MiniGolfAim } from "./miniGolfAim";
 import {
   DEFAULT_MINI_GOLF_PHYSICS,
   applyMiniGolfPutt,
@@ -17,7 +17,7 @@ import {
   type MiniGolfPhysicsConfig,
   type MiniGolfSurface,
   type Vec2,
-} from "@/game/miniGolfBallPhysics";
+} from "./miniGolfBallPhysics";
 import type {
   GameModeContext,
   GameModeDefinition,
@@ -25,7 +25,7 @@ import type {
   GameState,
   PlayerControllerDefinition,
   PlayerState,
-} from "./types";
+} from "@/game/gameModes/types";
 
 export const MINI_GOLF_GAME_MODE_ID = "minigolf.singleHole";
 

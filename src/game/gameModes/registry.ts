@@ -6,7 +6,7 @@
  */
 import { DEFAULT_GAME_MODE_ID } from "./catalog";
 import { defaultCameraGameMode } from "./defaultCameraGameMode";
-import { miniGolfGameMode } from "./miniGolfGameMode";
+import { miniGolfGameMode } from "@game/minigolf/gameplay/miniGolfGameMode";
 import { tpsCharacterGameMode } from "./tpsCharacterGameMode";
 import type { GameModeDefinition } from "./types";
 

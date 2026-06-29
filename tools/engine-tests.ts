@@ -108,9 +108,9 @@ import {
   miniGolfSurfaceHeight,
   stepMiniGolfBall,
   type MiniGolfCourse,
-} from "../src/game/miniGolfBallPhysics";
-import { computeMiniGolfAim } from "../src/game/miniGolfAim";
-import { buildMiniGolfCourse } from "../src/game/gameModes/miniGolfGameMode";
+} from "../game/minigolf/gameplay/miniGolfBallPhysics";
+import { computeMiniGolfAim } from "../game/minigolf/gameplay/miniGolfAim";
+import { buildMiniGolfCourse } from "../game/minigolf/gameplay/miniGolfGameMode";
 import {
   classifyLocomotion,
   locomotionConfigForSkeleton,

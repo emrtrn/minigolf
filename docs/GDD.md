@@ -243,7 +243,7 @@ Bu katman zaten data-driven ve headless; mini golf kuralları bir
 
 ### Faz 0 — Dikey dilim (1 delik)
 - [x] Top fiziği saf çekirdek (sürtünme, eğim, duvar sekme, rest, delik
-      yakalama) + birim testleri. `2026-06-29`: `src/game/miniGolfBallPhysics.ts`
+      yakalama) + birim testleri. `2026-06-29`: `game/minigolf/gameplay/miniGolfBallPhysics.ts`
       eklendi; engine testleri eklendi. Not: tam `npm run test:engine` koşusu mevcut
       asset manifest eksikleri nedeniyle erken duruyor.
 - [x] Sahne collision verisinin top fiziğine bağlanması. `2026-06-29`:
@@ -281,7 +281,8 @@ Bu oyun Forge'un bir **klonunda** geliştirilecek (aşağı bkz. §12). Aşağı
 reposunda yapılıp klona akar.
 
 **Mevcut (hazır):**
-- Game Mode / pawn / possession iskeleti (`src/game/gameModes/*`).
+- Game Mode / pawn / possession iskeleti (`src/game/gameModes/*`);
+  Mini Golf'e özel runtime kodu (`game/minigolf/gameplay/*`).
 - Game Rules katmanı (skor/objektif/timer/win-lose, HUD alanları).
 - Input: klavye + fare + gamepad + dokunmatik (`defaultInputBindings`, on-screen
   touch).
