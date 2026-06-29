@@ -29538,39 +29538,6 @@
       "license": "Kenney Asset Pack; see source package License.txt"
     },
     {
-      "id": "minigolf-colormap",
-      "name": "Minigolf Colormap",
-      "assetType": "texture",
-      "category": "minigolf",
-      "path": "assets/minigolf/textures/colormap.png",
-      "tags": [
-        "minigolf",
-        "kenney",
-        "texture",
-        "colormap"
-      ],
-      "placeable": false,
-      "placement": {
-        "surface": "floor",
-        "snapToWall": false,
-        "allowRotation": false,
-        "allowScale": false
-      },
-      "runtime": {
-        "loadGroup": "minigolf",
-        "castShadow": false,
-        "receiveShadow": false,
-        "collision": false,
-        "bytes": 8706
-      },
-      "source": {
-        "origin": "kenney",
-        "pack": "kenney_minigolf-kit",
-        "packVersion": "1.0"
-      },
-      "license": "Kenney Asset Pack; see source package License.txt"
-    },
-    {
       "id": "minigolf-level-hole-01",
       "name": "Mini Golf Hole 01",
       "assetType": "level",

@@ -9,17 +9,17 @@
       "assetId": "marker:playerStart",
       "placements": [
         {
-          "name": "Editor Camera Start",
           "position": [
             0,
             0.25,
             6
           ],
-          "rotationYDeg": 180,
+          "name": "Editor Camera Start",
           "collision": false,
           "metadata": {
             "role": "camera-start"
-          }
+          },
+          "rotationYDeg": 180
         }
       ]
     },
@@ -27,18 +27,18 @@
       "assetId": "minigolf-start",
       "placements": [
         {
-          "name": "Tee Start",
           "position": [
             0,
             0,
             0
           ],
-          "rotationYDeg": 0,
-          "scale": 1,
+          "name": "Tee Start",
           "metadata": {
             "minigolfRole": "tee",
             "hole": 1
-          }
+          },
+          "rotationYDeg": 0,
+          "scale": 1
         }
       ]
     },
@@ -46,32 +46,72 @@
       "assetId": "minigolf-straight",
       "placements": [
         {
+          "position": [
+            0,
+            0,
+            -1
+          ],
           "name": "Fairway 01",
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
           "position": [
             0,
             0,
             -2
           ],
+          "name": "Fairway 02",
           "rotationYDeg": 0,
           "scale": 1
         },
         {
-          "name": "Fairway 02",
+          "position": [
+            0,
+            0,
+            -3
+          ],
+          "name": "Fairway 03",
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
           "position": [
             0,
             0,
             -4
           ],
+          "name": "Fairway 03",
           "rotationYDeg": 0,
           "scale": 1
         },
         {
+          "position": [
+            0,
+            0,
+            -5
+          ],
           "name": "Fairway 03",
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
           "position": [
             0,
             0,
             -6
           ],
+          "name": "Fairway 03",
+          "rotationYDeg": 0,
+          "scale": 1
+        },
+        {
+          "position": [
+            0,
+            0,
+            -7
+          ],
+          "name": "Fairway 03",
           "rotationYDeg": 0,
           "scale": 1
         }
@@ -81,20 +121,20 @@
       "assetId": "minigolf-hole-open",
       "placements": [
         {
-          "name": "Cup Trigger Visual",
           "position": [
             0,
             0,
             -8
           ],
-          "rotationYDeg": 0,
-          "scale": 1,
+          "name": "Cup Trigger Visual",
           "metadata": {
             "minigolfRole": "cup",
             "hole": 1,
             "radius": 0.35,
             "captureSpeed": 0.75
-          }
+          },
+          "rotationYDeg": 0,
+          "scale": 1
         }
       ]
     },
@@ -102,123 +142,51 @@
       "assetId": "minigolf-end",
       "placements": [
         {
-          "name": "Hole End",
           "position": [
             0,
             0,
-            -10
+            -9
           ],
+          "name": "Hole End",
           "rotationYDeg": 0,
+          "rotation": [
+            0,
+            180,
+            0
+          ],
           "scale": 1
         }
       ]
     },
     {
       "assetId": "minigolf-wall-left",
-      "placements": [
-        {
-          "name": "Left Rail 01",
-          "position": [
-            -1,
-            0,
-            -2
-          ],
-          "rotationYDeg": 0,
-          "scale": 1
-        },
-        {
-          "name": "Left Rail 02",
-          "position": [
-            -1,
-            0,
-            -4
-          ],
-          "rotationYDeg": 0,
-          "scale": 1
-        },
-        {
-          "name": "Left Rail 03",
-          "position": [
-            -1,
-            0,
-            -6
-          ],
-          "rotationYDeg": 0,
-          "scale": 1
-        }
-      ]
+      "placements": []
     },
     {
       "assetId": "minigolf-wall-right",
-      "placements": [
-        {
-          "name": "Right Rail 01",
-          "position": [
-            1,
-            0,
-            -2
-          ],
-          "rotationYDeg": 0,
-          "scale": 1
-        },
-        {
-          "name": "Right Rail 02",
-          "position": [
-            1,
-            0,
-            -4
-          ],
-          "rotationYDeg": 0,
-          "scale": 1
-        },
-        {
-          "name": "Right Rail 03",
-          "position": [
-            1,
-            0,
-            -6
-          ],
-          "rotationYDeg": 0,
-          "scale": 1
-        }
-      ]
+      "placements": []
     },
     {
       "assetId": "minigolf-obstacle-diamond",
-      "placements": [
-        {
-          "name": "Center Diamond Obstacle",
-          "position": [
-            0,
-            0,
-            -5
-          ],
-          "rotationYDeg": 45,
-          "scale": 1,
-          "metadata": {
-            "minigolfRole": "obstacle",
-            "hole": 1
-          }
-        }
-      ]
+      "placements": []
     },
     {
       "assetId": "minigolf-ball-red",
       "placements": [
         {
-          "name": "Ball Spawn Visual",
           "position": [
             0,
             0.18,
             0.7
           ],
-          "rotationYDeg": 0,
-          "scale": 1,
+          "name": "Ball Spawn Visual",
           "collision": false,
           "metadata": {
             "minigolfRole": "ball-spawn",
             "hole": 1
-          }
+          },
+          "rotationYDeg": 0,
+          "scale": 1
         }
       ]
     },
@@ -226,27 +194,30 @@
       "assetId": "minigolf-flag-red",
       "placements": [
         {
-          "name": "Cup Flag",
           "position": [
             0,
             0.2,
             -8
           ],
-          "rotationYDeg": 0,
-          "scale": 1,
+          "name": "Cup Flag",
           "collision": false,
           "metadata": {
             "minigolfRole": "flag",
             "hole": 1
-          }
+          },
+          "rotationYDeg": 0,
+          "scale": 1
         }
       ]
+    },
+    {
+      "assetId": "minigolf-corner",
+      "placements": []
     }
   ],
   "characters": [],
   "worldSettings": {
     "staticObjectsCastShadow": true,
-    "staticObjectsReceiveShadow": true,
     "backgroundColor": "#9fd4ff",
     "ambientColor": "#ffffff",
     "ambientIntensity": 0.65,
@@ -255,6 +226,7 @@
       -9.8,
       0
     ],
+    "gameMode": "minigolf.singleHole",
     "gameRules": {
       "variables": [
         {
@@ -271,8 +243,8 @@
       "objectives": [
         {
           "id": "hole-1",
-          "label": "Hole 1",
-          "target": 1
+          "target": 1,
+          "label": "Hole 1"
         }
       ],
       "winWhenObjectivesComplete": true
@@ -300,21 +272,6 @@
     "toneMapping": "aces",
     "antialias": "smaa",
     "exposure": 1,
-    "bloom": {
-      "enabled": false
-    },
-    "vignette": {
-      "enabled": false
-    },
-    "chromaticAberration": {
-      "enabled": false
-    },
-    "grain": {
-      "enabled": false
-    },
-    "dof": {
-      "enabled": false
-    },
     "ao": {
       "enabled": true,
       "radius": 1,

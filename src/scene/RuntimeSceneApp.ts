@@ -204,6 +204,7 @@ import {
   GameStateStore,
   normalizeGameRules,
   parseGameEvent,
+  type GameEvent,
   type GamePhase,
 } from "@/game/gameRules";
 import type { AssetCollisionDef } from "@engine/scene/collision";
@@ -404,6 +405,8 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
   private pauseMenuDef: UiWidgetDef | null = null;
   /** Minimal gameplay-rules store; null when the scene authors no `gameRules`. */
   private gameStateStore: GameStateStore | null = null;
+  /** GameMode events emitted during boot before the rules store is mounted. */
+  private pendingGameEvents: GameEvent[] = [];
   /** Unsubscribe for the `game-event` script-message bridge into the rules store. */
   private gameEventUnsub: (() => void) | null = null;
   /** Modal screens shown when the rules layer resolves a win/loss; null when none. */
@@ -904,6 +907,8 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
 
     if (gameRules) {
       this.gameStateStore = new GameStateStore(gameRules);
+      for (const event of this.pendingGameEvents) this.gameStateStore.dispatch(event);
+      this.pendingGameEvents = [];
       // Bridge content-emitted `game-event` script messages into the rules store
       // so triggers/actor scripts (score, objective progress, win/lose) drive it
       // without the engine knowing any project rule. Released in dispose().
@@ -1454,12 +1459,17 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
   }
 
   private createGameModeContext(): GameModeContext {
+    const layout = this.layout;
+    if (!layout) throw new Error("Cannot create Game Mode context before a layout is loaded.");
     return {
+      canvas: this.renderer.domElement,
       camera: this.camera,
+      layout,
       actions: this.inputActions,
       characters: this.characterRefs,
       getLocomotion: (entityId) => this.locomotionReports.get(entityId),
       staticBlockerAabbs: () => this.physicsSubsystem.staticBlockerAabbs(),
+      getAssetCollisionDef: (assetId) => this.collisionDefs.get(assetId),
       addMixer: (mixer) => this.animationSubsystem.add(mixer),
       emitAnimNotify: (entityId, name) =>
         this.behaviorSubsystem.emitScriptMessage("anim-notify", entityId, { name }, entityId),
@@ -1483,7 +1493,17 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
       },
       setMouseCursorVisible: (visible) => this.pointerLook.setMouseCursorVisible(visible),
       setPointerLookMode: (mode) => this.pointerLook.setMode(mode),
+      setEntityTransform: (entityId, transform) => this.syncEntityTransform(entityId, transform),
+      dispatchGameEvent: (event) => this.dispatchGameEvent(event),
     };
+  }
+
+  private dispatchGameEvent(event: GameEvent): void {
+    if (this.gameStateStore) {
+      this.gameStateStore.dispatch(event);
+      return;
+    }
+    this.pendingGameEvents.push(event);
   }
 
   /**

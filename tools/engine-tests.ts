@@ -109,6 +109,7 @@ import {
   stepMiniGolfBall,
   type MiniGolfCourse,
 } from "../src/game/miniGolfBallPhysics";
+import { computeMiniGolfAim } from "../src/game/miniGolfAim";
 import {
   classifyLocomotion,
   locomotionConfigForSkeleton,
@@ -4495,6 +4496,33 @@ check("miniGolf: out-of-bounds resets to the last safe position and adds a penal
   assert.equal(ball.penaltyStrokes, 1);
   assert.equal(ball.resting, true);
   assert.deepEqual(ball.pos, [0, 0, 0]);
+});
+
+check("miniGolf: drag aim maps screen pull opposite to camera-relative shot direction", () => {
+  const aim = computeMiniGolfAim({
+    start: [100, 100],
+    current: [100, 200],
+    maxDragPixels: 100,
+    cameraRight: [1, 0],
+    cameraForward: [0, -1],
+  });
+  assert.equal(aim.power, 1);
+  assert.ok(Math.abs(aim.direction[0]) <= 1e-12);
+  assert.ok(Math.abs(aim.direction[1] + 1) <= 1e-12);
+});
+
+check("miniGolf: drag aim clamps power and normalizes diagonal direction", () => {
+  const aim = computeMiniGolfAim({
+    start: [0, 0],
+    current: [-300, 300],
+    maxDragPixels: 120,
+    cameraRight: [1, 0],
+    cameraForward: [0, -1],
+  });
+  assert.equal(aim.power, 1);
+  assert.ok(Math.abs(Math.hypot(aim.direction[0], aim.direction[1]) - 1) <= 1e-12);
+  assert.ok(aim.direction[0] > 0);
+  assert.ok(aim.direction[1] < 0);
 });
 
 check("physics subsystem exposes static blocker AABBs and collider half-extents", () => {

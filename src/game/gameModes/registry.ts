@@ -6,11 +6,12 @@
  */
 import { DEFAULT_GAME_MODE_ID } from "./catalog";
 import { defaultCameraGameMode } from "./defaultCameraGameMode";
+import { miniGolfGameMode } from "./miniGolfGameMode";
 import { tpsCharacterGameMode } from "./tpsCharacterGameMode";
 import type { GameModeDefinition } from "./types";
 
 const MODES = new Map<string, GameModeDefinition>(
-  [defaultCameraGameMode, tpsCharacterGameMode].map((mode) => [mode.id, mode]),
+  [defaultCameraGameMode, tpsCharacterGameMode, miniGolfGameMode].map((mode) => [mode.id, mode]),
 );
 
 export { DEFAULT_GAME_MODE_ID } from "./catalog";

@@ -22,6 +22,8 @@ export const DEFAULT_GAME_MODE_ID = "forge.defaultCamera";
 
 /** Third-person Game Mode that possesses a player character at the Player Start. */
 export const TPS_GAME_MODE_ID = "forge.tpsCharacter";
+/** Mini Golf project mode: drag-power ball pawn plus orbit camera. */
+export const MINI_GOLF_GAME_MODE_ID = "minigolf.singleHole";
 
 /**
  * The selectable Game Modes, in dropdown order. The first entry is the default
@@ -37,6 +39,11 @@ export const GAME_MODE_OPTIONS: readonly GameModeOption[] = [
     id: TPS_GAME_MODE_ID,
     displayName: "TPS Character",
     description: "Possesses an input-driven character with a third-person follow camera.",
+  },
+  {
+    id: MINI_GOLF_GAME_MODE_ID,
+    displayName: "Mini Golf",
+    description: "Drag-power putting with a ball-focused orbit camera.",
   },
 ];
 

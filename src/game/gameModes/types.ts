@@ -12,8 +12,12 @@ import type { AnimationMixer, Object3D, PerspectiveCamera } from "three";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { ActionMap } from "@engine/input/actionMap";
 import type { LayoutCharacter } from "@engine/scene/layout";
+import type { RoomLayout } from "@engine/scene/layout";
 import type { Entity } from "@engine/scene/entity";
+import type { TransformComponent } from "@engine/scene/components";
+import type { AssetCollisionDef } from "@engine/scene/collision";
 import type { Aabb3 } from "@/game/collision";
+import type { GameEvent } from "@/game/gameRules";
 import type { LocomotionInput } from "@/game/locomotionAnimation";
 import type { AssetSkeletonDef } from "@/scene/assetSkeletonLoader";
 import type { RagdollGroupDesc, RagdollPose } from "@engine/physics/ragdoll";
@@ -142,13 +146,17 @@ export interface RuntimeCharacterRef {
  * mixer registration, locomotion snapshots, camera ownership).
  */
 export interface GameModeContext {
+  readonly canvas: HTMLCanvasElement;
   readonly camera: PerspectiveCamera;
+  readonly layout: RoomLayout;
   readonly actions: ActionMap;
   readonly characters: readonly RuntimeCharacterRef[];
   /** Latest locomotion snapshot a behavior reported for `entityId` this tick. */
   getLocomotion(entityId: string): LocomotionInput | undefined;
   /** Static blocker AABBs derived by the physics subsystem for camera probes. */
   staticBlockerAabbs(): readonly Aabb3[];
+  /** Asset-authored collision sidecar already loaded by the runtime shell. */
+  getAssetCollisionDef(assetId: string): AssetCollisionDef | undefined;
   /** Registers a crossfade animator's mixer with the animation subsystem. */
   addMixer(mixer: AnimationMixer): void;
   /**
@@ -200,6 +208,10 @@ export interface GameModeContext {
   setMouseCursorVisible(visible: boolean): void;
   /** Applies the controller's runtime mouse capture/cursor policy. */
   setPointerLookMode(mode: PointerLookMode): void;
+  /** Updates a runtime entity transform and its rendered object, without saving. */
+  setEntityTransform(entityId: string, transform: TransformComponent): void;
+  /** Dispatches a project gameplay-rules event when the scene authored rules. */
+  dispatchGameEvent(event: GameEvent): void;
 }
 
 /**

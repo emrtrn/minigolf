@@ -246,8 +246,15 @@ Bu katman zaten data-driven ve headless; mini golf kuralları bir
       yakalama) + birim testleri. `2026-06-29`: `src/game/miniGolfBallPhysics.ts`
       eklendi; engine testleri eklendi. Not: tam `npm run test:engine` koşusu mevcut
       asset manifest eksikleri nedeniyle erken duruyor.
-- [ ] Sürükle-güç girdisi + güç/yön HUD.
-- [ ] Yörünge kamera (orbit + takip).
+- [x] Sahne collision verisinin top fiziğine bağlanması. `2026-06-29`:
+      `minigolf.singleHole`, runtime'ın yüklediği `*.collision.json` sidecar
+      kutularından yüzey yüksekliği ve kaldırım/engel AABB'leri üretir; top görsel
+      yüksekliği mesh yarıçapına göre zemine oturtulur.
+- [x] Sürükle-güç girdisi + güç/yön HUD. `2026-06-29`: `minigolf.singleHole`
+      Game Mode eklendi; top üstünden sürükle-bırak vuruş, güç barı ve yön çizgisi
+      Play runtime'a bağlandı.
+- [x] Yörünge kamera (orbit + takip). `2026-06-29`: aynı Game Mode içinde top
+      odaklı orbit kamera ve hareket sırasında takip eklendi.
 - [ ] 1 elle kurulmuş delik layout'u (tee → yol → delik, birkaç engel).
 - [ ] Vuruş sayacı + delik tamamlama (Game Rules).
 - **Kabul:** Tek delik baştan sona oynanır; vuruş sayılır; delik biter.
