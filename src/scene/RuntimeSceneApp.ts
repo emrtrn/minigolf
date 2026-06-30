@@ -23,7 +23,7 @@ import {
   type ScriptMessageDebugSnapshot,
 } from "@engine/behavior/behaviorSubsystem";
 import { PhysicsSubsystem } from "@engine/physics/physicsSubsystem";
-import { AudioSubsystem } from "@engine/audio/audioSubsystem";
+import { AudioSubsystem, type AudioPlayOptions } from "@engine/audio/audioSubsystem";
 import { KeyboardInputSource } from "@/input/keyboardInputSource";
 import { GamepadInputSource } from "@/input/gamepadInputSource";
 import { TouchInputSource, isTouchLikely } from "@/input/touchInputSource";
@@ -1301,6 +1301,24 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
     return definition;
   }
 
+  private playGameModeAudioOneShot(clipId: string, options: AudioPlayOptions = {}): void {
+    this.audioSubsystem.playOneShot(clipId, options);
+  }
+
+  private async spawnGameModeParticleEffect(
+    effectId: string,
+    position: readonly [number, number, number],
+  ): Promise<void> {
+    const url = this.effectUrlById.get(effectId);
+    if (!url) return;
+    const definition = await this.loadEffect(effectId, url);
+    if (!definition) return;
+    const effect = new ParticleEffect(definition);
+    effect.setOrigin(position[0], position[1], position[2]);
+    this.scene.add(effect.object3D);
+    this.particleEffects.push(effect);
+  }
+
   /**
    * Browser autoplay policies suspend the audio context until a user gesture, so
    * resume it on the first pointer/key input — then ambient cues auto-played at
@@ -1566,6 +1584,10 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
         this.physicsSubsystem.teleportBody(entityId, position, options),
       isBodySleeping: (entityId) => this.physicsSubsystem.isBodySleeping(entityId),
       onPhysicsContact: (entityId, handler) => this.onPhysicsContact(entityId, handler),
+      playAudioOneShot: (clipId, options) => this.playGameModeAudioOneShot(clipId, options),
+      spawnParticleEffect: (effectId, position) => {
+        void this.spawnGameModeParticleEffect(effectId, position);
+      },
       getAssetCollisionDef: (assetId) => this.collisionDefs.get(assetId),
       addMixer: (mixer) => this.animationSubsystem.add(mixer),
       emitAnimNotify: (entityId, name) =>

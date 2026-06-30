@@ -14,6 +14,7 @@ import type { ActionMap } from "@engine/input/actionMap";
 import type { LayoutCharacter } from "@engine/scene/layout";
 import type { RoomLayout } from "@engine/scene/layout";
 import type { PhysicsContact } from "@engine/behavior/behaviorSubsystem";
+import type { AudioPlayOptions } from "@engine/audio/audioSubsystem";
 import type { Entity } from "@engine/scene/entity";
 import type { TransformComponent } from "@engine/scene/components";
 import type { AssetCollisionDef } from "@engine/scene/collision";
@@ -174,6 +175,10 @@ export interface GameModeContext {
   isBodySleeping?(entityId: string): boolean;
   /** Subscribes to reported physics contacts involving `entityId`. */
   onPhysicsContact?(entityId: string, handler: (contact: PhysicsContact) => void): () => void;
+  /** Plays a runtime-only one-shot audio cue without requiring an authored Audio component. */
+  playAudioOneShot?(clipId: string, options?: AudioPlayOptions): void;
+  /** Spawns a runtime-only one-shot particle effect at a world position. */
+  spawnParticleEffect?(effectId: string, position: Vec3): void;
   /** Asset-authored collision sidecar already loaded by the runtime shell. */
   getAssetCollisionDef(assetId: string): AssetCollisionDef | undefined;
   /** Registers a crossfade animator's mixer with the animation subsystem. */

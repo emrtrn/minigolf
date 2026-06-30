@@ -3,15 +3,7 @@ import { instanceEntityId } from "@engine/scene/legacyRoomLayoutAdapter";
 import type { LayoutPlacement, RoomLayout } from "@engine/scene/layout";
 import { readRotation, readScale } from "@engine/scene/transform";
 import type { TransformComponent } from "@engine/scene/components";
-import type { AssetCollisionDef, CollisionPrimitive } from "@engine/scene/collision";
-import type { Aabb3 } from "@/game/collision";
 import { computeMiniGolfAim, type MiniGolfAim, type Vec2 } from "./miniGolfAim";
-import {
-  miniGolfCourseSurfaceHeight,
-  type MiniGolfAabb2,
-  type MiniGolfCourse,
-  type MiniGolfSurface,
-} from "./miniGolfBallPhysics";
 import type {
   GameModeContext,
   GameModeDefinition,
@@ -26,23 +18,53 @@ export const MINI_GOLF_GAME_MODE_ID = "minigolf.singleHole";
 const MAX_DRAG_PIXELS = 180;
 const BALL_HIT_RADIUS_PIXELS = 48;
 const HOLE_TRANSITION_DELAY_SECONDS = 1.15;
-const BALL_VISUAL_RADIUS = 0.035;
 const BALL_MASS_KG = 0.045;
+const BALL_SPAWN_HEIGHT_OFFSET = 0.1;
 const MAX_PUTT_SPEED = 8;
 const PUTT_POWER_EXPONENT = 1.35;
 const REST_LINEAR_SPEED = 0.045;
 const REST_ANGULAR_SPEED = 0.18;
+const MAX_SIDE_SPIN_TORQUE_IMPULSE = 0.0012;
+const MAGNUS_COEFFICIENT = 0.00045;
+const MAGNUS_MIN_VERTICAL_SPEED = 0.04;
+const MAGNUS_MIN_PLANAR_SPEED = 0.5;
+const COLLISION_FEEDBACK_CLIP_ID = "collision-chime";
+const COLLISION_FEEDBACK_EFFECT_ID = "starter-fx-dust-hit";
+const COLLISION_FEEDBACK_MIN_IMPULSE = 0.015;
+const COLLISION_FEEDBACK_FULL_IMPULSE = 0.18;
+const COLLISION_FEEDBACK_COOLDOWN_SECONDS = 0.08;
+const CAMERA_SHAKE_MAX_SECONDS = 0.18;
+const CAMERA_SHAKE_FREQUENCY_HZ = 24;
+const SPIN_LEFT_KEY = "KeyQ";
+const SPIN_RIGHT_KEY = "KeyE";
 const ORBIT_DISTANCE = 5.8;
 const ORBIT_HEIGHT = 3.2;
 const ORBIT_SENSITIVITY = 0.006;
-const SURFACE_BOX_MAX_HEIGHT = 0.075;
-const WALL_TOP_CLEARANCE = 0.035;
-const MESH_SURFACE_MAX_THICKNESS = 0.12;
-const MESH_SURFACE_MIN_FOOTPRINT = 0.004;
-const MESH_SURFACE_SAMPLE_PADDING = 0.002;
-const MESH_SURFACE_SLOPE_SAMPLE_STEP = 0.12;
-const MESH_SURFACE_MAX_SLOPE = 0.8;
 const LOCAL_BEST_STORAGE_PREFIX = "minigolf.bestTotalStrokes";
+
+interface MiniGolfAabb2 {
+  readonly min: Vec2;
+  readonly max: Vec2;
+}
+
+interface MiniGolfCup {
+  readonly center: readonly [number, number, number];
+  readonly radius: number;
+  readonly captureSpeed: number;
+}
+
+interface MiniGolfCourse {
+  readonly bounds?: MiniGolfAabb2;
+  readonly hazards?: readonly MiniGolfAabb2[];
+  readonly hazardEntityIds?: readonly string[];
+  readonly cupSensorEntityIds?: readonly string[];
+  readonly cup?: MiniGolfCup;
+}
+
+interface MiniGolfHazardRef {
+  readonly bounds: MiniGolfAabb2;
+  readonly entityId: string;
+}
 
 interface MiniGolfBallRuntimeState {
   readonly pos: readonly [number, number, number];
@@ -106,7 +128,15 @@ class MiniGolfSingleHoleSession implements GameModeSession {
   private readonly holeResults: MiniGolfHoleResult[] = [];
   private cameraYaw = 0;
   private readonly cameraForward = new Vector3();
-  private pendingPutt: { direction: Vec2; power: number } | null = null;
+  private pendingPutt: { direction: Vec2; power: number; sideSpin: number } | null = null;
+  private unsubscribeBallContacts: (() => void) | null = null;
+  private hazardSensorContact = false;
+  private cupSensorContact = false;
+  private readonly heldSpinKeys = new Set<string>();
+  private lastCollisionFeedbackAt = -Infinity;
+  private cameraShakeTimer = 0;
+  private cameraShakeDuration = 0;
+  private cameraShakeAmplitude = 0;
 
   constructor(private readonly context: GameModeContext) {}
 
@@ -129,6 +159,8 @@ class MiniGolfSingleHoleSession implements GameModeSession {
     this.context.canvas.addEventListener("pointermove", this.handlePointerMove);
     this.context.canvas.addEventListener("pointerup", this.handlePointerUp);
     this.context.canvas.addEventListener("pointercancel", this.handlePointerUp);
+    window.addEventListener("keydown", this.handleKeyDown);
+    window.addEventListener("keyup", this.handleKeyUp);
     this.updateCamera(1);
     this.updateHud();
   }
@@ -154,6 +186,7 @@ class MiniGolfSingleHoleSession implements GameModeSession {
   }
 
   beforeEngineUpdate(): void {
+    this.applyMagnusForce();
     if (!this.pendingPutt || !this.ballRef || !this.ball || this.ball.inCup) return;
     const ballEntityId = this.ballEntityId();
     if (!ballEntityId) return;
@@ -168,6 +201,8 @@ class MiniGolfSingleHoleSession implements GameModeSession {
       0,
       direction[1] * BALL_MASS_KG * speed,
     ]);
+    const torque = miniGolfSideSpinTorqueImpulse(shot.sideSpin, power);
+    if (torque[1] !== 0) this.context.applyTorqueImpulse?.(ballEntityId, torque);
     this.ball = {
       ...this.ball,
       resting: speed <= REST_LINEAR_SPEED,
@@ -192,12 +227,17 @@ class MiniGolfSingleHoleSession implements GameModeSession {
     this.context.canvas.removeEventListener("pointermove", this.handlePointerMove);
     this.context.canvas.removeEventListener("pointerup", this.handlePointerUp);
     this.context.canvas.removeEventListener("pointercancel", this.handlePointerUp);
+    window.removeEventListener("keydown", this.handleKeyDown);
+    window.removeEventListener("keyup", this.handleKeyUp);
     this.hud?.dispose();
     this.hud = null;
     this.scorecard?.dispose();
     this.scorecard = null;
     this.transitionCard?.dispose();
     this.transitionCard = null;
+    this.unsubscribeBallContacts?.();
+    this.unsubscribeBallContacts = null;
+    this.heldSpinKeys.clear();
     this.drag = null;
   }
 
@@ -241,11 +281,24 @@ class MiniGolfSingleHoleSession implements GameModeSession {
       // Pointer capture may already be released.
     }
     if (!this.ball || aim.power < 0.03) return;
-    this.pendingPutt = { direction: aim.direction, power: aim.power };
+    this.pendingPutt = { direction: aim.direction, power: aim.power, sideSpin: this.spinInput() };
     this.holeStrokes += 1;
     this.totalStrokes += 1;
     this.context.dispatchGameEvent({ kind: "add", variable: "strokes", amount: 1 });
     this.context.dispatchGameEvent({ kind: "add", variable: "totalStrokes", amount: 1 });
+  };
+
+  private handleKeyDown = (event: KeyboardEvent): void => {
+    if (this.context.getInputMode() === "ui") return;
+    if (event.code === SPIN_LEFT_KEY || event.code === SPIN_RIGHT_KEY) {
+      this.heldSpinKeys.add(event.code);
+    }
+  };
+
+  private handleKeyUp = (event: KeyboardEvent): void => {
+    if (event.code === SPIN_LEFT_KEY || event.code === SPIN_RIGHT_KEY) {
+      this.heldSpinKeys.delete(event.code);
+    }
   };
 
   private aimFromPointer(start: Vec2, current: Vec2): MiniGolfAim {
@@ -265,6 +318,24 @@ class MiniGolfSingleHoleSession implements GameModeSession {
     this.context.camera.getWorldDirection(this.cameraForward);
     const forward: Vec2 = normalize2([this.cameraForward.x, this.cameraForward.z]);
     return { right, forward };
+  }
+
+  private spinInput(): number {
+    const left = this.heldSpinKeys.has(SPIN_LEFT_KEY) ? -1 : 0;
+    const right = this.heldSpinKeys.has(SPIN_RIGHT_KEY) ? 1 : 0;
+    return clamp(left + right, -1, 1);
+  }
+
+  private applyMagnusForce(): void {
+    if (!this.ballRef || !this.ball || this.ball.resting || this.ball.inCup) return;
+    const ballEntityId = this.ballEntityId();
+    if (!ballEntityId) return;
+    const velocity = this.context.getLinearVelocity?.(ballEntityId);
+    const angularVelocity = this.context.getAngularVelocity?.(ballEntityId);
+    if (!velocity || !angularVelocity) return;
+    const force = miniGolfMagnusForce(velocity, angularVelocity);
+    if (force[0] === 0 && force[1] === 0 && force[2] === 0) return;
+    this.context.applyForce?.(ballEntityId, force);
   }
 
   private pointerHitsBall(clientX: number, clientY: number): boolean {
@@ -287,11 +358,26 @@ class MiniGolfSingleHoleSession implements GameModeSession {
   private updateCamera(_deltaSeconds: number): void {
     const ball = this.ball;
     if (!ball) return;
+    this.cameraShakeTimer = Math.max(0, this.cameraShakeTimer - _deltaSeconds);
     const x = ball.pos[0] + Math.sin(this.cameraYaw) * ORBIT_DISTANCE;
     const z = ball.pos[2] + Math.cos(this.cameraYaw) * ORBIT_DISTANCE;
-    this.context.camera.position.set(x, ball.pos[1] + ORBIT_HEIGHT, z);
+    const shake = this.cameraShakeOffset();
+    this.context.camera.position.set(x + shake[0], ball.pos[1] + ORBIT_HEIGHT + shake[1], z + shake[2]);
     this.context.camera.lookAt(ball.pos[0], ball.pos[1], ball.pos[2]);
     this.context.camera.updateMatrixWorld();
+  }
+
+  private cameraShakeOffset(): [number, number, number] {
+    if (this.cameraShakeTimer <= 0 || this.cameraShakeDuration <= 0) return [0, 0, 0];
+    const progress = 1 - this.cameraShakeTimer / this.cameraShakeDuration;
+    const envelope = this.cameraShakeTimer / this.cameraShakeDuration;
+    const phase = progress * CAMERA_SHAKE_FREQUENCY_HZ * Math.PI * 2;
+    const amplitude = this.cameraShakeAmplitude * envelope;
+    return [
+      Math.sin(phase) * amplitude,
+      Math.sin(phase * 1.37 + 0.6) * amplitude * 0.55,
+      Math.cos(phase * 0.83) * amplitude,
+    ];
   }
 
   private updateHud(): void {
@@ -340,15 +426,9 @@ class MiniGolfSingleHoleSession implements GameModeSession {
     this.holeStrokes = 0;
     this.penaltyStrokes = 0;
     this.transitionTimer = 0;
-    this.course = buildMiniGolfCourse(
-      this.context.layout,
-      this.context.getAssetCollisionDef,
-      this.context.staticBlockerAabbs(),
-      { hole: hole.number },
-    );
-    const pos = hole.tee.placement.position;
-    const ballY = miniGolfCourseSurfaceHeight(this.course, pos[0], pos[2]);
-    const spawn: [number, number, number] = [pos[0], ballY, pos[2]];
+    this.course = buildMiniGolfCourse(this.context.layout, { hole: hole.number });
+    this.configureBallContactHandler();
+    const spawn = ballCenterFromPlacement(hole.tee.placement);
     this.ball = createMiniGolfRuntimeBall(spawn);
     this.pendingPutt = null;
     this.context.dispatchGameEvent({ kind: "set", variable: "strokes", value: 0 });
@@ -434,7 +514,11 @@ class MiniGolfSingleHoleSession implements GameModeSession {
           (speed <= REST_LINEAR_SPEED && spin <= REST_ANGULAR_SPEED)),
       outOfBounds: false,
     };
-    if (!next.inCup && this.isBallOutOfBounds(pos)) {
+    const hitHazardSensor = this.hazardSensorContact;
+    const hitCupSensor = this.cupSensorContact;
+    this.hazardSensorContact = false;
+    this.cupSensorContact = false;
+    if (!next.inCup && this.isBallOutOfBounds(pos, hitHazardSensor)) {
       const reset = next.lastSafePos;
       this.teleportBall(reset);
       next = {
@@ -444,7 +528,7 @@ class MiniGolfSingleHoleSession implements GameModeSession {
         outOfBounds: true,
         penaltyStrokes: next.penaltyStrokes + 1,
       };
-    } else if (!next.inCup && this.isBallInCup(pos, speed)) {
+    } else if (!next.inCup && this.isBallInCup(pos, speed, hitCupSensor)) {
       const cup = this.course.cup!;
       const cupPos: [number, number, number] = [cup.center[0], cup.center[1], cup.center[2]];
       this.teleportBall(cupPos);
@@ -455,20 +539,81 @@ class MiniGolfSingleHoleSession implements GameModeSession {
     this.ball = next;
   }
 
-  private isBallOutOfBounds(pos: readonly [number, number, number]): boolean {
+  private configureBallContactHandler(): void {
+    this.unsubscribeBallContacts?.();
+    this.unsubscribeBallContacts = null;
+    this.hazardSensorContact = false;
+    this.cupSensorContact = false;
+    const ballEntityId = this.ballEntityId();
+    const hazardEntityIds = new Set(this.course.hazardEntityIds ?? []);
+    const cupSensorEntityIds = new Set(this.course.cupSensorEntityIds ?? []);
+    if (!ballEntityId || !this.context.onPhysicsContact) {
+      return;
+    }
+    this.unsubscribeBallContacts = this.context.onPhysicsContact(ballEntityId, (contact) => {
+      if (!contact.isSensor) {
+        this.handleSolidContactFeedback(ballEntityId, contact.maxImpulse ?? 0);
+        return;
+      }
+      const other = contact.a === ballEntityId ? contact.b : contact.a;
+      if (hazardEntityIds.has(other)) this.hazardSensorContact = true;
+      if (cupSensorEntityIds.has(other)) this.cupSensorContact = true;
+    });
+  }
+
+  private handleSolidContactFeedback(ballEntityId: string, impulse: number): void {
+    if (impulse < COLLISION_FEEDBACK_MIN_IMPULSE) return;
+    const now = this.gameState.elapsedSeconds;
+    if (now - this.lastCollisionFeedbackAt < COLLISION_FEEDBACK_COOLDOWN_SECONDS) return;
+    this.lastCollisionFeedbackAt = now;
+    const strength = clamp(
+      (impulse - COLLISION_FEEDBACK_MIN_IMPULSE) /
+        (COLLISION_FEEDBACK_FULL_IMPULSE - COLLISION_FEEDBACK_MIN_IMPULSE),
+      0,
+      1,
+    );
+    const transform = this.context.getEntityTransform?.(ballEntityId);
+    const position = transform?.position ?? this.ball?.pos;
+    if (position) {
+      this.context.playAudioOneShot?.(COLLISION_FEEDBACK_CLIP_ID, {
+        volume: 0.18 + strength * 0.42,
+        pitch: 0.85 + strength * 0.35,
+        spatial: true,
+        position: [position[0], position[1], position[2]],
+        refDistance: 2,
+        maxDistance: 28,
+      });
+      this.context.spawnParticleEffect?.(COLLISION_FEEDBACK_EFFECT_ID, [
+        position[0],
+        position[1],
+        position[2],
+      ]);
+    }
+    this.cameraShakeDuration = 0.08 + strength * (CAMERA_SHAKE_MAX_SECONDS - 0.08);
+    this.cameraShakeTimer = this.cameraShakeDuration;
+    this.cameraShakeAmplitude = 0.012 + strength * 0.055;
+  }
+
+  private isBallOutOfBounds(pos: readonly [number, number, number], hitHazardSensor: boolean): boolean {
     const x = pos[0];
     const y = pos[1];
     const z = pos[2];
     if (y < -2) return true;
     const bounds = this.course.bounds;
     if (bounds && !containsMiniGolfAabb(bounds, x, z)) return true;
+    if (hitHazardSensor) return true;
     return (this.course.hazards ?? []).some((hazard) => containsMiniGolfAabb(hazard, x, z));
   }
 
-  private isBallInCup(pos: readonly [number, number, number], speed: number): boolean {
+  private isBallInCup(
+    pos: readonly [number, number, number],
+    speed: number,
+    hitCupSensor: boolean,
+  ): boolean {
     const cup = this.course.cup;
     if (!cup) return false;
     if (speed > cup.captureSpeed) return false;
+    if (hitCupSensor) return true;
     return Math.hypot(pos[0] - cup.center[0], pos[2] - cup.center[2]) <= cup.radius;
   }
 }
@@ -734,6 +879,14 @@ function createMiniGolfRuntimeBall(pos: readonly [number, number, number]): Mini
   };
 }
 
+function ballCenterFromPlacement(placement: LayoutPlacement): [number, number, number] {
+  return [
+    placement.position[0],
+    placement.position[1] + BALL_SPAWN_HEIGHT_OFFSET,
+    placement.position[2],
+  ];
+}
+
 function containsMiniGolfAabb(aabb: MiniGolfAabb2, x: number, z: number): boolean {
   return x >= aabb.min[0] && x <= aabb.max[0] && z >= aabb.min[1] && z <= aabb.max[1];
 }
@@ -765,38 +918,21 @@ function findPlacementsByRole(
 
 export function buildMiniGolfCourse(
   layout: RoomLayout,
-  getAssetCollisionDef: (assetId: string) => AssetCollisionDef | undefined,
-  staticBlockers: readonly Aabb3[] = [],
   options: { readonly hole?: number } = {},
 ): MiniGolfCourse {
   const cup = findPlacementByRole(layout, "cup", options.hole)?.placement;
-  const collisionBoxes = collectCourseCollisionBoxes(layout, getAssetCollisionDef, options.hole);
+  const cupSensors = findPlacementsByRole(layout, "cup-sensor", options.hole);
   const courseBounds = courseBoundsFromPlacements(layout, options.hole);
-  const surfaceBoxes = collisionBoxes.filter((box) => box.kind === "surface");
-  const surfaceHeight = collisionBoxes
-    .filter((box) => box.kind === "surface")
-    .reduce((height, box) => Math.max(height, box.top), 0);
-  const surfaces = [
-    ...surfaceBoxes.map((box) => surfaceFromCourseBox(box)),
-    ...meshSurfacesFromBlockers(staticBlockers, collisionBoxes, courseBounds),
-  ];
-  const walls = collisionBoxes
-    .filter((box) => box.kind === "wall" && box.top > surfaceHeight + WALL_TOP_CLEARANCE)
-    .map((box) => ({
-      bounds: box.bounds,
-      ...(box.restitution !== undefined ? { restitution: box.restitution } : {}),
-    }));
   const hazards = collectHazards(layout, options.hole);
   return {
     bounds: courseBounds,
-    hazards,
-    walls,
-    surfaces,
-    defaultSurface: { height: surfaceHeight + BALL_VISUAL_RADIUS, friction: 1 },
+    hazards: hazards.map((hazard) => hazard.bounds),
+    hazardEntityIds: hazards.map((hazard) => hazard.entityId),
+    cupSensorEntityIds: cupSensors.map((sensor) => instanceEntityId(sensor.assetId, sensor.placementIndex)),
     ...(cup
       ? {
           cup: {
-            center: [cup.position[0], surfaceHeight + BALL_VISUAL_RADIUS, cup.position[2]],
+            center: ballCenterFromPlacement(cup),
             radius: numberMeta(cup, "radius", 0.35),
             captureSpeed: numberMeta(cup, "captureSpeed", 0.75),
           },
@@ -805,42 +941,18 @@ export function buildMiniGolfCourse(
   };
 }
 
-interface CourseCollisionBox {
-  readonly kind: "surface" | "wall";
-  readonly bounds: MiniGolfAabb2;
-  readonly top: number;
-  readonly restitution?: number;
-}
-
-function collectCourseCollisionBoxes(
-  layout: RoomLayout,
-  getAssetCollisionDef: (assetId: string) => AssetCollisionDef | undefined,
-  hole?: number,
-): CourseCollisionBox[] {
-  const boxes: CourseCollisionBox[] = [];
+function collectHazards(layout: RoomLayout, hole: number | undefined): MiniGolfHazardRef[] {
+  const hazards: MiniGolfHazardRef[] = [];
   for (const instance of layout.instances) {
-    const def = getAssetCollisionDef(instance.assetId);
-    if (!def) continue;
-    for (const placement of instance.placements) {
-      if (placement.hidden || placement.collision === false) continue;
-      if (!placementBelongsToHole(placement, hole)) continue;
-      for (const primitive of def.primitives) {
-        const box = primitiveCourseBox(primitive, placement);
-        if (box) boxes.push(box);
-      }
-    }
-  }
-  return boxes;
-}
-
-function collectHazards(layout: RoomLayout, hole: number | undefined): MiniGolfAabb2[] {
-  const hazards: MiniGolfAabb2[] = [];
-  for (const instance of layout.instances) {
-    for (const placement of instance.placements) {
+    for (let placementIndex = 0; placementIndex < instance.placements.length; placementIndex += 1) {
+      const placement = instance.placements[placementIndex]!;
       const role = placement.metadata?.minigolfRole;
       if (role !== "hazard" && role !== "water") continue;
       if (!placementBelongsToHole(placement, hole)) continue;
-      hazards.push(hazardAabbFromPlacement(placement));
+      hazards.push({
+        bounds: hazardAabbFromPlacement(placement),
+        entityId: instanceEntityId(instance.assetId, placementIndex),
+      });
     }
   }
   return hazards;
@@ -853,145 +965,6 @@ function hazardAabbFromPlacement(placement: LayoutPlacement): MiniGolfAabb2 {
     min: [placement.position[0] - halfWidth, placement.position[2] - halfDepth],
     max: [placement.position[0] + halfWidth, placement.position[2] + halfDepth],
   };
-}
-
-function primitiveCourseBox(
-  primitive: CollisionPrimitive,
-  placement: LayoutPlacement,
-): CourseCollisionBox | null {
-  if (primitive.shape !== "box") return null;
-  const scale = readScale(placement);
-  const halfX = Math.abs(primitive.size[0] * scale[0]) / 2;
-  const halfZ = Math.abs(primitive.size[2] * scale[2]) / 2;
-  if (halfX <= 0 || halfZ <= 0) return null;
-  const center = primitive.center ?? [0, 0, 0];
-  const rotation = readRotation(placement);
-  const yaw = degreesToRadians(rotation[1] + (primitive.rotation?.[1] ?? 0));
-  const cos = Math.cos(yaw);
-  const sin = Math.sin(yaw);
-  const localX = center[0] * scale[0];
-  const localZ = center[2] * scale[2];
-  const centerX = placement.position[0] + localX * cos + localZ * sin;
-  const centerZ = placement.position[2] + -localX * sin + localZ * cos;
-  const extX = Math.abs(cos) * halfX + Math.abs(sin) * halfZ;
-  const extZ = Math.abs(sin) * halfX + Math.abs(cos) * halfZ;
-  const sizeY = Math.abs(primitive.size[1] * scale[1]);
-  const centerY = placement.position[1] + center[1] * scale[1];
-  const top = centerY + sizeY / 2;
-  return {
-    kind: sizeY <= SURFACE_BOX_MAX_HEIGHT ? "surface" : "wall",
-    bounds: {
-      min: [centerX - extX, centerZ - extZ],
-      max: [centerX + extX, centerZ + extZ],
-    },
-    top,
-    restitution: 0.65,
-  };
-}
-
-function surfaceFromCourseBox(box: CourseCollisionBox): MiniGolfSurface {
-  return {
-    bounds: box.bounds,
-    height: box.top + BALL_VISUAL_RADIUS,
-    friction: 1,
-  };
-}
-
-function meshSurfacesFromBlockers(
-  staticBlockers: readonly Aabb3[],
-  authoredBoxes: readonly CourseCollisionBox[],
-  courseBounds?: MiniGolfAabb2,
-): MiniGolfSurface[] {
-  const blockers = staticBlockers.filter(
-    (blocker) =>
-      isMeshSurfaceBlocker(blocker) &&
-      !matchesAuthoredCourseBox(blocker, authoredBoxes) &&
-      (!courseBounds || blockerIntersectsAabb2(blocker, courseBounds)),
-  );
-  if (blockers.length === 0) return [];
-  const bounds = unionBlockerBounds(blockers);
-  const surface: MiniGolfSurface = {
-    bounds,
-    friction: 1,
-    heightAt: (x, z) => heightFromMeshBlockers(blockers, x, z),
-    slopeAt: (x, z) => slopeFromMeshBlockers(blockers, x, z),
-  };
-  return [surface];
-}
-
-function isMeshSurfaceBlocker(blocker: Aabb3): boolean {
-  const sizeX = blocker.max[0] - blocker.min[0];
-  const sizeY = blocker.max[1] - blocker.min[1];
-  const sizeZ = blocker.max[2] - blocker.min[2];
-  return (
-    Number.isFinite(sizeX) &&
-    Number.isFinite(sizeY) &&
-    Number.isFinite(sizeZ) &&
-    sizeX > MESH_SURFACE_MIN_FOOTPRINT &&
-    sizeZ > MESH_SURFACE_MIN_FOOTPRINT &&
-    sizeY >= 0 &&
-    sizeY <= MESH_SURFACE_MAX_THICKNESS
-  );
-}
-
-function matchesAuthoredCourseBox(blocker: Aabb3, boxes: readonly CourseCollisionBox[]): boolean {
-  return boxes.some(
-    (box) =>
-      nearlyEqual(blocker.min[0], box.bounds.min[0]) &&
-      nearlyEqual(blocker.max[0], box.bounds.max[0]) &&
-      nearlyEqual(blocker.min[2], box.bounds.min[1]) &&
-      nearlyEqual(blocker.max[2], box.bounds.max[1]) &&
-      nearlyEqual(blocker.max[1], box.top),
-  );
-}
-
-function unionBlockerBounds(blockers: readonly Aabb3[]): MiniGolfAabb2 {
-  let minX = Infinity;
-  let minZ = Infinity;
-  let maxX = -Infinity;
-  let maxZ = -Infinity;
-  for (const blocker of blockers) {
-    minX = Math.min(minX, blocker.min[0]);
-    minZ = Math.min(minZ, blocker.min[2]);
-    maxX = Math.max(maxX, blocker.max[0]);
-    maxZ = Math.max(maxZ, blocker.max[2]);
-  }
-  return { min: [minX, minZ], max: [maxX, maxZ] };
-}
-
-function heightFromMeshBlockers(
-  blockers: readonly Aabb3[],
-  x: number,
-  z: number,
-): number | null {
-  let height: number | null = null;
-  for (const blocker of blockers) {
-    if (
-      x < blocker.min[0] - MESH_SURFACE_SAMPLE_PADDING ||
-      x > blocker.max[0] + MESH_SURFACE_SAMPLE_PADDING ||
-      z < blocker.min[2] - MESH_SURFACE_SAMPLE_PADDING ||
-      z > blocker.max[2] + MESH_SURFACE_SAMPLE_PADDING
-    ) {
-      continue;
-    }
-    const candidate = blocker.max[1] + BALL_VISUAL_RADIUS;
-    height = height === null ? candidate : Math.max(height, candidate);
-  }
-  return height;
-}
-
-function slopeFromMeshBlockers(blockers: readonly Aabb3[], x: number, z: number): Vec2 | null {
-  const center = heightFromMeshBlockers(blockers, x, z);
-  if (center === null) return null;
-  const step = MESH_SURFACE_SLOPE_SAMPLE_STEP;
-  const hx0 = heightFromMeshBlockers(blockers, x - step, z) ?? center;
-  const hx1 = heightFromMeshBlockers(blockers, x + step, z) ?? center;
-  const hz0 = heightFromMeshBlockers(blockers, x, z - step) ?? center;
-  const hz1 = heightFromMeshBlockers(blockers, x, z + step) ?? center;
-  return [
-    clamp((hx1 - hx0) / (step * 2), -MESH_SURFACE_MAX_SLOPE, MESH_SURFACE_MAX_SLOPE),
-    clamp((hz1 - hz0) / (step * 2), -MESH_SURFACE_MAX_SLOPE, MESH_SURFACE_MAX_SLOPE),
-  ];
 }
 
 function numberMeta(placement: LayoutPlacement, key: string, fallback: number): number {
@@ -1008,11 +981,22 @@ function courseBoundsFromPlacements(layout: RoomLayout, hole: number | undefined
       ? nonCameraPlacements
       : nonCameraPlacements.filter((placement) => holeNumber(placement) === hole);
   const boundedPlacements = holePlacements.length > 0 ? holePlacements : nonCameraPlacements;
+  const useScopedExtents = hole !== undefined && holePlacements.length > 0;
   const xs = boundedPlacements.map((placement) => placement.position[0]);
   const zs = boundedPlacements.map((placement) => placement.position[2]);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minZ = Math.min(...zs);
+  const maxZ = Math.max(...zs);
   return {
-    min: [Math.min(...xs, -1) - 0.55, Math.min(...zs, -8) - 1],
-    max: [Math.max(...xs, 1) + 0.55, Math.max(...zs, 1) + 1],
+    min: [
+      (useScopedExtents ? minX : Math.min(minX, -1)) - 0.55,
+      (useScopedExtents ? minZ : Math.min(minZ, -8)) - 1,
+    ],
+    max: [
+      (useScopedExtents ? maxX : Math.max(maxX, 1)) + 0.55,
+      (useScopedExtents ? maxZ : Math.max(maxZ, 1)) + 1,
+    ],
   };
 }
 
@@ -1035,26 +1019,31 @@ function placementBelongsToHole(placement: LayoutPlacement, hole: number | undef
   return placementHole === null || placementHole === hole;
 }
 
-function blockerIntersectsAabb2(blocker: Aabb3, bounds: MiniGolfAabb2): boolean {
-  return (
-    blocker.max[0] >= bounds.min[0] &&
-    blocker.min[0] <= bounds.max[0] &&
-    blocker.max[2] >= bounds.min[1] &&
-    blocker.min[2] <= bounds.max[1]
-  );
-}
-
 function normalize2(value: Vec2): Vec2 {
   const length = Math.hypot(value[0], value[1]);
   return length > 0 ? [value[0] / length, value[1] / length] : [0, 0];
 }
 
-function degreesToRadians(value: number): number {
-  return (value * Math.PI) / 180;
+export function miniGolfSideSpinTorqueImpulse(
+  sideSpin: number,
+  power: number,
+): [number, number, number] {
+  const spin = clamp(sideSpin, -1, 1);
+  const strength = clamp(power, 0, 1);
+  return [0, spin * strength * MAX_SIDE_SPIN_TORQUE_IMPULSE, 0];
 }
 
-function nearlyEqual(a: number, b: number): boolean {
-  return Math.abs(a - b) <= 1e-4;
+export function miniGolfMagnusForce(
+  velocity: readonly [number, number, number],
+  angularVelocity: readonly [number, number, number],
+): [number, number, number] {
+  if (Math.abs(velocity[1]) < MAGNUS_MIN_VERTICAL_SPEED) return [0, 0, 0];
+  const planarSpeed = Math.hypot(velocity[0], velocity[2]);
+  if (planarSpeed < MAGNUS_MIN_PLANAR_SPEED) return [0, 0, 0];
+  const spinY = angularVelocity[1];
+  if (Math.abs(spinY) <= REST_ANGULAR_SPEED) return [0, 0, 0];
+  const force = MAGNUS_COEFFICIENT * spinY * planarSpeed;
+  return [(-velocity[2] / planarSpeed) * force, 0, (velocity[0] / planarSpeed) * force];
 }
 
 function clamp(value: number, min: number, max: number): number {

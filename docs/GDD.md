@@ -242,17 +242,31 @@ Bu katman zaten data-driven ve headless; mini golf kuralları bir
 ## 10. Kapsam ve faz planı
 
 ### Faz 0 — Dikey dilim (1 delik)
-- [x] Top fiziği saf çekirdek (sürtünme, eğim, duvar sekme, rest, delik
-      yakalama) + birim testleri. `2026-06-29`: `game/minigolf/gameplay/miniGolfBallPhysics.ts`
-      eklendi; engine testleri eklendi. Not: tam `npm run test:engine` koşusu mevcut
-      asset manifest eksikleri nedeniyle erken duruyor.
-- [x] Sahne collision verisinin top fiziğine bağlanması. `2026-06-29`:
-      `minigolf.singleHole`, runtime'ın yüklediği `*.collision.json` sidecar
-      kutularından yüzey yüksekliği ve kaldırım/engel AABB'leri üretir; top görsel
-      yüksekliği mesh yarıçapına göre zemine oturtulur.
+- [x] Top fiziği gerçek Rapier rigid body akışına taşındı. `2026-06-30`:
+      önceki saf arcade çekirdek (`game/minigolf/gameplay/miniGolfBallPhysics.ts`)
+      kaldırıldı; `minigolf.singleHole` vuruşu `beforeEngineUpdate` içinde
+      Rapier `applyImpulse` ile uygular ve top pozisyonunu physics transform
+      cache'inden okur. Not: tam `npm run test:engine` koşusu mevcut asset
+      manifest eksikleri nedeniyle erken duruyor.
+- [x] Sahne collision verisi artık Rapier collider olarak top fiziğinin sahibidir.
+      `buildMiniGolfCourse` duvar/yüzey sentezlemez; yalnızca tee/cup/hazard/OOB
+      oyun işaretçilerini çıkarır. `mini-golf-hole-01` top placement'ı
+      `simulatePhysics:true` ve golf topu kütle/damping ayarlarıyla dinamik
+      gövdeye dönüştü.
+- [x] Fiziksel cup/hazard ilk pass'i. `2026-06-30`: `hole-open` collision
+      sidecar'ındaki dolu kutu kaldırıldı ve açık cup mesh'i `complexAsSimple`
+      trimesh collider'a bırakıldı. Her cup'a görünmez `shape:cylinder`
+      `cup-sensor` placement'ı eklendi; `minigolf-gap` hazard placement'ları
+      `sensor:true` oldu. Game mode aktif hole cup/hazard sensor temaslarını
+      `onPhysicsContact` üzerinden cup completion veya ceza + `lastSafePos` reset
+      akışına bağlar.
 - [x] Sürükle-güç girdisi + güç/yön HUD. `2026-06-29`: `minigolf.singleHole`
       Game Mode eklendi; top üstünden sürükle-bırak vuruş, güç barı ve yön çizgisi
       Play runtime'a bağlandı.
+- [x] Spin/curve ilk pass'i. `2026-06-30`: Q/E side-spin input'u vuruş anında
+      Rapier `applyTorqueImpulse` üretir; top havadayken `applyForce` ile Magnus
+      kuvveti uygulanır. Topspin/backspin hissi ve `kMagnus` kalibrasyonu ayar
+      pass'ine bırakıldı.
 - [x] Yörünge kamera (orbit + takip). `2026-06-29`: aynı Game Mode içinde top
       odaklı orbit kamera ve hareket sırasında takip eklendi.
 - [x] 1 elle kurulmuş delik layout'u (tee → yol → delik, birkaç engel).

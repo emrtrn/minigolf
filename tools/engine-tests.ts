@@ -108,20 +108,14 @@ import {
   resolvePlanarMovement,
   type Aabb3,
 } from "../src/game/collision";
-import {
-  applyMiniGolfPutt,
-  createMiniGolfBallState,
-  miniGolfCourseSurfaceHeight,
-  miniGolfSurfaceHeight,
-  stepMiniGolfBall,
-  type MiniGolfCourse,
-} from "../game/minigolf/gameplay/miniGolfBallPhysics";
 import { computeMiniGolfAim } from "../game/minigolf/gameplay/miniGolfAim";
 import {
   buildMiniGolfCourse,
   formatMiniGolfScore,
+  miniGolfMagnusForce,
   miniGolfResultName,
   miniGolfScoreRelativeToPar,
+  miniGolfSideSpinTorqueImpulse,
   summarizeMiniGolfCourse,
 } from "../game/minigolf/gameplay/miniGolfGameMode";
 import {
@@ -4568,151 +4562,9 @@ check("resolvePlanarMovement: stops at the blocker in the path among several", (
   assert.ok(Math.abs(moved.dx) <= 1e-12); // flush against the near wall (x stays 0)
 });
 
-// Mini Golf v1 vertical-slice physics: pure, deterministic, no Three/DOM/Rapier.
-check("miniGolf: putt normalizes direction, clamps power, and clears rest", () => {
-  const ball = applyMiniGolfPutt(createMiniGolfBallState([0, 0, 0]), [10, 0], 2, {
-    maxPuttSpeed: 6,
-    puttPowerExponent: 1,
-  });
-  assert.equal(ball.resting, false);
-  assert.ok(Math.abs(ball.vel[0] - 6) <= 1e-12);
-  assert.equal(ball.vel[2], 0);
-});
-
-check("miniGolf: rolling friction brings the ball to rest deterministically", () => {
-  const course: MiniGolfCourse = {};
-  const ball = stepMiniGolfBall(createMiniGolfBallState([0, 0, 0], [1, 0, 0]), course, 2, {
-    rollingFriction: 1,
-    restSpeed: 0.04,
-  });
-  assert.equal(ball.resting, true);
-  assert.ok(Math.abs(ball.vel[0]) <= 1e-12);
-  assert.ok(ball.pos[0] > 0.45 && ball.pos[0] < 0.55);
-});
-
-check("miniGolf: slope accelerates the ball downhill and updates surface height", () => {
-  const course: MiniGolfCourse = {
-    defaultSurface: { height: 1, slope: [0.1, 0], friction: 0 },
-  };
-  const ball = stepMiniGolfBall(createMiniGolfBallState([0, 1, 0]), course, 0.25, {
-    rollingFriction: 0,
-  });
-  assert.equal(ball.resting, false);
-  assert.ok(ball.vel[0] < 0);
-  assert.ok(ball.pos[0] < 0);
-  assert.equal(ball.pos[1], miniGolfSurfaceHeight(course.defaultSurface!, ball.pos[0], ball.pos[2]));
-});
-
-check("miniGolf: overlapping sampled surfaces use the highest height", () => {
-  const course: MiniGolfCourse = {
-    defaultSurface: { height: 0, friction: 0 },
-    surfaces: [
-      { bounds: { min: [-1, -1], max: [1, 1] }, height: 0.25, friction: 0 },
-      {
-        bounds: { min: [-0.5, -0.5], max: [0.5, 0.5] },
-        friction: 0,
-        heightAt: (x, z) => (Math.abs(x) <= 0.5 && Math.abs(z) <= 0.5 ? 0.75 : null),
-      },
-    ],
-  };
-  const ball = stepMiniGolfBall(createMiniGolfBallState([0, 0, 0], [0, 0, 0]), course, 1 / 120, {
-    rollingFriction: 0,
-  });
-  assert.equal(ball.pos[1], 0.75);
-});
-
-check("miniGolf: spawn surface sampling prefers the local tee over the course fallback", () => {
-  const course: MiniGolfCourse = {
-    defaultSurface: { height: 1.5, friction: 0 },
-    surfaces: [
-      {
-        bounds: { min: [-1, -1], max: [1, 1] },
-        height: 0.25,
-        friction: 0,
-      },
-    ],
-  };
-  assert.equal(miniGolfCourseSurfaceHeight(course, 0, 0), 0.25);
-});
-
-check("miniGolf: course builder turns complex blocker AABBs into sampled surfaces", () => {
-  const layout: RoomLayout = {
-    schema: 1,
-    name: "minigolf-complex-surface",
-    loadGroups: [],
-    instances: [
-      { assetId: "floor", placements: [{ position: [0, 0.82, 0] }] },
-      { assetId: "hill", placements: [{ position: [0, 0.82, -1] }] },
-    ],
-    characters: [],
-    lights: [],
-  };
-  const floorDef: AssetCollisionDef = {
-    primitives: [{ shape: "box", size: [1, 0.056, 1], center: [0, 0.032, 0] }],
-    complexity: "projectDefault",
-    preset: "blockAll",
-  };
-  const defs = new Map<string, AssetCollisionDef>([
-    ["floor", floorDef],
-    ["hill", { primitives: [], complexity: "complexAsSimple", preset: "blockAll" }],
-  ]);
-  const floorTop = 0.82 + 0.032 + 0.056 / 2;
-  const hillTop = 1.05;
-  const course = buildMiniGolfCourse(
-    layout,
-    (assetId) => defs.get(assetId),
-    [
-      { min: [-0.5, 0.82, -0.5], max: [0.5, floorTop, 0.5] },
-      { min: [-0.35, 0.97, -1.35], max: [0.35, hillTop, -0.65] },
-    ],
-  );
-  const sampled = course.surfaces
-    ?.map((surface) => miniGolfSurfaceHeight(surface, 0, -1))
-    .filter((height) => height > 1);
-  assert.deepEqual(sampled, [hillTop + 0.035]);
-});
-
-check("miniGolf: course builder turns authored tall primitives into walls", () => {
-  const layout: RoomLayout = {
-    schema: 1,
-    name: "minigolf-authored-wall",
-    loadGroups: [],
-    instances: [
-      { assetId: "floor", placements: [{ position: [0, 0.82, 0] }] },
-      { assetId: "wall", placements: [{ position: [0, 0.82, 0] }] },
-    ],
-    characters: [],
-    lights: [],
-  };
-  const defs = new Map<string, AssetCollisionDef>([
-    [
-      "floor",
-      {
-        primitives: [{ shape: "box", size: [1, 0.056, 1], center: [0, 0.032, 0] }],
-        complexity: "projectDefault",
-        preset: "blockAll",
-      },
-    ],
-    [
-      "wall",
-      {
-        primitives: [{ shape: "box", size: [0.12, 0.1467, 1], center: [0.44, 0.0734, 0] }],
-        complexity: "projectDefault",
-        preset: "blockAll",
-      },
-    ],
-  ]);
-  const course = buildMiniGolfCourse(layout, (assetId) => defs.get(assetId));
-  assert.equal(course.walls?.length, 1);
-  const wall = course.walls?.[0];
-  assert.ok(wall);
-  assert.ok(Math.abs(wall.bounds.min[0] - 0.38) <= 1e-12);
-  assert.equal(wall.bounds.min[1], -0.5);
-  assert.equal(wall.bounds.max[0], 0.5);
-  assert.equal(wall.bounds.max[1], 0.5);
-});
-
-check("miniGolf: course builder can scope collision and cup data to one hole", () => {
+// Mini Golf real-physics mode: Rapier owns ball/collision; the project course
+// helper only extracts game markers (cup, hazard, OOB bounds).
+check("miniGolf: course builder scopes marker data to one hole", () => {
   const layout: RoomLayout = {
     schema: 1,
     name: "minigolf-two-hole-course",
@@ -4732,25 +4584,23 @@ check("miniGolf: course builder can scope collision and cup data to one hole", (
           { position: [10, 0.82, -3], metadata: { minigolfRole: "cup", hole: 2 } },
         ],
       },
+      {
+        assetId: "shape:cylinder",
+        placements: [
+          { position: [0, 0.92, -3], sensor: true, metadata: { minigolfRole: "cup-sensor", hole: 1 } },
+          { position: [10, 0.92, -3], sensor: true, metadata: { minigolfRole: "cup-sensor", hole: 2 } },
+        ],
+      },
     ],
     characters: [],
     lights: [],
   };
-  const defs = new Map<string, AssetCollisionDef>([
-    [
-      "floor",
-      {
-        primitives: [{ shape: "box", size: [1, 0.056, 1], center: [0, 0.032, 0] }],
-        complexity: "projectDefault",
-        preset: "blockAll",
-      },
-    ],
-  ]);
-  const course = buildMiniGolfCourse(layout, (assetId) => defs.get(assetId), [], { hole: 2 });
+  const course = buildMiniGolfCourse(layout, { hole: 2 });
   assert.equal(course.cup?.center[0], 10);
+  assert.ok(Math.abs((course.cup?.center[1] ?? 0) - 0.92) <= 1e-12);
   assert.ok(course.bounds);
   assert.ok(course.bounds.min[0] > 9);
-  assert.ok(course.surfaces?.every((surface) => surface.bounds!.min[0] > 9));
+  assert.deepEqual(course.cupSensorEntityIds, [instanceEntityId("shape:cylinder", 1)]);
 });
 
 check("miniGolf: course summary totals strokes, par, and relative score", () => {
@@ -4795,49 +4645,23 @@ check("miniGolf: course builder reads hazard metadata for the active hole", () =
     characters: [],
     lights: [],
   };
-  const course = buildMiniGolfCourse(layout, () => undefined, [], { hole: 1 });
+  const course = buildMiniGolfCourse(layout, { hole: 1 });
   assert.deepEqual(course.hazards, [{ min: [1.75, -3.5], max: [2.25, -2.5] }]);
+  assert.deepEqual(course.hazardEntityIds, [instanceEntityId("hazard", 0)]);
 });
 
-check("miniGolf: AABB walls bounce the ball with restitution", () => {
-  const course: MiniGolfCourse = {
-    walls: [{ bounds: { min: [0.9, -1], max: [1.1, 1] }, restitution: 0.5 }],
-  };
-  const ball = stepMiniGolfBall(createMiniGolfBallState([0, 0, 0], [2, 0, 0]), course, 0.5, {
-    ballRadius: 0.1,
-    rollingFriction: 0,
-  });
-  assert.ok(ball.pos[0] < 0.85);
-  assert.ok(ball.vel[0] < 0);
-  assert.ok(Math.abs(ball.vel[0] + 1) <= 1e-9);
+check("miniGolf: side spin torque clamps spin and scales by power", () => {
+  assert.deepEqual(miniGolfSideSpinTorqueImpulse(2, 0.5), [0, 0.0006, 0]);
+  assert.deepEqual(miniGolfSideSpinTorqueImpulse(-1, 0), [0, -0, 0]);
 });
 
-check("miniGolf: cup captures slow balls and lets fast lip-outs pass", () => {
-  const course: MiniGolfCourse = {
-    cup: { center: [1, 0, 0], radius: 0.25, captureSpeed: 0.7 },
-  };
-  const slow = stepMiniGolfBall(createMiniGolfBallState([0.7, 0, 0], [0.4, 0, 0]), course, 1, {
-    rollingFriction: 0,
-  });
-  assert.equal(slow.inCup, true);
-  assert.deepEqual(slow.pos, [1, 0, 0]);
-
-  const fast = stepMiniGolfBall(createMiniGolfBallState([0.7, 0, 0], [2, 0, 0]), course, 0.5, {
-    rollingFriction: 0,
-  });
-  assert.equal(fast.inCup, false);
-  assert.ok(fast.pos[0] > 1.2);
-});
-
-check("miniGolf: out-of-bounds resets to the last safe position and adds a penalty", () => {
-  const course: MiniGolfCourse = { bounds: { min: [-1, -1], max: [1, 1] } };
-  const ball = stepMiniGolfBall(createMiniGolfBallState([0, 0, 0], [3, 0, 0]), course, 1, {
-    rollingFriction: 0,
-  });
-  assert.equal(ball.outOfBounds, true);
-  assert.equal(ball.penaltyStrokes, 1);
-  assert.equal(ball.resting, true);
-  assert.deepEqual(ball.pos, [0, 0, 0]);
+check("miniGolf: Magnus force curves airborne side-spin shots sideways", () => {
+  assert.deepEqual(miniGolfMagnusForce([3, 0, 0], [0, 12, 0]), [0, 0, 0]);
+  const force = miniGolfMagnusForce([3, 0.2, 0], [0, 12, 0]);
+  assert.equal(force[0], 0);
+  assert.equal(force[1], 0);
+  assert.ok(force[2] > 0);
+  assert.ok(Math.abs(force[2] - 0.0162) <= 1e-12);
 });
 
 check("miniGolf: drag aim maps screen pull opposite to camera-relative shot direction", () => {

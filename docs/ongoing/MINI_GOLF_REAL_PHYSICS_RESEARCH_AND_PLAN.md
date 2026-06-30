@@ -1,9 +1,9 @@
 # Mini Golf — Gerçek Fizik (Rapier) Araştırma & Plan
 
 > Tarih: 2026-06-30
-> Durum: 🚧 Uygulama başladı — Faz 1 motor köprüleri kodlandı; tam engine gate
-> mevcut `asset-path-missing` manifest hataları nedeniyle bloke. **Kapsam
-> kararları 2026-06-30'da kilitlendi** (bkz §11).
+> Durum: 🚧 Uygulama sürüyor — Faz 5 ilk pass tamamlandı; tam engine gate mevcut
+> `asset-path-missing` manifest hataları nedeniyle bloke. **Kapsam kararları
+> 2026-06-30'da kilitlendi** (bkz §11).
 > Amaç: Topu, kendi 2.5B arcade çekirdeği yerine **gerçek 3B rigid-body**
 > simülasyonuyla sürmek; topun **havalandığını görmek**, **çarpışmaları
 > hissetmek** (sekme + geri bildirim), **spin/curve** ile oynamak, eğimde
@@ -134,7 +134,7 @@ fabrika [`RuntimeSceneApp.ts:1508`](../../src/scene/RuntimeSceneApp.ts#L1508):
 
 ## 5. Veri akışının değişimi
 
-**Şimdi:** `miniGolfGameMode.update` → `stepMiniGolfBall` (özel) →
+**Önce:** `miniGolfGameMode.update` → `stepMiniGolfBall` (özel) →
 `context.setEntityTransform` (oyun → render'a iter).
 
 **Sonra:**
@@ -167,61 +167,65 @@ build-passing (CLAUDE.md kuralı). Her adım ayrı commit.
   bridge harness geçiyor; `npm run test:engine` mevcut `asset-path-missing`
   manifest hatalarında erken duruyor.
 
-### Faz 2 — Saf çekirdeği kaldır + topu dinamik cisim yap 🚧
-- ⬜ **`game/minigolf/gameplay/miniGolfBallPhysics.ts` SİLİNİR** (karar). Tüm
+### Faz 2 — Saf çekirdeği kaldır + topu dinamik cisim yap ✅
+- ✅ **`game/minigolf/gameplay/miniGolfBallPhysics.ts` SİLİNİR** (karar). Tüm
   import'lar ve `MiniGolfCourse`/`MiniGolfSurface`/`stepMiniGolfBall`/
   `applyMiniGolfPutt`/`createMiniGolfBallState` kullanımları kaldırılır.
-- ⬜ `buildMiniGolfCourse` **küçülür**: duvar/yüzey sentezi
+- ✅ `buildMiniGolfCourse` **küçülür**: duvar/yüzey sentezi
   (`collectCourseCollisionBoxes`, `surfaceFromCourseBox`, `meshSurfacesFromBlockers`,
   `primitiveCourseBox` …) silinir — collision geometrisinin sahibi artık Rapier.
   Geriye sadece **oyun işaretçileri** kalır: tee, cup (pozisyon/yarıçap), hazard
   AABB'leri, OOB sınırları.
 - 🚧 Top collider'ı `simulatePhysics:true`, `massKg`, `restitution`, `friction`,
   düşük `angularDamping` (yuvarlanma), düşük `linearDamping`; CCD zaten açık
-  (`rigidBodyDescForBody` dinamik dalında). İlk pass: level top placement'ı
-  `simulatePhysics:true`, `massKg`, damping ve sphere sidecar ile dinamik gövdeye
-  dönüştü; restitution/friction yüzey ayarı sonraki kalibrasyon.
-- 🚧 Spawn: `teleportBody(ballId, teePos)`; `createMiniGolfBallState` gider. Top
+  (`rigidBodyDescForBody` dinamik dalında). Top placement'ı `simulatePhysics:true`,
+  `massKg`, damping ve sphere sidecar ile dinamik gövdeye dönüştü; restitution/
+  friction yüzey ayarı Faz 6 kalibrasyonu.
+- ✅ Spawn: `teleportBody(ballId, teePos)`; `createMiniGolfBallState` gider. Top
   fizikçe yere oturur.
-- 🚧 Vuruş: `beforeEngineUpdate`'te yatay impuls. Güç→impuls kalibrasyonu
-  (kütle × hedef hız), sahaya göre (8 m lane) ayarlanır. İlk pass vuruşu
-  `applyImpulse` ile Rapier gövdesine veriyor.
-- 🚧 Görsel: `syncBallVisual` kaldırılır; transform sink topu sürer → **spin
+- ✅ Vuruş: `beforeEngineUpdate`'te yatay impuls. Güç→impuls kalibrasyonu
+  (kütle × hedef hız), sahaya göre (8 m lane) ayarlanır. Vuruş `applyImpulse`
+  ile Rapier gövdesine veriliyor.
+- ✅ Görsel: `syncBallVisual` kaldırılır; transform sink topu sürer → **spin
   bedava** (Rapier tam quaternion verir). Kamera fizik pozisyonunu takip eder.
-  İlk pass runtime `getEntityTransform` cache'i üzerinden fizik pozisyonunu okuyor.
-- 🚧 Rest tespiti: `isBodySleeping` veya `|v|<eps && |ω|<eps`.
+  Runtime `getEntityTransform` cache'i üzerinden fizik pozisyonunu okuyor.
+- ✅ Rest tespiti: `isBodySleeping` veya `|v|<eps && |ω|<eps`.
 - ⬜ **Çıktı:** Rampadan havalanma + duvardan gerçek sekme + dönen top gözlenir.
 
-### Faz 3 — Delik (fiziksel) + hazard + OOB ⬜
-- ⬜ **Cup fiziksel delik (karar):** delikli modeller (`hole-open`, gerekirse
+### Faz 3 — Delik (fiziksel) + hazard + OOB 🚧
+- 🚧 **Cup fiziksel delik (karar):** delikli modeller (`hole-open`, gerekirse
   `hole-round`/`hole-square`) collision'ı `complexAsSimple` + **boş primitives**
   yapılır → gerçek delikli mesh trimesh collider olur, top içeri düşer.
-  ⚠️ Mevcut [`hole-open.collision.json`](../../public/assets/minigolf/models/hole-open.collision.json)
-  tüm fayrı kaplayan **tek dolu kutu** — bu kutu kaldırılmazsa delik oluşmaz.
-- ⬜ Cup sensor: fincan hacminde küçük sensor; top içeride + durağan → "girdi".
+  İlk pass: [`hole-open.collision.json`](../../public/assets/minigolf/models/hole-open.collision.json)
+  içindeki tüm fayrı kaplayan dolu kutu kaldırıldı; `complexAsSimple` boş
+  primitives ile mesh collider'a bırakıldı.
+- ✅ Cup sensor: fincan hacminde küçük sensor; top içeride + durağan → "girdi".
   (Fiziksel huni + sensor birlikte → lip-out artık fizikçe gerçek olur.)
-- ⬜ Hazard/su: `minigolf-gap` yerlerine sensor; overlap → ceza + reset.
-- ⬜ OOB: `y < zeminEşiği` veya parkur-altı geniş sensor; `teleportBody(lastSafePos)`
+- ✅ Hazard/su: `minigolf-gap` yerlerine sensor; overlap → ceza + reset.
+- 🚧 OOB: `y < zeminEşiği` veya parkur-altı geniş sensor; `teleportBody(lastSafePos)`
   + ceza. `lastSafePos` her durağan/sınır-içi karede güncellenir (mevcut
-  "tee'ye geri atma" hatası düzelir).
-- ⬜ Skor/akış (`completeCurrentHole`, transition) fizik state'inden sürülür.
+  "tee'ye geri atma" hatası düzelir). İlk pass: mevcut `y < -2` + hole bounds
+  + hazard sensor/AABB yolu `lastSafePos` ile resetliyor.
+- 🚧 Skor/akış (`completeCurrentHole`, transition) fizik state'inden sürülür.
 - ⚠️ Trimesh cup ince duvarlı → hızlı topta tünelleme riski; topta CCD + impuls
   üst sınırı; gerekirse cup ağzına fiziksel huni/rampa.
 
-### Faz 4 — Spin & curve (v1, karar) ⬜ → teknik için §6a
-- ⬜ Aim'e **spin girişi** (ör. vuruş sonrası ikinci sürükleme / tuş modifier /
-  yan kaydırma) → topspin/backspin + yan spin miktarı.
-- ⬜ Vuruşta `applyTorqueImpulse` ile açısal hız ver (yerde yuvarlanma/backspin).
-- ⬜ **Magnus kuvveti** (hava eğrisi): top havadayken her fizik adımında
+### Faz 4 — Spin & curve (v1, karar) 🚧 → teknik için §6a
+- 🚧 Aim'e **spin girişi** (ör. vuruş sonrası ikinci sürükleme / tuş modifier /
+  yan kaydırma) → topspin/backspin + yan spin miktarı. İlk pass: Q/E ile
+  side-spin.
+- 🚧 Vuruşta `applyTorqueImpulse` ile açısal hız ver (yerde yuvarlanma/backspin).
+  İlk pass: vertical-axis side-spin torque impulse.
+- ✅ **Magnus kuvveti** (hava eğrisi): top havadayken her fizik adımında
   `F = kMagnus · (ω × v)` uygula — Rapier bunu otomatik yapmaz.
-- ⬜ Ayar: `kMagnus`, spin sönümü, yerde spin→sürtünme tepkisi.
+- 🚧 Ayar: `kMagnus`, spin sönümü, yerde spin→sürtünme tepkisi.
 
-### Faz 5 — Tokuşma hissi: ses + kamera sarsıntısı + partikül (birlikte, karar) ⬜
-- ⬜ Temas-impuls eşiği aşılınca **üçü birden**, çarpma şiddetine ölçekli:
+### Faz 5 — Tokuşma hissi: ses + kamera sarsıntısı + partikül (birlikte, karar) 🚧
+- ✅ Temas-impuls eşiği aşılınca **üçü birden**, çarpma şiddetine ölçekli:
   - **ses** (audio backend `web-audio` mevcut — `RuntimeSceneApp.ts:316`),
   - kısa **kamera sarsıntısı**,
   - **partikül/iz**.
-- ⬜ Havadan inişe ayrı "thud" varyantı.
+- ⬜ Havadan inişe ayrı "thud" varyantı ve eşik/şiddet kalibrasyonu.
 
 ### Faz 6 — Yüzey malzemeleri & global ayar ⬜
 - ⬜ Yüzey başına fiziksel malzeme: green (orta sürtünme), rampa, hızlı/yavaş
@@ -356,3 +360,40 @@ Saf çekirdek **siliniyor** (karar — §11), dolayısıyla mevcut
   okuyor. `mini-golf-hole-01` top placement'ı `simulatePhysics:true` ve golf topu
   kütle/damping ayarlarıyla dinamik gövde oldu. `tsc` ve headless adapter
   kontrolü geçti; saf çekirdek/course-builder silme henüz yapılmadı.
+- 2026-06-30 — Faz 2 saf çekirdek kaldırma tamamlandı: `miniGolfBallPhysics.ts`
+  silindi; `miniGolfAim` kendi `Vec2` tipini taşıyor; `buildMiniGolfCourse` artık
+  asset collision/static blocker yüzeyi veya duvarı sentezlemiyor, yalnızca
+  cup/hazard/OOB oyun işaretçilerini çıkarıyor. Eski 2.5B ball physics testleri
+  kaldırıldı; skor/aim/marker testleri kaldı. `npx tsc --noEmit`, odak mini golf
+  course harness'i ve `npm run build` geçti; tam `npm run test:engine` mevcut
+  `asset-path-missing` manifest hatalarında erken duruyor.
+- 2026-06-30 — Faz 3 ilk pass başladı: `hole-open.collision.json` dolu kutusu
+  kaldırıldı ve açık cup mesh'i `complexAsSimple` trimesh collider'a bırakıldı.
+  `mini-golf-hole-01` içindeki `minigolf-gap` hazard placement'ları
+  `sensor:true` oldu; game mode aktif hole hazard sensor entity'lerini
+  `onPhysicsContact` ile dinleyip temas olduğunda `lastSafePos` reset/ceza
+  yoluna sokuyor. `npx tsc --noEmit`, odak mini golf course harness'i ve
+  `npm run build` geçti; tam `npm run test:engine` aynı manifest hatalarında
+  erken duruyor.
+- 2026-06-30 — Faz 3 cup sensor tamamlandı: her cup için görünmez
+  `shape:cylinder` / `sensor:true` / `minigolfRole:cup-sensor` placement eklendi.
+  `buildMiniGolfCourse` aktif hole cup sensor entity id'lerini çıkarıyor; game
+  mode sensor temasını `onPhysicsContact` üzerinden yakalayıp mevcut
+  `captureSpeed` eşiğiyle lip-out filtresini koruyarak hole completion yoluna
+  bağlıyor. `npx tsc --noEmit`, odak mini golf course harness'i, JSON parse ve
+  `npm run build` geçti; tam `npm run test:engine` aynı manifest hatalarında
+  erken duruyor.
+- 2026-06-30 — Faz 4 ilk pass başladı: Q/E ile side-spin input'u eklendi; vuruş
+  anında `applyTorqueImpulse` vertical-axis side-spin veriyor. Top havadayken
+  `miniGolfMagnusForce` ile `applyForce` uygulanıyor; helper'lar odak harness'te
+  test edildi. Topspin/backspin ve `kMagnus`/sürtünme kalibrasyonu sonraki ayar
+  işi olarak kaldı. `npx tsc --noEmit`, odak mini golf harness'i ve
+  `npm run build` geçti; tam `npm run test:engine` aynı manifest hatalarında
+  erken duruyor.
+- 2026-06-30 — Faz 5 ilk pass tamamlandı: `GameModeContext` runtime-only
+  `playAudioOneShot` ve `spawnParticleEffect` köprüleriyle genişletildi;
+  mini golf solid contact `maxImpulse` eşiği aşılınca aynı anda spatial
+  `collision-chime`, kısa kamera sarsıntısı ve `starter-fx-dust-hit` efekti
+  tetikliyor. Sensor contact yolu hazard/cup için korunuyor. `npx tsc --noEmit`
+  ve `npm run build` geçti; `npm run test:engine` mevcut `asset-path-missing`
+  manifest hatalarında erken duruyor.
