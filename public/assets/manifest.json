@@ -24256,6 +24256,29 @@
         "packVersion": "0.1"
       },
       "license": "Project-authored level"
+    },
+    {
+      "id": "playtestgolf-level",
+      "name": "Play Test Golf.Level",
+      "assetType": "level",
+      "category": "levels",
+      "path": "assets/minigolf/levels/PlayTestGolf.level.json",
+      "tags": [],
+      "placeable": false,
+      "placement": {
+        "surface": "floor",
+        "snapToWall": false,
+        "allowRotation": false,
+        "allowScale": false
+      },
+      "runtime": {
+        "loadGroup": "levels",
+        "castShadow": false,
+        "receiveShadow": false,
+        "collision": false,
+        "bytes": 103
+      },
+      "license": "Unknown"
     }
   ]
 }

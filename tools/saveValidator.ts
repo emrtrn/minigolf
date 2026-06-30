@@ -75,9 +75,17 @@ function validateRotationDeg(value: unknown, label: string): number {
   return Number(degrees.toFixed(1));
 }
 
+// Upper bound is a sanity guard against runaway gizmo drags / garbage input, not
+// an engine/render limit (Three.js applies any finite scale). 8 was too low for
+// level geometry (greens, floors, walls); 1000 still rejects obvious mistakes
+// while allowing realistic level-sized objects. The `<= 0` / non-finite guards
+// matter and stay: zero/negative scale inverts colliders + normals, NaN/Infinity
+// propagates through the transform/physics chain.
+const MAX_PLACEMENT_SCALE = 1000;
+
 function validateScaleValue(value: unknown, label: string): number {
   const scale = Number(value);
-  if (!Number.isFinite(scale) || scale <= 0 || scale > 8) {
+  if (!Number.isFinite(scale) || scale <= 0 || scale > MAX_PLACEMENT_SCALE) {
     throw new Error(`invalid ${label}: ${value}`);
   }
   return Number(scale.toFixed(3));
