@@ -5074,7 +5074,7 @@
       "name": "Circle A",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_a.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_a.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5097,7 +5097,7 @@
       "name": "Circle A Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_a_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_a_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5120,7 +5120,7 @@
       "name": "Circle A Streaks",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_a_streaks.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_a_streaks.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5143,7 +5143,7 @@
       "name": "Circle A Streaks Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_a_streaks_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_a_streaks_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5166,7 +5166,7 @@
       "name": "Circle B",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_b.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_b.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5189,7 +5189,7 @@
       "name": "Circle B Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_b_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_b_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5212,7 +5212,7 @@
       "name": "Circle B Streaks",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_b_streaks.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_b_streaks.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5235,7 +5235,7 @@
       "name": "Circle B Streaks Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_b_streaks_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_b_streaks_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5258,7 +5258,7 @@
       "name": "Circle C",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_c.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_c.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5281,7 +5281,7 @@
       "name": "Circle C Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_c_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_c_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5304,7 +5304,7 @@
       "name": "Circle C Streaks",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_c_streaks.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_c_streaks.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5327,7 +5327,7 @@
       "name": "Circle C Streaks Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_c_streaks_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_c_streaks_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5350,7 +5350,7 @@
       "name": "Circle D",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_d.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_d.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5373,7 +5373,7 @@
       "name": "Circle D Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_d_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_d_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5396,7 +5396,7 @@
       "name": "Circle D Streaks",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_d_streaks.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_d_streaks.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5419,7 +5419,7 @@
       "name": "Circle D Streaks Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_d_streaks_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_d_streaks_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5442,7 +5442,7 @@
       "name": "Circle Rings A",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_rings_a.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_rings_a.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5465,7 +5465,7 @@
       "name": "Circle Rings A Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_rings_a_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_rings_a_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5488,7 +5488,7 @@
       "name": "Circle Rings A Streaks",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_rings_a_streaks.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_rings_a_streaks.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5511,7 +5511,7 @@
       "name": "Circle Rings B",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_rings_b.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_rings_b.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5534,7 +5534,7 @@
       "name": "Circle Rings B Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_rings_b_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_rings_b_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5557,7 +5557,7 @@
       "name": "Circle Rings B Streaks",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_rings_b_streaks.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_rings_b_streaks.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5580,7 +5580,7 @@
       "name": "Circle Rings C",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_rings_c.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_rings_c.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5603,7 +5603,7 @@
       "name": "Circle Rings C Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_rings_c_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_rings_c_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5626,7 +5626,7 @@
       "name": "Circle Rings C Streaks",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_rings_c_streaks.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_rings_c_streaks.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5649,7 +5649,7 @@
       "name": "Circle Rings D",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_rings_d.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_rings_d.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5672,7 +5672,7 @@
       "name": "Circle Rings D Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_rings_d_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_rings_d_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5695,7 +5695,7 @@
       "name": "Circle Rings D Streaks",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/circle_rings_d_streaks.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/circle_rings_d_streaks.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5718,7 +5718,7 @@
       "name": "Cone A",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_a.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_a.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5741,7 +5741,7 @@
       "name": "Cone A Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_a_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_a_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5764,7 +5764,7 @@
       "name": "Cone A Blur Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_a_blur_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_a_blur_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5787,7 +5787,7 @@
       "name": "Cone A Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_a_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_a_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5810,7 +5810,7 @@
       "name": "Cone B",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_b.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_b.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5833,7 +5833,7 @@
       "name": "Cone B Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_b_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_b_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5856,7 +5856,7 @@
       "name": "Cone B Blur Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_b_blur_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_b_blur_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5879,7 +5879,7 @@
       "name": "Cone B Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_b_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_b_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5902,7 +5902,7 @@
       "name": "Cone C",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_c.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_c.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5925,7 +5925,7 @@
       "name": "Cone C Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_c_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_c_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5948,7 +5948,7 @@
       "name": "Cone C Blur Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_c_blur_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_c_blur_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5971,7 +5971,7 @@
       "name": "Cone C Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_c_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_c_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -5994,7 +5994,7 @@
       "name": "Cone Composed A",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_composed_a.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_composed_a.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6017,7 +6017,7 @@
       "name": "Cone Composed A Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_composed_a_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_composed_a_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6040,7 +6040,7 @@
       "name": "Cone Composed B",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_composed_b.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_composed_b.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6063,7 +6063,7 @@
       "name": "Cone Composed B Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_composed_b_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_composed_b_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6086,7 +6086,7 @@
       "name": "Cone Composed C",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_composed_c.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_composed_c.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6109,7 +6109,7 @@
       "name": "Cone Composed C Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_composed_c_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_composed_c_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6132,7 +6132,7 @@
       "name": "Cone Composed D",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_composed_d.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_composed_d.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6155,7 +6155,7 @@
       "name": "Cone Composed D Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_composed_d_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_composed_d_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6178,7 +6178,7 @@
       "name": "Cone Composed E",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_composed_e.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_composed_e.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6201,7 +6201,7 @@
       "name": "Cone Composed E Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_composed_e_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_composed_e_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6224,7 +6224,7 @@
       "name": "Cone Composed F",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_composed_f.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_composed_f.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6247,7 +6247,7 @@
       "name": "Cone Composed F Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_composed_f_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_composed_f_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6270,7 +6270,7 @@
       "name": "Cone D",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_d.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_d.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6293,7 +6293,7 @@
       "name": "Cone D Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_d_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_d_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6316,7 +6316,7 @@
       "name": "Cone D Blur Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_d_blur_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_d_blur_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6339,7 +6339,7 @@
       "name": "Cone D Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_d_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_d_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6362,7 +6362,7 @@
       "name": "Cone E",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_e.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_e.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6385,7 +6385,7 @@
       "name": "Cone E Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_e_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_e_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6408,7 +6408,7 @@
       "name": "Cone E Blur Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_e_blur_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_e_blur_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6431,7 +6431,7 @@
       "name": "Cone E Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/cone_e_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/cone_e_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6454,7 +6454,7 @@
       "name": "Fan A",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/fan_a.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/fan_a.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6477,7 +6477,7 @@
       "name": "Fan A Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/fan_a_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/fan_a_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6500,7 +6500,7 @@
       "name": "Fan A Gradient",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/fan_a_gradient.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/fan_a_gradient.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6523,7 +6523,7 @@
       "name": "Fan B",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/fan_b.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/fan_b.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6546,7 +6546,7 @@
       "name": "Fan B Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/fan_b_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/fan_b_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6569,7 +6569,7 @@
       "name": "Fan B Gradient",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/fan_b_gradient.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/fan_b_gradient.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6592,7 +6592,7 @@
       "name": "Fan C",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/fan_c.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/fan_c.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6615,7 +6615,7 @@
       "name": "Fan C Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/fan_c_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/fan_c_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6638,7 +6638,7 @@
       "name": "Fan C Gradient",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/fan_c_gradient.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/fan_c_gradient.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6661,7 +6661,7 @@
       "name": "Fan D",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/fan_d.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/fan_d.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6684,7 +6684,7 @@
       "name": "Fan D Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/fan_d_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/fan_d_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6707,7 +6707,7 @@
       "name": "Fan D Gradient",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/fan_d_gradient.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/fan_d_gradient.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6730,7 +6730,7 @@
       "name": "Foliage Canopy A",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/foliage_canopy_a.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/foliage_canopy_a.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6753,7 +6753,7 @@
       "name": "Foliage Canopy A Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/foliage_canopy_a_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/foliage_canopy_a_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6776,7 +6776,7 @@
       "name": "Foliage Canopy A Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/foliage_canopy_a_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/foliage_canopy_a_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6799,7 +6799,7 @@
       "name": "Foliage Canopy B",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/foliage_canopy_b.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/foliage_canopy_b.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6822,7 +6822,7 @@
       "name": "Foliage Canopy B Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/foliage_canopy_b_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/foliage_canopy_b_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6845,7 +6845,7 @@
       "name": "Foliage Canopy B Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/foliage_canopy_b_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/foliage_canopy_b_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6868,7 +6868,7 @@
       "name": "Foliage Canopy C",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/foliage_canopy_c.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/foliage_canopy_c.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6891,7 +6891,7 @@
       "name": "Foliage Canopy C Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/foliage_canopy_c_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/foliage_canopy_c_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6914,7 +6914,7 @@
       "name": "Foliage Canopy C Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/foliage_canopy_c_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/foliage_canopy_c_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6937,7 +6937,7 @@
       "name": "Foliage Canopy D",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/foliage_canopy_d.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/foliage_canopy_d.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6960,7 +6960,7 @@
       "name": "Foliage Canopy D Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/foliage_canopy_d_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/foliage_canopy_d_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -6983,7 +6983,7 @@
       "name": "Ring A",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/ring_a.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/ring_a.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7006,7 +7006,7 @@
       "name": "Ring A Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/ring_a_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/ring_a_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7029,7 +7029,7 @@
       "name": "Ring A Streaks",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/ring_a_streaks.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/ring_a_streaks.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7052,7 +7052,7 @@
       "name": "Ring B",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/ring_b.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/ring_b.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7075,7 +7075,7 @@
       "name": "Ring B Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/ring_b_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/ring_b_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7098,7 +7098,7 @@
       "name": "Ring B Streaks",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/ring_b_streaks.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/ring_b_streaks.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7121,7 +7121,7 @@
       "name": "Ring C",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/ring_c.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/ring_c.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7144,7 +7144,7 @@
       "name": "Ring C Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/ring_c_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/ring_c_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7167,7 +7167,7 @@
       "name": "Ring C Streaks",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/ring_c_streaks.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/ring_c_streaks.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7190,7 +7190,7 @@
       "name": "Shape A",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/shape_a.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/shape_a.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7213,7 +7213,7 @@
       "name": "Shape B",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/shape_b.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/shape_b.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7236,7 +7236,7 @@
       "name": "Shape C",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/shape_c.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/shape_c.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7259,7 +7259,7 @@
       "name": "Shape D",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/shape_d.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/shape_d.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7282,7 +7282,7 @@
       "name": "Shape E",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/shape_e.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/shape_e.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7305,7 +7305,7 @@
       "name": "Shape F",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/shape_f.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/shape_f.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7328,7 +7328,7 @@
       "name": "Shape G",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/shape_g.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/shape_g.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7351,7 +7351,7 @@
       "name": "Streaks Composed A",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/streaks_composed_a.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/streaks_composed_a.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7374,7 +7374,7 @@
       "name": "Streaks Composed A Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/streaks_composed_a_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/streaks_composed_a_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7397,7 +7397,7 @@
       "name": "Streaks Composed B",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/streaks_composed_b.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/streaks_composed_b.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7420,7 +7420,7 @@
       "name": "Streaks Composed B Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/streaks_composed_b_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/streaks_composed_b_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7443,7 +7443,7 @@
       "name": "Streaks Composed C",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/streaks_composed_c.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/streaks_composed_c.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7466,7 +7466,7 @@
       "name": "Streaks Composed C Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/streaks_composed_c_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/streaks_composed_c_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7489,7 +7489,7 @@
       "name": "Streaks Composed D",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/streaks_composed_d.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/streaks_composed_d.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7512,7 +7512,7 @@
       "name": "Streaks Composed D Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/streaks_composed_d_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/streaks_composed_d_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7535,7 +7535,7 @@
       "name": "Streaks Composed E",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/streaks_composed_e.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/streaks_composed_e.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7558,7 +7558,7 @@
       "name": "Streaks Composed E Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/streaks_composed_e_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/streaks_composed_e_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7581,7 +7581,7 @@
       "name": "Streaks Composed F",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/streaks_composed_f.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/streaks_composed_f.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7604,7 +7604,7 @@
       "name": "Streaks Composed F Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/streaks_composed_f_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/streaks_composed_f_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7627,7 +7627,7 @@
       "name": "Streaks Composed G",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/streaks_composed_g.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/streaks_composed_g.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7650,7 +7650,7 @@
       "name": "Streaks Composed G Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/streaks_composed_g_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/streaks_composed_g_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7673,7 +7673,7 @@
       "name": "Streaks Composed H",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/streaks_composed_h.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/streaks_composed_h.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7696,7 +7696,7 @@
       "name": "Streaks Composed H Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/streaks_composed_h_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/streaks_composed_h_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7719,7 +7719,7 @@
       "name": "Water Caustics A",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/water_caustics_a.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/water_caustics_a.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7742,7 +7742,7 @@
       "name": "Water Caustics B",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/water_caustics_b.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/water_caustics_b.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7765,7 +7765,7 @@
       "name": "Water Caustics C",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/water_caustics_c.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/water_caustics_c.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7788,7 +7788,7 @@
       "name": "Water Caustics D",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/water_caustics_d.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/water_caustics_d.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7811,7 +7811,7 @@
       "name": "Window A",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_a.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_a.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7834,7 +7834,7 @@
       "name": "Window A Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_a_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_a_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7857,7 +7857,7 @@
       "name": "Window A Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_a_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_a_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7880,7 +7880,7 @@
       "name": "Window B",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_b.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_b.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7903,7 +7903,7 @@
       "name": "Window B Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_b_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_b_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7926,7 +7926,7 @@
       "name": "Window B Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_b_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_b_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7949,7 +7949,7 @@
       "name": "Window C",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_c.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_c.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7972,7 +7972,7 @@
       "name": "Window C Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_c_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_c_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -7995,7 +7995,7 @@
       "name": "Window C Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_c_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_c_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8018,7 +8018,7 @@
       "name": "Window D",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_d.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_d.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8041,7 +8041,7 @@
       "name": "Window D Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_d_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_d_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8064,7 +8064,7 @@
       "name": "Window D Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_d_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_d_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8087,7 +8087,7 @@
       "name": "Window E",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_e.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_e.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8110,7 +8110,7 @@
       "name": "Window E Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_e_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_e_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8133,7 +8133,7 @@
       "name": "Window E Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_e_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_e_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8156,7 +8156,7 @@
       "name": "Window F",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_f.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_f.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8179,7 +8179,7 @@
       "name": "Window F Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_f_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_f_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8202,7 +8202,7 @@
       "name": "Window F Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_f_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_f_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8225,7 +8225,7 @@
       "name": "Window G",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_g.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_g.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8248,7 +8248,7 @@
       "name": "Window G Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_g_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_g_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8271,7 +8271,7 @@
       "name": "Window G Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_g_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_g_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8294,7 +8294,7 @@
       "name": "Window H",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_h.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_h.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8317,7 +8317,7 @@
       "name": "Window H Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_h_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_h_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8340,7 +8340,7 @@
       "name": "Window H Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_h_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_h_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8363,7 +8363,7 @@
       "name": "Window I",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_i.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_i.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8386,7 +8386,7 @@
       "name": "Window I Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_i_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_i_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8409,7 +8409,7 @@
       "name": "Window I Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_i_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_i_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8432,7 +8432,7 @@
       "name": "Window J",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_j.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_j.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8455,7 +8455,7 @@
       "name": "Window J Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_j_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_j_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8478,7 +8478,7 @@
       "name": "Window J Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_j_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_j_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8501,7 +8501,7 @@
       "name": "Window K",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_k.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_k.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8524,7 +8524,7 @@
       "name": "Window K Blur",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_k_blur.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_k_blur.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -8547,7 +8547,7 @@
       "name": "Window K Noise",
       "assetType": "texture",
       "category": "LightMasks",
-      "path": "assets/DevelopmentContent/Textures/LightMasks/window_k_noise.png",
+      "path": "assets/DevelopmentContent/Textures/LightMasks/Black/window_k_noise.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -15562,7 +15562,7 @@
       "name": "Circle 01",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/circle_01.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/circle_01.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -15585,7 +15585,7 @@
       "name": "Circle 02",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/circle_02.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/circle_02.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -15608,7 +15608,7 @@
       "name": "Circle 03",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/circle_03.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/circle_03.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -15631,7 +15631,7 @@
       "name": "Circle 04",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/circle_04.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/circle_04.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -15654,7 +15654,7 @@
       "name": "Circle 05",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/circle_05.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/circle_05.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -15677,7 +15677,7 @@
       "name": "Dirt 01",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/dirt_01.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/dirt_01.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -15700,7 +15700,7 @@
       "name": "Dirt 02",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/dirt_02.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/dirt_02.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -15723,7 +15723,7 @@
       "name": "Dirt 03",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/dirt_03.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/dirt_03.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -15746,7 +15746,7 @@
       "name": "Fire 01",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/fire_01.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/fire_01.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -15769,7 +15769,7 @@
       "name": "Fire 02",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/fire_02.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/fire_02.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -15792,7 +15792,7 @@
       "name": "Flame 01",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/flame_01.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/flame_01.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -15815,7 +15815,7 @@
       "name": "Flame 02",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/flame_02.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/flame_02.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -15838,7 +15838,7 @@
       "name": "Flame 03",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/flame_03.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/flame_03.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -15861,7 +15861,7 @@
       "name": "Flame 04",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/flame_04.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/flame_04.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -15884,7 +15884,7 @@
       "name": "Flame 05",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/flame_05.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/flame_05.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -15907,7 +15907,7 @@
       "name": "Flame 06",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/flame_06.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/flame_06.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -15930,7 +15930,7 @@
       "name": "Flare 01",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/flare_01.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/flare_01.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -15953,7 +15953,7 @@
       "name": "Light 01",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/light_01.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/light_01.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -15976,7 +15976,7 @@
       "name": "Light 02",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/light_02.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/light_02.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -15999,7 +15999,7 @@
       "name": "Light 03",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/light_03.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/light_03.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16022,7 +16022,7 @@
       "name": "Magic 01",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/magic_01.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/magic_01.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16045,7 +16045,7 @@
       "name": "Magic 02",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/magic_02.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/magic_02.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16068,7 +16068,7 @@
       "name": "Magic 03",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/magic_03.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/magic_03.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16091,7 +16091,7 @@
       "name": "Magic 04",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/magic_04.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/magic_04.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16114,7 +16114,7 @@
       "name": "Magic 05",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/magic_05.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/magic_05.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16137,7 +16137,7 @@
       "name": "Muzzle 01",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/muzzle_01.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/muzzle_01.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16160,7 +16160,7 @@
       "name": "Muzzle 02",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/muzzle_02.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/muzzle_02.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16183,7 +16183,7 @@
       "name": "Muzzle 03",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/muzzle_03.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/muzzle_03.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16206,7 +16206,7 @@
       "name": "Muzzle 04",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/muzzle_04.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/muzzle_04.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16229,7 +16229,7 @@
       "name": "Muzzle 05",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/muzzle_05.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/muzzle_05.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16252,7 +16252,7 @@
       "name": "Scorch 01",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/scorch_01.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/scorch_01.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16275,7 +16275,7 @@
       "name": "Scorch 02",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/scorch_02.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/scorch_02.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16298,7 +16298,7 @@
       "name": "Scorch 03",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/scorch_03.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/scorch_03.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16321,7 +16321,7 @@
       "name": "Scratch 01",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/scratch_01.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/scratch_01.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16344,7 +16344,7 @@
       "name": "Slash 01",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/slash_01.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/slash_01.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16367,7 +16367,7 @@
       "name": "Slash 02",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/slash_02.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/slash_02.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16390,7 +16390,7 @@
       "name": "Slash 03",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/slash_03.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/slash_03.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16413,7 +16413,7 @@
       "name": "Slash 04",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/slash_04.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/slash_04.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16436,7 +16436,7 @@
       "name": "Smoke 01",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/smoke_01.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/smoke_01.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16459,7 +16459,7 @@
       "name": "Smoke 02",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/smoke_02.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/smoke_02.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16482,7 +16482,7 @@
       "name": "Smoke 03",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/smoke_03.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/smoke_03.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16505,7 +16505,7 @@
       "name": "Smoke 04",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/smoke_04.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/smoke_04.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16528,7 +16528,7 @@
       "name": "Smoke 05",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/smoke_05.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/smoke_05.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16551,7 +16551,7 @@
       "name": "Smoke 06",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/smoke_06.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/smoke_06.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16574,7 +16574,7 @@
       "name": "Smoke 07",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/smoke_07.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/smoke_07.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16597,7 +16597,7 @@
       "name": "Smoke 08",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/smoke_08.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/smoke_08.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16620,7 +16620,7 @@
       "name": "Smoke 09",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/smoke_09.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/smoke_09.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16643,7 +16643,7 @@
       "name": "Smoke 10",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/smoke_10.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/smoke_10.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16666,7 +16666,7 @@
       "name": "Spark 01",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/spark_01.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/spark_01.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16689,7 +16689,7 @@
       "name": "Spark 02",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/spark_02.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/spark_02.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16712,7 +16712,7 @@
       "name": "Spark 03",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/spark_03.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/spark_03.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16735,7 +16735,7 @@
       "name": "Spark 04",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/spark_04.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/spark_04.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16758,7 +16758,7 @@
       "name": "Spark 05",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/spark_05.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/spark_05.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16781,7 +16781,7 @@
       "name": "Spark 06",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/spark_06.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/spark_06.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16804,7 +16804,7 @@
       "name": "Spark 07",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/spark_07.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/spark_07.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16827,7 +16827,7 @@
       "name": "Star 01",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/star_01.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/star_01.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16850,7 +16850,7 @@
       "name": "Star 02",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/star_02.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/star_02.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16873,7 +16873,7 @@
       "name": "Star 03",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/star_03.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/star_03.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16896,7 +16896,7 @@
       "name": "Star 04",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/star_04.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/star_04.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16919,7 +16919,7 @@
       "name": "Star 05",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/star_05.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/star_05.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16942,7 +16942,7 @@
       "name": "Star 06",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/star_06.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/star_06.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16965,7 +16965,7 @@
       "name": "Star 07",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/star_07.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/star_07.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -16988,7 +16988,7 @@
       "name": "Star 08",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/star_08.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/star_08.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -17011,7 +17011,7 @@
       "name": "Star 09",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/star_09.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/star_09.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -17034,7 +17034,7 @@
       "name": "Symbol 01",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/symbol_01.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/symbol_01.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -17057,7 +17057,7 @@
       "name": "Symbol 02",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/symbol_02.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/symbol_02.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -17080,7 +17080,7 @@
       "name": "Trace 01",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/trace_01.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/trace_01.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -17103,7 +17103,7 @@
       "name": "Trace 02",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/trace_02.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/trace_02.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -17126,7 +17126,7 @@
       "name": "Trace 03",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/trace_03.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/trace_03.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -17149,7 +17149,7 @@
       "name": "Trace 04",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/trace_04.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/trace_04.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -17172,7 +17172,7 @@
       "name": "Trace 05",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/trace_05.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/trace_05.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -17195,7 +17195,7 @@
       "name": "Trace 06",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/trace_06.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/trace_06.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -17218,7 +17218,7 @@
       "name": "Trace 07",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/trace_07.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/trace_07.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -17241,7 +17241,7 @@
       "name": "Twirl 01",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/twirl_01.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/twirl_01.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -17264,7 +17264,7 @@
       "name": "Twirl 02",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/twirl_02.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/twirl_02.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -17287,7 +17287,7 @@
       "name": "Twirl 03",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/twirl_03.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/twirl_03.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -17310,7 +17310,7 @@
       "name": "Window 01",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/window_01.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/window_01.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -17333,7 +17333,7 @@
       "name": "Window 02",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/window_02.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/window_02.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -17356,7 +17356,7 @@
       "name": "Window 03",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/window_03.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/window_03.png",
       "tags": [],
       "placeable": false,
       "placement": {
@@ -17379,7 +17379,7 @@
       "name": "Window 04",
       "assetType": "texture",
       "category": "Particle",
-      "path": "assets/DevelopmentContent/Textures/Particle/window_04.png",
+      "path": "assets/DevelopmentContent/Textures/Particle/Black/window_04.png",
       "tags": [],
       "placeable": false,
       "placement": {

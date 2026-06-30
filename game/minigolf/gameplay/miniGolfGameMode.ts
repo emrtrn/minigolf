@@ -32,6 +32,9 @@ const COLLISION_FEEDBACK_CLIP_ID = "collision-chime";
 const COLLISION_FEEDBACK_EFFECT_ID = "starter-fx-dust-hit";
 const COLLISION_FEEDBACK_MIN_IMPULSE = 0.015;
 const COLLISION_FEEDBACK_FULL_IMPULSE = 0.18;
+const LANDING_THUD_MIN_IMPULSE = 0.01;
+const LANDING_THUD_FULL_IMPULSE = 0.24;
+const LANDING_THUD_MIN_DOWNWARD_SPEED = 0.16;
 const COLLISION_FEEDBACK_COOLDOWN_SECONDS = 0.08;
 const CAMERA_SHAKE_MAX_SECONDS = 0.18;
 const CAMERA_SHAKE_FREQUENCY_HZ = 24;
@@ -137,6 +140,9 @@ class MiniGolfSingleHoleSession implements GameModeSession {
   private cameraShakeTimer = 0;
   private cameraShakeDuration = 0;
   private cameraShakeAmplitude = 0;
+  private ballPhysicsLocked = false;
+  private lockedBallPosition: [number, number, number] | null = null;
+  private lastPrePhysicsVelocity: [number, number, number] | null = null;
 
   constructor(private readonly context: GameModeContext) {}
 
@@ -186,21 +192,35 @@ class MiniGolfSingleHoleSession implements GameModeSession {
   }
 
   beforeEngineUpdate(): void {
+    this.capturePrePhysicsVelocity();
+    if (this.ballPhysicsLocked && !this.pendingPutt) {
+      this.holdLockedBall();
+      return;
+    }
     this.applyMagnusForce();
     if (!this.pendingPutt || !this.ballRef || !this.ball || this.ball.inCup) return;
     const ballEntityId = this.ballEntityId();
     if (!ballEntityId) return;
     const shot = this.pendingPutt;
     this.pendingPutt = null;
+    this.ballPhysicsLocked = false;
+    this.lockedBallPosition = null;
     const power = clamp(shot.power, 0, 1);
     const direction = normalize2(shot.direction);
     const speed = MAX_PUTT_SPEED * Math.pow(power, PUTT_POWER_EXPONENT);
-    this.context.setLinearVelocity?.(ballEntityId, [0, 0, 0]);
-    this.context.applyImpulse?.(ballEntityId, [
-      direction[0] * BALL_MASS_KG * speed,
+    const shotVelocity: [number, number, number] = [
+      direction[0] * speed,
       0,
-      direction[1] * BALL_MASS_KG * speed,
-    ]);
+      direction[1] * speed,
+    ];
+    const velocityApplied = this.context.setLinearVelocity?.(ballEntityId, shotVelocity) ?? false;
+    if (!velocityApplied) {
+      this.context.applyImpulse?.(ballEntityId, [
+        direction[0] * BALL_MASS_KG * speed,
+        0,
+        direction[1] * BALL_MASS_KG * speed,
+      ]);
+    }
     const torque = miniGolfSideSpinTorqueImpulse(shot.sideSpin, power);
     if (torque[1] !== 0) this.context.applyTorqueImpulse?.(ballEntityId, torque);
     this.ball = {
@@ -431,6 +451,8 @@ class MiniGolfSingleHoleSession implements GameModeSession {
     const spawn = ballCenterFromPlacement(hole.tee.placement);
     this.ball = createMiniGolfRuntimeBall(spawn);
     this.pendingPutt = null;
+    this.ballPhysicsLocked = true;
+    this.lockedBallPosition = [...spawn];
     this.context.dispatchGameEvent({ kind: "set", variable: "strokes", value: 0 });
     this.context.dispatchGameEvent({ kind: "set", variable: "par", value: this.par });
     this.context.dispatchGameEvent({ kind: "set", variable: "currentHole", value: hole.number });
@@ -491,8 +513,28 @@ class MiniGolfSingleHoleSession implements GameModeSession {
     } satisfies TransformComponent);
   }
 
+  private holdLockedBall(): void {
+    if (!this.ball) return;
+    this.lastPrePhysicsVelocity = null;
+    const locked = this.lockedBallPosition ?? [...this.ball.pos];
+    this.teleportBall(locked);
+    this.ball = {
+      ...this.ball,
+      pos: [locked[0], locked[1], locked[2]],
+      resting: true,
+      outOfBounds: false,
+      lastSafePos: [locked[0], locked[1], locked[2]],
+    };
+  }
+
   private syncBallFromPhysics(): void {
     if (!this.ball) return;
+    if (this.ballPhysicsLocked) {
+      this.holdLockedBall();
+      this.hazardSensorContact = false;
+      this.cupSensorContact = false;
+      return;
+    }
     const entityId = this.ballEntityId();
     const transform = entityId ? this.context.getEntityTransform?.(entityId) : null;
     const pos: [number, number, number] = transform
@@ -521,6 +563,8 @@ class MiniGolfSingleHoleSession implements GameModeSession {
     if (!next.inCup && this.isBallOutOfBounds(pos, hitHazardSensor)) {
       const reset = next.lastSafePos;
       this.teleportBall(reset);
+      this.ballPhysicsLocked = true;
+      this.lockedBallPosition = [reset[0], reset[1], reset[2]];
       next = {
         ...next,
         pos: [reset[0], reset[1], reset[2]],
@@ -562,13 +606,16 @@ class MiniGolfSingleHoleSession implements GameModeSession {
   }
 
   private handleSolidContactFeedback(ballEntityId: string, impulse: number): void {
-    if (impulse < COLLISION_FEEDBACK_MIN_IMPULSE) return;
+    const kind = miniGolfContactFeedbackKind(impulse, this.lastPrePhysicsVelocity);
+    if (kind === "none") return;
     const now = this.gameState.elapsedSeconds;
     if (now - this.lastCollisionFeedbackAt < COLLISION_FEEDBACK_COOLDOWN_SECONDS) return;
     this.lastCollisionFeedbackAt = now;
+    const isLanding = kind === "landing";
+    const minImpulse = isLanding ? LANDING_THUD_MIN_IMPULSE : COLLISION_FEEDBACK_MIN_IMPULSE;
+    const fullImpulse = isLanding ? LANDING_THUD_FULL_IMPULSE : COLLISION_FEEDBACK_FULL_IMPULSE;
     const strength = clamp(
-      (impulse - COLLISION_FEEDBACK_MIN_IMPULSE) /
-        (COLLISION_FEEDBACK_FULL_IMPULSE - COLLISION_FEEDBACK_MIN_IMPULSE),
+      (impulse - minImpulse) / (fullImpulse - minImpulse),
       0,
       1,
     );
@@ -576,8 +623,8 @@ class MiniGolfSingleHoleSession implements GameModeSession {
     const position = transform?.position ?? this.ball?.pos;
     if (position) {
       this.context.playAudioOneShot?.(COLLISION_FEEDBACK_CLIP_ID, {
-        volume: 0.18 + strength * 0.42,
-        pitch: 0.85 + strength * 0.35,
+        volume: isLanding ? 0.22 + strength * 0.38 : 0.18 + strength * 0.42,
+        pitch: isLanding ? 0.48 + strength * 0.18 : 0.85 + strength * 0.35,
         spatial: true,
         position: [position[0], position[1], position[2]],
         refDistance: 2,
@@ -589,9 +636,19 @@ class MiniGolfSingleHoleSession implements GameModeSession {
         position[2],
       ]);
     }
-    this.cameraShakeDuration = 0.08 + strength * (CAMERA_SHAKE_MAX_SECONDS - 0.08);
+    const baseShakeSeconds = isLanding ? 0.1 : 0.08;
+    this.cameraShakeDuration = baseShakeSeconds + strength * (CAMERA_SHAKE_MAX_SECONDS - baseShakeSeconds);
     this.cameraShakeTimer = this.cameraShakeDuration;
-    this.cameraShakeAmplitude = 0.012 + strength * 0.055;
+    this.cameraShakeAmplitude = isLanding ? 0.016 + strength * 0.046 : 0.012 + strength * 0.055;
+  }
+
+  private capturePrePhysicsVelocity(): void {
+    if (!this.ballRef || this.ballPhysicsLocked || this.ball?.inCup) {
+      this.lastPrePhysicsVelocity = null;
+      return;
+    }
+    const entityId = this.ballEntityId();
+    this.lastPrePhysicsVelocity = entityId ? this.context.getLinearVelocity?.(entityId) ?? null : null;
   }
 
   private isBallOutOfBounds(pos: readonly [number, number, number], hitHazardSensor: boolean): boolean {
@@ -1043,7 +1100,20 @@ export function miniGolfMagnusForce(
   const spinY = angularVelocity[1];
   if (Math.abs(spinY) <= REST_ANGULAR_SPEED) return [0, 0, 0];
   const force = MAGNUS_COEFFICIENT * spinY * planarSpeed;
-  return [(-velocity[2] / planarSpeed) * force, 0, (velocity[0] / planarSpeed) * force];
+  // `+ 0` normalizes -0 to +0 so a straight-line shot reports exactly zero
+  // lateral force on the axis it is travelling along.
+  return [(-velocity[2] / planarSpeed) * force + 0, 0, (velocity[0] / planarSpeed) * force + 0];
+}
+
+export function miniGolfContactFeedbackKind(
+  impulse: number,
+  prePhysicsVelocity: readonly [number, number, number] | null,
+): "collision" | "landing" | "none" {
+  const downwardSpeed = prePhysicsVelocity ? Math.max(0, -prePhysicsVelocity[1]) : 0;
+  if (downwardSpeed >= LANDING_THUD_MIN_DOWNWARD_SPEED && impulse >= LANDING_THUD_MIN_IMPULSE) {
+    return "landing";
+  }
+  return impulse >= COLLISION_FEEDBACK_MIN_IMPULSE ? "collision" : "none";
 }
 
 function clamp(value: number, min: number, max: number): number {

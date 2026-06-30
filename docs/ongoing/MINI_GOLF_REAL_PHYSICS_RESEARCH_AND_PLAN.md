@@ -225,7 +225,10 @@ build-passing (CLAUDE.md kuralı). Her adım ayrı commit.
   - **ses** (audio backend `web-audio` mevcut — `RuntimeSceneApp.ts:316`),
   - kısa **kamera sarsıntısı**,
   - **partikül/iz**.
-- ⬜ Havadan inişe ayrı "thud" varyantı ve eşik/şiddet kalibrasyonu.
+- ✅ Havadan inişe ayrı "thud" varyantı: temas öncesi dikey hız + impulse
+  sınıflandırmasıyla landing feedback, duvar sekmesinden daha düşük pitch/tok
+  kamera sarsıntısı olarak ayrıldı. Eşik/şiddet kalibrasyonu playtest ile
+  ince ayar gerektirir.
 
 ### Faz 6 — Yüzey malzemeleri & global ayar ⬜
 - ⬜ Yüzey başına fiziksel malzeme: green (orta sürtünme), rampa, hızlı/yavaş
@@ -397,3 +400,20 @@ Saf çekirdek **siliniyor** (karar — §11), dolayısıyla mevcut
   tetikliyor. Sensor contact yolu hazard/cup için korunuyor. `npx tsc --noEmit`
   ve `npm run build` geçti; `npm run test:engine` mevcut `asset-path-missing`
   manifest hatalarında erken duruyor.
+- 2026-06-30 — Faz 2 oynanış stabilizasyonu: top, delik başlangıcında ve
+  hazard/OOB resetinden sonra ilk geçerli vuruş bırakılana kadar physics
+  teleportunun `zeroVelocity` yolu ile tee/last-safe pozisyonuna kilitleniyor.
+  Böylece eğimli `start`/rampa üzerinde oyun açılır açılmaz topun kayması
+  engellendi; drag bırakıldığında kilit kalkıyor ve Rapier impulsu uygulanıyor.
+- 2026-06-30 — Faz 2 vuruş düzeltmesi: kilitli/sıfırlanmış top gövdesinde ilk
+  vuruşun görünür şekilde başlaması için shot artık önce hedef lineer hız
+  (`setLinearVelocity`) olarak uygulanıyor; velocity köprüsü yoksa eski impuls
+  yolu fallback olarak kalıyor. `npx tsc --noEmit` ve `npm run build` geçti.
+- 2026-06-30 — Faz 5 havadan iniş feedback'i tamamlandı: minigolf runtime temas
+  öncesi lineer hızı cache'leyip solid contact impulse'unu
+  `miniGolfContactFeedbackKind` ile `collision` / `landing` / `none` olarak
+  ayırıyor. Landing temasları aynı particle yolunu korurken daha düşük pitch,
+  biraz daha tok kamera sarsıntısı ve ayrı impulse eşiği kullanıyor. Helper için
+  engine test eklendi; `npx.cmd tsc --noEmit`, `npm.cmd run build` ve izole
+  minigolf contact-feedback harness'i geçti. Tam `npm.cmd run test:engine` aynı
+  `asset-path-missing` manifest hatalarında erken duruyor.

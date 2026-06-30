@@ -112,6 +112,7 @@ import { computeMiniGolfAim } from "../game/minigolf/gameplay/miniGolfAim";
 import {
   buildMiniGolfCourse,
   formatMiniGolfScore,
+  miniGolfContactFeedbackKind,
   miniGolfMagnusForce,
   miniGolfResultName,
   miniGolfScoreRelativeToPar,
@@ -476,16 +477,40 @@ import {
 } from "../engine/ui/uiWorldWidget";
 
 let checks = 0;
+// Collect every failure and keep going instead of aborting at the first one, so
+// a single early failure can never mask the rest of the suite. (A broken asset
+// manifest check used to hide ~400 downstream checks, physics tests included.)
+const failures: string[] = [];
+const recordFailure = (label: string, err: unknown): void => {
+  process.exitCode = 1;
+  const message = err instanceof Error ? err.message.split("\n")[0] : String(err);
+  failures.push(`${label} :: ${message}`);
+  console.log(`  FAIL: ${label}`);
+};
 const check = (label: string, fn: () => void): void => {
-  fn();
-  checks += 1;
-  console.log(`  ok: ${label}`);
+  try {
+    fn();
+    checks += 1;
+    console.log(`  ok: ${label}`);
+  } catch (err) {
+    recordFailure(label, err);
+  }
 };
 const checkAsync = async (label: string, fn: () => Promise<void>): Promise<void> => {
-  await fn();
-  checks += 1;
-  console.log(`  ok: ${label}`);
+  try {
+    await fn();
+    checks += 1;
+    console.log(`  ok: ${label}`);
+  } catch (err) {
+    recordFailure(label, err);
+  }
 };
+process.on("exit", () => {
+  if (failures.length) {
+    console.log(`\n[engine-tests] ${failures.length} FAILURE(S):`);
+    for (const failure of failures) console.log(`  FAIL: ${failure}`);
+  }
+});
 
 function listPublicFiles(root: string): string[] {
   const files: string[] = [];
@@ -566,15 +591,15 @@ check("asset manifest validates against the public assets tree", () => {
   assert.equal(report.assetCount, assetManifest.assets.length);
 });
 check("asset manifest helpers expose canonical path, load group, and byte size", () => {
-  const crate = assetManifest.assets.find((asset) => asset.id === "starter-sm-crate");
-  assert.ok(crate);
-  assert.equal(assetType(crate), "staticMesh");
+  const cube = assetManifest.assets.find((asset) => asset.id === "shape-cube");
+  assert.ok(cube);
+  assert.equal(assetType(cube), "staticMesh");
   assert.equal(
-    assetPath(crate),
-    "assets/starter-content/StaticMeshes/Props/SM_Prototype_Crate.glb",
+    assetPath(cube),
+    "assets/starter-content/StaticMeshes/Shapes/Shape_Cube.glb",
   );
-  assert.equal(assetLoadGroup(crate), "starter-static-meshes");
-  assert.equal(assetByteSize(crate), 2024);
+  assert.equal(assetLoadGroup(cube), "Shapes");
+  assert.equal(assetByteSize(cube), 3932);
 });
 check("asset manifest classifies Sound Cue assets separately from prefab JSON", () => {
   const cue = assetManifest.assets.find((asset) => asset.id === "sc-footstep-stone");
@@ -4662,6 +4687,12 @@ check("miniGolf: Magnus force curves airborne side-spin shots sideways", () => {
   assert.equal(force[1], 0);
   assert.ok(force[2] > 0);
   assert.ok(Math.abs(force[2] - 0.0162) <= 1e-12);
+});
+
+check("miniGolf: contact feedback separates airborne landings from side impacts", () => {
+  assert.equal(miniGolfContactFeedbackKind(0.009, [0, -3, 0]), "none");
+  assert.equal(miniGolfContactFeedbackKind(0.02, [2, 0, 0]), "collision");
+  assert.equal(miniGolfContactFeedbackKind(0.02, [0.2, -0.2, 0.1]), "landing");
 });
 
 check("miniGolf: drag aim maps screen pull opposite to camera-relative shot direction", () => {
