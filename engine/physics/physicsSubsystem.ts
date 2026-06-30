@@ -174,6 +174,78 @@ export class PhysicsSubsystem implements Subsystem, PhysicsQuery {
     return this.contacts.filter((contact) => contact.a === entityId || contact.b === entityId);
   }
 
+  applyImpulse(entityId: EntityId, impulse: Vec3, wake = true): boolean {
+    const rapier = this.rapierBodies.get(entityId);
+    if (!rapier) return false;
+    rapier.body.applyImpulse(vectorFromVec3(impulse), wake);
+    return true;
+  }
+
+  applyTorqueImpulse(entityId: EntityId, torque: Vec3, wake = true): boolean {
+    const rapier = this.rapierBodies.get(entityId);
+    if (!rapier) return false;
+    rapier.body.applyTorqueImpulse(vectorFromVec3(torque), wake);
+    return true;
+  }
+
+  applyForce(entityId: EntityId, force: Vec3, wake = true): boolean {
+    const rapier = this.rapierBodies.get(entityId);
+    if (!rapier) return false;
+    rapier.body.addForce(vectorFromVec3(force), wake);
+    return true;
+  }
+
+  linearVelocity(entityId: EntityId): Vec3 | null {
+    const rapier = this.rapierBodies.get(entityId);
+    if (!rapier) return null;
+    return vec3FromRapier(rapier.body.linvel());
+  }
+
+  setLinearVelocity(entityId: EntityId, velocity: Vec3, wake = true): boolean {
+    const rapier = this.rapierBodies.get(entityId);
+    if (!rapier) return false;
+    rapier.body.setLinvel(vectorFromVec3(velocity), wake);
+    return true;
+  }
+
+  angularVelocity(entityId: EntityId): Vec3 | null {
+    const rapier = this.rapierBodies.get(entityId);
+    if (!rapier) return null;
+    return vec3FromRapier(rapier.body.angvel());
+  }
+
+  setAngularVelocity(entityId: EntityId, velocity: Vec3, wake = true): boolean {
+    const rapier = this.rapierBodies.get(entityId);
+    if (!rapier) return false;
+    rapier.body.setAngvel(vectorFromVec3(velocity), wake);
+    return true;
+  }
+
+  teleportBody(entityId: EntityId, position: Vec3, options: { zeroVelocity?: boolean } = {}): boolean {
+    const rapier = this.rapierBodies.get(entityId);
+    if (!rapier) return false;
+    rapier.body.setTranslation(vectorFromVec3(position), true);
+    if (options.zeroVelocity) {
+      rapier.body.setLinvel(vectorFromVec3([0, 0, 0]), true);
+      rapier.body.setAngvel(vectorFromVec3([0, 0, 0]), true);
+    }
+    const body = this.bodies.find((candidate) => candidate.id === entityId);
+    if (body) {
+      const transform: TransformComponent = {
+        position: [...position],
+        rotation: eulerDegreesFromQuaternion(rapier.body.rotation()),
+        scale: [...body.transform.scale],
+      };
+      body.transform = cloneTransform(transform);
+      this.transformSink?.(entityId, transform);
+    }
+    return true;
+  }
+
+  isBodySleeping(entityId: EntityId): boolean {
+    return this.rapierBodies.get(entityId)?.body.isSleeping() ?? false;
+  }
+
   /**
    * World-space AABBs of every static, non-sensor collider — the movement
    * blockers fed to `resolvePlanarMovement`. A compound collider contributes one
@@ -447,10 +519,10 @@ export class PhysicsSubsystem implements Subsystem, PhysicsQuery {
     for (const record of this.rapierBodies.values()) {
       for (const collider of record.colliders) {
         this.rapierWorld.contactPairsWith(collider, (other) => {
-          this.addRapierContact(contacts, seen, record, other);
+          this.addRapierContact(contacts, seen, record, collider, other);
         });
         this.rapierWorld.intersectionPairsWith(collider, (other) => {
-          this.addRapierContact(contacts, seen, record, other);
+          this.addRapierContact(contacts, seen, record, collider, other);
         });
       }
     }
@@ -503,6 +575,7 @@ export class PhysicsSubsystem implements Subsystem, PhysicsQuery {
     contacts: PhysicsContact[],
     seen: Set<string>,
     a: RapierBodyRecord,
+    aCollider: RapierCollider,
     bCollider: RapierCollider,
   ): void {
     const bId = this.rapierColliderToEntity.get(bCollider.handle);
@@ -513,11 +586,25 @@ export class PhysicsSubsystem implements Subsystem, PhysicsQuery {
     const key = contactKey(left.id, right.id);
     if (seen.has(key)) return;
     seen.add(key);
-    contacts.push({
+    const contact: PhysicsContact = {
       a: left.id,
       b: right.id,
       isSensor: left.isSensor || right.isSensor,
+    };
+    const maxImpulse = contact.isSensor ? 0 : this.maxRapierContactImpulse(aCollider, bCollider);
+    if (maxImpulse > 0) contacts.push({ ...contact, maxImpulse });
+    else contacts.push(contact);
+  }
+
+  private maxRapierContactImpulse(aCollider: RapierCollider, bCollider: RapierCollider): number {
+    let maxImpulse = 0;
+    this.rapierWorld?.contactPair(aCollider, bCollider, (manifold) => {
+      for (let i = 0; i < manifold.numContacts(); i += 1) {
+        const impulse = manifold.contactImpulse(i);
+        if (Number.isFinite(impulse)) maxImpulse = Math.max(maxImpulse, impulse);
+      }
     });
+    return maxImpulse;
   }
 }
 
@@ -820,6 +907,10 @@ function vectorFromVec3(vec: Vec3): { x: number; y: number; z: number } {
     y: vec[1],
     z: vec[2],
   };
+}
+
+function vec3FromRapier(vec: { x: number; y: number; z: number }): Vec3 {
+  return [vec.x, vec.y, vec.z];
 }
 
 function quaternionFromEulerDegrees(rotation: Vec3): { x: number; y: number; z: number; w: number } {

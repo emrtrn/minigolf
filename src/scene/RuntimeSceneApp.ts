@@ -19,6 +19,7 @@ import { DEFAULT_INPUT_BINDINGS } from "@/game/defaultInputBindings";
 import { InputSubsystem } from "@engine/input/inputSubsystem";
 import {
   BehaviorSubsystem,
+  type PhysicsContact,
   type ScriptMessageDebugSnapshot,
 } from "@engine/behavior/behaviorSubsystem";
 import { PhysicsSubsystem } from "@engine/physics/physicsSubsystem";
@@ -294,6 +295,8 @@ export interface RuntimeSceneAppOptions {
   readonly scriptMessageTraceLimit?: number;
 }
 
+type PhysicsContactHandler = (contact: PhysicsContact) => void;
+
 export class RuntimeSceneApp implements RuntimeStatsApp {
   private readonly renderer: WebGLRenderer;
   private readonly scene: Scene;
@@ -303,6 +306,7 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
   private readonly inputActions = new ActionMap(DEFAULT_INPUT_BINDINGS);
   private readonly inputSubsystem = new InputSubsystem(this.inputActions);
   private readonly physicsSubsystem = new PhysicsSubsystem({ backend: "rapier" });
+  private readonly physicsContactHandlers = new Map<string, Set<PhysicsContactHandler>>();
   private readonly characterMovementSubsystem: CharacterMovementSubsystem;
   /** Manifest sound asset id -> fetchable file URL, filled after the manifest loads. */
   private readonly soundUrlById = new Map<string, string>();
@@ -360,6 +364,7 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
   private characterObjects: Object3D[] = [];
   private characterRefs: RuntimeCharacterRef[] = [];
   private lightObjects: LightObjectRecord[] = [];
+  private readonly liveEntityTransforms = new Map<string, TransformComponent>();
   /** Entities flattened from placed Actor Script instances (`layout.actors`). */
   private actorEntities: Entity[] = [];
   /** Rendered object per actor instance index (absent for mesh-less logic actors). */
@@ -430,6 +435,7 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
     entityId: string,
     transform: TransformComponent,
   ): void => {
+    this.liveEntityTransforms.set(entityId, cloneTransform(transform));
     const instance = parseInstanceEntityId(entityId);
     if (instance) {
       this.syncInstanceTransform(instance.assetId, instance.placementIndex, transform);
@@ -580,6 +586,7 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
       this.gamepadInput.poll();
       this.gameModeSession?.beforeEngineUpdate?.(deltaMs / 1000);
       this.engineApp.update(deltaMs / 1000);
+      this.emitPhysicsContacts();
       this.applyKillZ();
       // Consume the `menu` edge after input advances, before the Game Mode reads
       // input, so opening a screen suppresses this frame's camera/movement.
@@ -624,6 +631,8 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
     }
     this.particleEffects = [];
     this.gameModeSession?.dispose();
+    this.physicsContactHandlers.clear();
+    this.liveEntityTransforms.clear();
     this.postProcessPipeline?.dispose();
     this.postProcessPipeline = null;
     this.disposeReflectionTarget();
@@ -761,6 +770,7 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
   }
 
   private async loadActiveProjectScene(): Promise<void> {
+    this.liveEntityTransforms.clear();
     this.activeProject = await loadActiveProject();
     this.assetLoader = new AssetLoader(this.activeProject.manifest);
     this.layout = await loadRoomLayout(this.activeProject.manifest.editor.defaultScene);
@@ -1424,6 +1434,7 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
   private async startGameMode(): Promise<void> {
     this.applyPlayCameraHandoff();
     const mode = await this.resolveActiveGameMode();
+    this.physicsContactHandlers.clear();
     const session = mode.createSession(this.createGameModeContext());
     session.spawnDefaultPawn();
     session.possess();
@@ -1505,6 +1516,32 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
     this.cameraViewTouched = true;
   }
 
+  private onPhysicsContact(entityId: string, handler: PhysicsContactHandler): () => void {
+    let handlers = this.physicsContactHandlers.get(entityId);
+    if (!handlers) {
+      handlers = new Set();
+      this.physicsContactHandlers.set(entityId, handlers);
+    }
+    handlers.add(handler);
+    return () => {
+      handlers.delete(handler);
+      if (handlers.size === 0) this.physicsContactHandlers.delete(entityId);
+    };
+  }
+
+  private emitPhysicsContacts(): void {
+    if (this.physicsContactHandlers.size === 0) return;
+    for (const entityId of this.physicsContactHandlers.keys()) {
+      const contacts = this.physicsSubsystem.contactsForEntity(entityId);
+      if (contacts.length === 0) continue;
+      const handlers = this.physicsContactHandlers.get(entityId);
+      if (!handlers) continue;
+      for (const contact of contacts) {
+        for (const handler of handlers) handler(contact);
+      }
+    }
+  }
+
   private createGameModeContext(): GameModeContext {
     const layout = this.layout;
     if (!layout) throw new Error("Cannot create Game Mode context before a layout is loaded.");
@@ -1516,6 +1553,19 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
       characters: this.characterRefs,
       getLocomotion: (entityId) => this.locomotionReports.get(entityId),
       staticBlockerAabbs: () => this.physicsSubsystem.staticBlockerAabbs(),
+      applyImpulse: (entityId, impulse, wake) =>
+        this.physicsSubsystem.applyImpulse(entityId, impulse, wake),
+      applyTorqueImpulse: (entityId, torque, wake) =>
+        this.physicsSubsystem.applyTorqueImpulse(entityId, torque, wake),
+      applyForce: (entityId, force, wake) => this.physicsSubsystem.applyForce(entityId, force, wake),
+      getLinearVelocity: (entityId) => this.physicsSubsystem.linearVelocity(entityId),
+      setLinearVelocity: (entityId, velocity, wake) =>
+        this.physicsSubsystem.setLinearVelocity(entityId, velocity, wake),
+      getAngularVelocity: (entityId) => this.physicsSubsystem.angularVelocity(entityId),
+      teleportBody: (entityId, position, options) =>
+        this.physicsSubsystem.teleportBody(entityId, position, options),
+      isBodySleeping: (entityId) => this.physicsSubsystem.isBodySleeping(entityId),
+      onPhysicsContact: (entityId, handler) => this.onPhysicsContact(entityId, handler),
       getAssetCollisionDef: (assetId) => this.collisionDefs.get(assetId),
       addMixer: (mixer) => this.animationSubsystem.add(mixer),
       emitAnimNotify: (entityId, name) =>
@@ -1540,6 +1590,10 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
       },
       setMouseCursorVisible: (visible) => this.pointerLook.setMouseCursorVisible(visible),
       setPointerLookMode: (mode) => this.pointerLook.setMode(mode),
+      getEntityTransform: (entityId) => {
+        const transform = this.liveEntityTransforms.get(entityId);
+        return transform ? cloneTransform(transform) : null;
+      },
       setEntityTransform: (entityId, transform) => this.syncEntityTransform(entityId, transform),
       dispatchGameEvent: (event) => this.dispatchGameEvent(event),
     };

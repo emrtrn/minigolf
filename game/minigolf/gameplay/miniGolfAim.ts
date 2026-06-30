@@ -1,4 +1,4 @@
-import type { Vec2 } from "./miniGolfBallPhysics";
+export type Vec2 = readonly [number, number];
 
 export interface MiniGolfAimInput {
   readonly start: Vec2;

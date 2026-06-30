@@ -2814,6 +2814,122 @@ await checkAsync("rapier simulatePhysics body falls under configured gravity", a
   }
 });
 
+await checkAsync("rapier dynamic body bridge applies impulses, forces, velocities, and teleports", async () => {
+  const physics = new PhysicsSubsystem({ backend: "rapier" });
+  physics.setGravity([0, 0, 0]);
+  const synced: TransformComponent[] = [];
+  physics.setTransformSink((_entityId, transform) => {
+    synced.push({
+      position: [...transform.position],
+      rotation: [...transform.rotation],
+      scale: [...transform.scale],
+    });
+  });
+  physics.setEntities([
+    {
+      id: "ball",
+      components: {
+        Transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+        Collider: {
+          shape: "sphere",
+          size: [1, 1, 1],
+          isStatic: false,
+          isSensor: false,
+          simulatePhysics: true,
+          massKg: 1,
+        },
+      },
+    },
+  ]);
+
+  const app = new EngineApp();
+  app.registerSubsystem(physics);
+  const warn = console.warn;
+  console.warn = (...args: unknown[]) => {
+    if (String(args[0] ?? "").includes("deprecated parameters for the initialization function")) return;
+    warn(...args);
+  };
+  try {
+    await app.init();
+    assert.equal(physics.usesRapier(), true);
+    assert.deepEqual(physics.linearVelocity("missing"), null);
+    assert.equal(physics.applyImpulse("missing", [1, 0, 0]), false);
+
+    assert.equal(physics.applyImpulse("ball", [1, 0, 0]), true);
+    app.update(1 / 60);
+    assert.ok((physics.linearVelocity("ball")?.[0] ?? 0) > 0.5);
+
+    assert.equal(physics.setLinearVelocity("ball", [0, 0, 0]), true);
+    assert.equal(physics.applyForce("ball", [12, 0, 0]), true);
+    app.update(1 / 60);
+    assert.ok((physics.linearVelocity("ball")?.[0] ?? 0) > 0);
+
+    assert.equal(physics.applyTorqueImpulse("ball", [0, 2, 0]), true);
+    app.update(1 / 60);
+    assert.ok((physics.angularVelocity("ball")?.[1] ?? 0) > 0);
+
+    assert.equal(physics.teleportBody("ball", [3, 4, 5], { zeroVelocity: true }), true);
+    assert.deepEqual(physics.linearVelocity("ball"), [0, 0, 0]);
+    assert.deepEqual(physics.angularVelocity("ball"), [0, 0, 0]);
+    assert.deepEqual(synced.at(-1)?.position, [3, 4, 5]);
+    assert.equal(typeof physics.isBodySleeping("ball"), "boolean");
+    await app.dispose();
+  } finally {
+    console.warn = warn;
+  }
+});
+
+await checkAsync("rapier solid contacts expose max normal impulse", async () => {
+  const physics = new PhysicsSubsystem({ backend: "rapier" });
+  physics.setGravity([0, -10, 0]);
+  physics.setEntities([
+    {
+      id: "floor",
+      components: {
+        Transform: { position: [0, -0.1, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+        Collider: { shape: "box", size: [10, 0.2, 10], isStatic: true, isSensor: false },
+      },
+    },
+    {
+      id: "ball",
+      components: {
+        Transform: { position: [0, 4, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+        Collider: {
+          shape: "sphere",
+          size: [1, 1, 1],
+          isStatic: false,
+          isSensor: false,
+          simulatePhysics: true,
+          massKg: 1,
+          restitution: 0.2,
+        },
+      },
+    },
+  ]);
+
+  const app = new EngineApp();
+  app.registerSubsystem(physics);
+  const warn = console.warn;
+  console.warn = (...args: unknown[]) => {
+    if (String(args[0] ?? "").includes("deprecated parameters for the initialization function")) return;
+    warn(...args);
+  };
+  try {
+    await app.init();
+    let maxImpulse = 0;
+    for (let frame = 0; frame < 180; frame += 1) {
+      app.update(1 / 60);
+      for (const contact of physics.contactsForEntity("ball")) {
+        maxImpulse = Math.max(maxImpulse, contact.maxImpulse ?? 0);
+      }
+    }
+    assert.ok(maxImpulse > 0, "falling ball should report a positive contact impulse");
+    await app.dispose();
+  } finally {
+    console.warn = warn;
+  }
+});
+
 await checkAsync("rapier builds a compound collider per authored primitive (gap is empty)", async () => {
   const physics = new PhysicsSubsystem({ backend: "rapier" });
   physics.setGravity([0, 0, 0]);

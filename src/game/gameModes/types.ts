@@ -13,6 +13,7 @@ import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { ActionMap } from "@engine/input/actionMap";
 import type { LayoutCharacter } from "@engine/scene/layout";
 import type { RoomLayout } from "@engine/scene/layout";
+import type { PhysicsContact } from "@engine/behavior/behaviorSubsystem";
 import type { Entity } from "@engine/scene/entity";
 import type { TransformComponent } from "@engine/scene/components";
 import type { AssetCollisionDef } from "@engine/scene/collision";
@@ -155,6 +156,24 @@ export interface GameModeContext {
   getLocomotion(entityId: string): LocomotionInput | undefined;
   /** Static blocker AABBs derived by the physics subsystem for camera probes. */
   staticBlockerAabbs(): readonly Aabb3[];
+  /** Applies an instantaneous world-space impulse to a live physics body. */
+  applyImpulse?(entityId: string, impulse: Vec3, wake?: boolean): boolean;
+  /** Applies an instantaneous world-space torque impulse to a live physics body. */
+  applyTorqueImpulse?(entityId: string, torque: Vec3, wake?: boolean): boolean;
+  /** Applies a continuous world-space force for the next physics step. */
+  applyForce?(entityId: string, force: Vec3, wake?: boolean): boolean;
+  /** Current linear velocity for a live physics body, or null when unavailable. */
+  getLinearVelocity?(entityId: string): Vec3 | null;
+  /** Overrides the current linear velocity for a live physics body. */
+  setLinearVelocity?(entityId: string, velocity: Vec3, wake?: boolean): boolean;
+  /** Current angular velocity for a live physics body, or null when unavailable. */
+  getAngularVelocity?(entityId: string): Vec3 | null;
+  /** Teleports a live physics body, optionally clearing linear/angular velocity. */
+  teleportBody?(entityId: string, position: Vec3, options?: { zeroVelocity?: boolean }): boolean;
+  /** True when the live physics body is sleeping in the physics backend. */
+  isBodySleeping?(entityId: string): boolean;
+  /** Subscribes to reported physics contacts involving `entityId`. */
+  onPhysicsContact?(entityId: string, handler: (contact: PhysicsContact) => void): () => void;
   /** Asset-authored collision sidecar already loaded by the runtime shell. */
   getAssetCollisionDef(assetId: string): AssetCollisionDef | undefined;
   /** Registers a crossfade animator's mixer with the animation subsystem. */
@@ -208,6 +227,8 @@ export interface GameModeContext {
   setMouseCursorVisible(visible: boolean): void;
   /** Applies the controller's runtime mouse capture/cursor policy. */
   setPointerLookMode(mode: PointerLookMode): void;
+  /** Reads the live runtime entity transform when the shell can provide it. */
+  getEntityTransform?(entityId: string): TransformComponent | null;
   /** Updates a runtime entity transform and its rendered object, without saving. */
   setEntityTransform(entityId: string, transform: TransformComponent): void;
   /** Dispatches a project gameplay-rules event when the scene authored rules. */

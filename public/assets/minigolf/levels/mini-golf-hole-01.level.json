@@ -1441,7 +1441,13 @@
             0.25
           ],
           "name": "Runtime Ball Visual",
-          "collision": false,
+          "simulatePhysics": true,
+          "physics": {
+            "massKg": 0.045,
+            "linearDamping": 0.18,
+            "angularDamping": 0.08,
+            "enableGravity": true
+          },
           "metadata": {
             "minigolfRole": "ball-spawn"
           },

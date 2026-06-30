@@ -5,19 +5,12 @@ import { readRotation, readScale } from "@engine/scene/transform";
 import type { TransformComponent } from "@engine/scene/components";
 import type { AssetCollisionDef, CollisionPrimitive } from "@engine/scene/collision";
 import type { Aabb3 } from "@/game/collision";
-import { computeMiniGolfAim, type MiniGolfAim } from "./miniGolfAim";
+import { computeMiniGolfAim, type MiniGolfAim, type Vec2 } from "./miniGolfAim";
 import {
-  DEFAULT_MINI_GOLF_PHYSICS,
-  applyMiniGolfPutt,
-  createMiniGolfBallState,
   miniGolfCourseSurfaceHeight,
-  stepMiniGolfBall,
   type MiniGolfAabb2,
-  type MiniGolfBallState,
   type MiniGolfCourse,
-  type MiniGolfPhysicsConfig,
   type MiniGolfSurface,
-  type Vec2,
 } from "./miniGolfBallPhysics";
 import type {
   GameModeContext,
@@ -34,6 +27,11 @@ const MAX_DRAG_PIXELS = 180;
 const BALL_HIT_RADIUS_PIXELS = 48;
 const HOLE_TRANSITION_DELAY_SECONDS = 1.15;
 const BALL_VISUAL_RADIUS = 0.035;
+const BALL_MASS_KG = 0.045;
+const MAX_PUTT_SPEED = 8;
+const PUTT_POWER_EXPONENT = 1.35;
+const REST_LINEAR_SPEED = 0.045;
+const REST_ANGULAR_SPEED = 0.18;
 const ORBIT_DISTANCE = 5.8;
 const ORBIT_HEIGHT = 3.2;
 const ORBIT_SENSITIVITY = 0.006;
@@ -45,10 +43,15 @@ const MESH_SURFACE_SAMPLE_PADDING = 0.002;
 const MESH_SURFACE_SLOPE_SAMPLE_STEP = 0.12;
 const MESH_SURFACE_MAX_SLOPE = 0.8;
 const LOCAL_BEST_STORAGE_PREFIX = "minigolf.bestTotalStrokes";
-const MINI_GOLF_RUNTIME_PHYSICS: Partial<MiniGolfPhysicsConfig> = {
-  ...DEFAULT_MINI_GOLF_PHYSICS,
-  ballRadius: BALL_VISUAL_RADIUS,
-};
+
+interface MiniGolfBallRuntimeState {
+  readonly pos: readonly [number, number, number];
+  readonly resting: boolean;
+  readonly inCup: boolean;
+  readonly outOfBounds: boolean;
+  readonly penaltyStrokes: number;
+  readonly lastSafePos: readonly [number, number, number];
+}
 
 interface MiniGolfPlacementRef {
   readonly assetId: string;
@@ -85,7 +88,7 @@ class MiniGolfSingleHoleSession implements GameModeSession {
   readonly gameState: GameState = { elapsedSeconds: 0 };
 
   private ballRef: MiniGolfPlacementRef | null = null;
-  private ball: MiniGolfBallState | null = null;
+  private ball: MiniGolfBallRuntimeState | null = null;
   private holes: readonly MiniGolfHole[] = [];
   private activeHoleIndex = 0;
   private course: MiniGolfCourse = {};
@@ -103,6 +106,7 @@ class MiniGolfSingleHoleSession implements GameModeSession {
   private readonly holeResults: MiniGolfHoleResult[] = [];
   private cameraYaw = 0;
   private readonly cameraForward = new Vector3();
+  private pendingPutt: { direction: Vec2; power: number } | null = null;
 
   constructor(private readonly context: GameModeContext) {}
 
@@ -142,14 +146,33 @@ class MiniGolfSingleHoleSession implements GameModeSession {
     }
 
     const before = this.ball;
-    if (this.ball && !this.ball.resting && !this.ball.inCup) {
-      this.ball = stepMiniGolfBall(this.ball, this.course, deltaSeconds, MINI_GOLF_RUNTIME_PHYSICS);
-      this.syncBallVisual();
-      this.dispatchPhysicsEvents(before, this.ball);
-    }
+    this.syncBallFromPhysics();
+    if (this.ball) this.dispatchPhysicsEvents(before, this.ball);
 
     this.updateCamera(deltaSeconds);
     this.updateHud();
+  }
+
+  beforeEngineUpdate(): void {
+    if (!this.pendingPutt || !this.ballRef || !this.ball || this.ball.inCup) return;
+    const ballEntityId = this.ballEntityId();
+    if (!ballEntityId) return;
+    const shot = this.pendingPutt;
+    this.pendingPutt = null;
+    const power = clamp(shot.power, 0, 1);
+    const direction = normalize2(shot.direction);
+    const speed = MAX_PUTT_SPEED * Math.pow(power, PUTT_POWER_EXPONENT);
+    this.context.setLinearVelocity?.(ballEntityId, [0, 0, 0]);
+    this.context.applyImpulse?.(ballEntityId, [
+      direction[0] * BALL_MASS_KG * speed,
+      0,
+      direction[1] * BALL_MASS_KG * speed,
+    ]);
+    this.ball = {
+      ...this.ball,
+      resting: speed <= REST_LINEAR_SPEED,
+      outOfBounds: false,
+    };
   }
 
   getCameraDebug(): {
@@ -218,12 +241,11 @@ class MiniGolfSingleHoleSession implements GameModeSession {
       // Pointer capture may already be released.
     }
     if (!this.ball || aim.power < 0.03) return;
-    this.ball = applyMiniGolfPutt(this.ball, aim.direction, aim.power);
+    this.pendingPutt = { direction: aim.direction, power: aim.power };
     this.holeStrokes += 1;
     this.totalStrokes += 1;
     this.context.dispatchGameEvent({ kind: "add", variable: "strokes", amount: 1 });
     this.context.dispatchGameEvent({ kind: "add", variable: "totalStrokes", amount: 1 });
-    this.syncBallVisual();
   };
 
   private aimFromPointer(start: Vec2, current: Vec2): MiniGolfAim {
@@ -292,7 +314,10 @@ class MiniGolfSingleHoleSession implements GameModeSession {
     });
   }
 
-  private dispatchPhysicsEvents(previous: MiniGolfBallState | null, next: MiniGolfBallState): void {
+  private dispatchPhysicsEvents(
+    previous: MiniGolfBallRuntimeState | null,
+    next: MiniGolfBallRuntimeState,
+  ): void {
     if (!previous) return;
     const penaltyDelta = next.penaltyStrokes - this.penaltyStrokes;
     if (penaltyDelta > 0) {
@@ -323,11 +348,13 @@ class MiniGolfSingleHoleSession implements GameModeSession {
     );
     const pos = hole.tee.placement.position;
     const ballY = miniGolfCourseSurfaceHeight(this.course, pos[0], pos[2]);
-    this.ball = createMiniGolfBallState([pos[0], ballY, pos[2]]);
+    const spawn: [number, number, number] = [pos[0], ballY, pos[2]];
+    this.ball = createMiniGolfRuntimeBall(spawn);
+    this.pendingPutt = null;
     this.context.dispatchGameEvent({ kind: "set", variable: "strokes", value: 0 });
     this.context.dispatchGameEvent({ kind: "set", variable: "par", value: this.par });
     this.context.dispatchGameEvent({ kind: "set", variable: "currentHole", value: hole.number });
-    this.syncBallVisual();
+    this.teleportBall(spawn);
   }
 
   private completeCurrentHole(): void {
@@ -363,13 +390,86 @@ class MiniGolfSingleHoleSession implements GameModeSession {
     return this.holes[this.activeHoleIndex] ?? null;
   }
 
-  private syncBallVisual(): void {
-    if (!this.ball || !this.ballRef) return;
-    this.context.setEntityTransform(instanceEntityId(this.ballRef.assetId, this.ballRef.placementIndex), {
-      position: [this.ball.pos[0], this.ball.pos[1], this.ball.pos[2]],
+  private ballEntityId(): string | null {
+    if (!this.ballRef) return null;
+    return instanceEntityId(this.ballRef.assetId, this.ballRef.placementIndex);
+  }
+
+  private teleportBall(position: readonly [number, number, number]): void {
+    if (!this.ballRef) return;
+    const entityId = this.ballEntityId();
+    if (!entityId) return;
+    const teleported =
+      this.context.teleportBody?.(entityId, [position[0], position[1], position[2]], {
+        zeroVelocity: true,
+      }) ?? false;
+    if (teleported) return;
+    this.context.setEntityTransform(entityId, {
+      position: [...position],
       rotation: readRotation(this.ballRef.placement),
       scale: readScale(this.ballRef.placement),
     } satisfies TransformComponent);
+  }
+
+  private syncBallFromPhysics(): void {
+    if (!this.ball) return;
+    const entityId = this.ballEntityId();
+    const transform = entityId ? this.context.getEntityTransform?.(entityId) : null;
+    const pos: [number, number, number] = transform
+      ? [transform.position[0], transform.position[1], transform.position[2]]
+      : [...this.ball.pos];
+    const velocity = entityId ? this.context.getLinearVelocity?.(entityId) : null;
+    const angularVelocity = entityId ? this.context.getAngularVelocity?.(entityId) : null;
+    const speed = velocity ? Math.hypot(velocity[0], velocity[1], velocity[2]) : 0;
+    const spin = angularVelocity
+      ? Math.hypot(angularVelocity[0], angularVelocity[1], angularVelocity[2])
+      : 0;
+    let next = {
+      ...this.ball,
+      pos,
+      resting:
+        !this.pendingPutt &&
+        !this.ball.inCup &&
+        ((entityId ? (this.context.isBodySleeping?.(entityId) ?? false) : false) ||
+          (speed <= REST_LINEAR_SPEED && spin <= REST_ANGULAR_SPEED)),
+      outOfBounds: false,
+    };
+    if (!next.inCup && this.isBallOutOfBounds(pos)) {
+      const reset = next.lastSafePos;
+      this.teleportBall(reset);
+      next = {
+        ...next,
+        pos: [reset[0], reset[1], reset[2]],
+        resting: true,
+        outOfBounds: true,
+        penaltyStrokes: next.penaltyStrokes + 1,
+      };
+    } else if (!next.inCup && this.isBallInCup(pos, speed)) {
+      const cup = this.course.cup!;
+      const cupPos: [number, number, number] = [cup.center[0], cup.center[1], cup.center[2]];
+      this.teleportBall(cupPos);
+      next = { ...next, pos: cupPos, resting: true, inCup: true, lastSafePos: cupPos };
+    } else if (next.resting && !next.outOfBounds) {
+      next = { ...next, lastSafePos: pos };
+    }
+    this.ball = next;
+  }
+
+  private isBallOutOfBounds(pos: readonly [number, number, number]): boolean {
+    const x = pos[0];
+    const y = pos[1];
+    const z = pos[2];
+    if (y < -2) return true;
+    const bounds = this.course.bounds;
+    if (bounds && !containsMiniGolfAabb(bounds, x, z)) return true;
+    return (this.course.hazards ?? []).some((hazard) => containsMiniGolfAabb(hazard, x, z));
+  }
+
+  private isBallInCup(pos: readonly [number, number, number], speed: number): boolean {
+    const cup = this.course.cup;
+    if (!cup) return false;
+    if (speed > cup.captureSpeed) return false;
+    return Math.hypot(pos[0] - cup.center[0], pos[2] - cup.center[2]) <= cup.radius;
   }
 }
 
@@ -621,6 +721,21 @@ function collectMiniGolfHoles(layout: RoomLayout): readonly MiniGolfHole[] {
       };
     })
     .sort((a, b) => a.number - b.number);
+}
+
+function createMiniGolfRuntimeBall(pos: readonly [number, number, number]): MiniGolfBallRuntimeState {
+  return {
+    pos: [...pos],
+    resting: true,
+    inCup: false,
+    outOfBounds: false,
+    penaltyStrokes: 0,
+    lastSafePos: [...pos],
+  };
+}
+
+function containsMiniGolfAabb(aabb: MiniGolfAabb2, x: number, z: number): boolean {
+  return x >= aabb.min[0] && x <= aabb.max[0] && z >= aabb.min[1] && z <= aabb.max[1];
 }
 
 function findPlacementByRole(

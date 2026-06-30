@@ -91,6 +91,8 @@ export interface PhysicsContact {
   readonly a: EntityId;
   readonly b: EntityId;
   readonly isSensor: boolean;
+  /** Largest normal impulse reported by the physics backend for this contact. */
+  readonly maxImpulse?: number;
 }
 
 /** A world-space axis-aligned bounding box. */

@@ -1,8 +1,9 @@
 # Mini Golf — Gerçek Fizik (Rapier) Araştırma & Plan
 
 > Tarih: 2026-06-30
-> Durum: 📐 Planlandı — uygulama başlamadı. **Kapsam kararları 2026-06-30'da
-> kilitlendi** (bkz §11).
+> Durum: 🚧 Uygulama başladı — Faz 1 motor köprüleri kodlandı; tam engine gate
+> mevcut `asset-path-missing` manifest hataları nedeniyle bloke. **Kapsam
+> kararları 2026-06-30'da kilitlendi** (bkz §11).
 > Amaç: Topu, kendi 2.5B arcade çekirdeği yerine **gerçek 3B rigid-body**
 > simülasyonuyla sürmek; topun **havalandığını görmek**, **çarpışmaları
 > hissetmek** (sekme + geri bildirim), **spin/curve** ile oynamak, eğimde
@@ -119,10 +120,11 @@ Tek gerçek kod boşluğu: oyun modu **dinamik bir cismi süremiyor**. Eklenecek
 [`src/game/gameModes/types.ts:148`](../../src/game/gameModes/types.ts#L148) +
 fabrika [`RuntimeSceneApp.ts:1508`](../../src/scene/RuntimeSceneApp.ts#L1508):
 
-- `applyImpulse?`, `getLinearVelocity?`, `setLinearVelocity?`,
-  `getAngularVelocity?`, `teleportBody?`, `isBodySleeping?`
-- `onPhysicsContact?(entityId, handler)` — duvar/engel çarpma şiddeti olayı
-  (geri bildirim için).
+- `applyImpulse?`, `applyTorqueImpulse?`, `applyForce?`, `getLinearVelocity?`,
+  `setLinearVelocity?`, `getAngularVelocity?`, `teleportBody?`,
+  `isBodySleeping?`
+- `onPhysicsContact?(entityId, handler)` — duvar/engel contact olayı
+  (geri bildirim için; impuls şiddeti ayrı eklenecek).
 
 > Hepsi `?:` opsiyonel → headless/test context'leri köprüleri vermeyebilir
 > (ragdoll köprüleri gibi). Sözleşme [`types.ts`](../../src/game/gameModes/types.ts)
@@ -153,16 +155,19 @@ durumu okur.
 Her aşama `npx tsc --noEmit` + `npm run test:engine` geçecek şekilde küçük ve
 build-passing (CLAUDE.md kuralı). Her adım ayrı commit.
 
-### Faz 1 — Motor köprüleri ⬜
-- ⬜ `PhysicsSubsystem`: §4a metotları — impuls, hız get/set, açısal hız,
-  teleport, sleeping, **`applyForce` (sürekli kuvvet — Magnus için, §6a)**,
-  temas-impuls (şiddet) olayı.
-- ⬜ `GameModeContext` + fabrika: §4b opsiyonel köprüler.
-- ⬜ Birim testleri: köprü metotları için küçük Rapier harness (bkz §8) **ya da**
+### Faz 1 — Motor köprüleri 🚧
+- ✅ `PhysicsSubsystem`: §4a metotları — impuls, hız get/set, açısal hız,
+  teleport, sleeping, **`applyForce` (sürekli kuvvet — Magnus için, §6a)**.
+- ✅ Temas olayı: `onPhysicsContact` aboneliği ve Rapier solid contact
+  `maxImpulse` şiddeti eklendi.
+- ✅ `GameModeContext` + fabrika: §4b opsiyonel köprüler.
+- ✅ Birim testleri: köprü metotları için küçük Rapier harness (bkz §8) **ya da**
   saf imza/no-op testleri.
-- ⬜ Mevcut tüm testler + tsc yeşil. (Davranış değişmez; sadece API yüzeyi.)
+- ⚠️ Mevcut tüm testler + tsc yeşil. `npx tsc --noEmit` geçiyor; odaklı Rapier
+  bridge harness geçiyor; `npm run test:engine` mevcut `asset-path-missing`
+  manifest hatalarında erken duruyor.
 
-### Faz 2 — Saf çekirdeği kaldır + topu dinamik cisim yap ⬜
+### Faz 2 — Saf çekirdeği kaldır + topu dinamik cisim yap 🚧
 - ⬜ **`game/minigolf/gameplay/miniGolfBallPhysics.ts` SİLİNİR** (karar). Tüm
   import'lar ve `MiniGolfCourse`/`MiniGolfSurface`/`stepMiniGolfBall`/
   `applyMiniGolfPutt`/`createMiniGolfBallState` kullanımları kaldırılır.
@@ -171,16 +176,20 @@ build-passing (CLAUDE.md kuralı). Her adım ayrı commit.
   `primitiveCourseBox` …) silinir — collision geometrisinin sahibi artık Rapier.
   Geriye sadece **oyun işaretçileri** kalır: tee, cup (pozisyon/yarıçap), hazard
   AABB'leri, OOB sınırları.
-- ⬜ Top collider'ı `simulatePhysics:true`, `massKg`, `restitution`, `friction`,
+- 🚧 Top collider'ı `simulatePhysics:true`, `massKg`, `restitution`, `friction`,
   düşük `angularDamping` (yuvarlanma), düşük `linearDamping`; CCD zaten açık
-  (`rigidBodyDescForBody` dinamik dalında).
-- ⬜ Spawn: `teleportBody(ballId, teePos)`; `createMiniGolfBallState` gider. Top
+  (`rigidBodyDescForBody` dinamik dalında). İlk pass: level top placement'ı
+  `simulatePhysics:true`, `massKg`, damping ve sphere sidecar ile dinamik gövdeye
+  dönüştü; restitution/friction yüzey ayarı sonraki kalibrasyon.
+- 🚧 Spawn: `teleportBody(ballId, teePos)`; `createMiniGolfBallState` gider. Top
   fizikçe yere oturur.
-- ⬜ Vuruş: `beforeEngineUpdate`'te yatay impuls. Güç→impuls kalibrasyonu
-  (kütle × hedef hız), sahaya göre (8 m lane) ayarlanır.
-- ⬜ Görsel: `syncBallVisual` kaldırılır; transform sink topu sürer → **spin
+- 🚧 Vuruş: `beforeEngineUpdate`'te yatay impuls. Güç→impuls kalibrasyonu
+  (kütle × hedef hız), sahaya göre (8 m lane) ayarlanır. İlk pass vuruşu
+  `applyImpulse` ile Rapier gövdesine veriyor.
+- 🚧 Görsel: `syncBallVisual` kaldırılır; transform sink topu sürer → **spin
   bedava** (Rapier tam quaternion verir). Kamera fizik pozisyonunu takip eder.
-- ⬜ Rest tespiti: `isBodySleeping` veya `|v|<eps && |ω|<eps`.
+  İlk pass runtime `getEntityTransform` cache'i üzerinden fizik pozisyonunu okuyor.
+- 🚧 Rest tespiti: `isBodySleeping` veya `|v|<eps && |ω|<eps`.
 - ⬜ **Çıktı:** Rampadan havalanma + duvardan gerçek sekme + dönen top gözlenir.
 
 ### Faz 3 — Delik (fiziksel) + hazard + OOB ⬜
@@ -333,3 +342,17 @@ Saf çekirdek **siliniyor** (karar — §11), dolayısıyla mevcut
   v1 (Magnus dahil); top deliğe fiziksel girer (`complexAsSimple` trimesh);
   geri bildirim = ses+sarsıntı+partikül birlikte; replay kapsam dışı. Plan buna
   göre güncellendi (Faz 2-5, §6a, §8, §9).
+- 2026-06-30 — Faz 1 başladı: `PhysicsSubsystem` için impuls/tork/kuvvet,
+  hız okuma-yazma, teleport ve sleeping köprüleri eklendi; `GameModeContext` ve
+  `RuntimeSceneApp` fabrika yüzeyi opsiyonel köprülerle güncellendi. `tsc` ve
+  odaklı Rapier bridge harness geçti; tam `test:engine` mevcut
+  `asset-path-missing` manifest hatalarında erken duruyor.
+- 2026-06-30 — Faz 1 temas şiddeti tamamlandı: `PhysicsContact.maxImpulse`
+  eklendi; Rapier solid contact manifold'larından maksimum normal impulse
+  okunuyor. Odaklı düşen top harness'i pozitif impulse doğruladı.
+- 2026-06-30 — Faz 2 ilk runtime bağı: `GameModeContext.getEntityTransform`
+  eklendi, mini golf vuruşu `beforeEngineUpdate` içinde Rapier `applyImpulse`
+  kullanmaya başladı, game mode top pozisyonunu physics transform cache'inden
+  okuyor. `mini-golf-hole-01` top placement'ı `simulatePhysics:true` ve golf topu
+  kütle/damping ayarlarıyla dinamik gövde oldu. `tsc` ve headless adapter
+  kontrolü geçti; saf çekirdek/course-builder silme henüz yapılmadı.
