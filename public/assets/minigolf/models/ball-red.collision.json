@@ -1,5 +1,14 @@
 {
-  "primitives": [],
-  "complexity": "complexAsSimple",
+  "primitives": [
+    {
+      "shape": "sphere",
+      "size": [
+        0.0699,
+        0.0699,
+        0.0699
+      ]
+    }
+  ],
+  "complexity": "projectDefault",
   "preset": "blockAll"
 }

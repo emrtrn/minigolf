@@ -9,7 +9,7 @@
     "defaultScene": "assets/minigolf/levels/mini-golf-hole-01.level.json",
     "assetManifest": "assets/manifest.json",
     "gridSize": 1,
-    "gridEnabled": false,
+    "gridEnabled": true,
     "snapRotationDeg": 15,
     "snapRotationEnabled": true,
     "snapScale": 0.1,

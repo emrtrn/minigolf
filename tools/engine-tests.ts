@@ -111,6 +111,7 @@ import {
 import {
   applyMiniGolfPutt,
   createMiniGolfBallState,
+  miniGolfCourseSurfaceHeight,
   miniGolfSurfaceHeight,
   stepMiniGolfBall,
   type MiniGolfCourse,
@@ -4502,6 +4503,20 @@ check("miniGolf: overlapping sampled surfaces use the highest height", () => {
     rollingFriction: 0,
   });
   assert.equal(ball.pos[1], 0.75);
+});
+
+check("miniGolf: spawn surface sampling prefers the local tee over the course fallback", () => {
+  const course: MiniGolfCourse = {
+    defaultSurface: { height: 1.5, friction: 0 },
+    surfaces: [
+      {
+        bounds: { min: [-1, -1], max: [1, 1] },
+        height: 0.25,
+        friction: 0,
+      },
+    ],
+  };
+  assert.equal(miniGolfCourseSurfaceHeight(course, 0, 0), 0.25);
 });
 
 check("miniGolf: course builder turns complex blocker AABBs into sampled surfaces", () => {

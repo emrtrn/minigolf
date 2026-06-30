@@ -10,6 +10,7 @@ import {
   DEFAULT_MINI_GOLF_PHYSICS,
   applyMiniGolfPutt,
   createMiniGolfBallState,
+  miniGolfCourseSurfaceHeight,
   stepMiniGolfBall,
   type MiniGolfAabb2,
   type MiniGolfBallState,
@@ -321,7 +322,7 @@ class MiniGolfSingleHoleSession implements GameModeSession {
       { hole: hole.number },
     );
     const pos = hole.tee.placement.position;
-    const ballY = this.course.defaultSurface?.height ?? BALL_VISUAL_RADIUS;
+    const ballY = miniGolfCourseSurfaceHeight(this.course, pos[0], pos[2]);
     this.ball = createMiniGolfBallState([pos[0], ballY, pos[2]]);
     this.context.dispatchGameEvent({ kind: "set", variable: "strokes", value: 0 });
     this.context.dispatchGameEvent({ kind: "set", variable: "par", value: this.par });

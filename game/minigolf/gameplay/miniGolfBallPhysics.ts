@@ -150,6 +150,18 @@ export function miniGolfSurfaceHeight(surface: MiniGolfSurface, x: number, z: nu
   return (surface.height ?? 0) + sx * (x - ox) + sz * (z - oz);
 }
 
+/**
+ * Samples the active course surface height at world coordinates. Returns the
+ * local surface when one covers the point, otherwise the course default.
+ */
+export function miniGolfCourseSurfaceHeight(
+  course: MiniGolfCourse,
+  x: number,
+  z: number,
+): number {
+  return miniGolfSurfaceHeight(surfaceAt(course, x, z), x, z);
+}
+
 function stepFixed(
   state: MiniGolfBallState,
   course: MiniGolfCourse,
