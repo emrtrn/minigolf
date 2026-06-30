@@ -154,7 +154,7 @@
       "placements": [
         {
           "position": [
-            0.77,
+            -0.56,
             2.54,
             2.1
           ],
@@ -308,6 +308,29 @@
     {
       "assetId": "ar-1",
       "placements": []
+    },
+    {
+      "assetId": "marker:ambientSound",
+      "placements": [
+        {
+          "position": [
+            0.34,
+            -0.08,
+            1.05
+          ],
+          "name": "Ambient Sound",
+          "collision": false,
+          "audio": {
+            "clipId": "",
+            "sourceId": "cue-birds-soundcue",
+            "sourceType": "soundCue",
+            "loop": true,
+            "autoPlay": true
+          },
+          "rotationYDeg": 0,
+          "scale": 1
+        }
+      ]
     }
   ],
   "characters": [],

@@ -664,6 +664,16 @@ body.editor-mode #debug-stats {
   letter-spacing: normal;
 }
 
+/* Sub-section heading inside a component card (e.g. Audio > Attenuation). */
+.detail-subhead {
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #c2cbd1;
+}
+
 .detail-hint {
   font-size: 11px;
   line-height: 1.4;
@@ -2632,3 +2642,322 @@ body.editor-mode #debug-stats {
   .uie-window { inset: 8px; min-width: 0; }
   .uie-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(240px, 1fr) auto; }
 }
+
+/* ----------------------------------------------------------------------- */
+/* Sound Cue editor (sce-*) — opened from Content Browser double-click.    */
+/* ----------------------------------------------------------------------- */
+
+.sce-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(10, 12, 14, 0.86);
+  display: flex;
+  padding: 24px;
+  pointer-events: auto;
+}
+
+.sce-window {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #1b1e22;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+  color: #f2f5f7;
+  font-size: 13px;
+}
+
+.sce-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 38px;
+  padding: 0 8px 0 0;
+  background: #15171a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.sce-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  padding: 0 16px;
+  background: #1b1e22;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sce-tab-icon { color: #5ad4c4; font-weight: 700; font-size: 12px; }
+.sce-tab strong { font-weight: 600; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sce-badge { font-size: 11px; color: #5ad4c4; background: rgba(90, 212, 196, 0.12); padding: 1px 6px; border-radius: 3px; }
+
+.sce-toolbar { display: flex; align-items: center; gap: 6px; padding: 0 8px; flex: 1; }
+.sce-header-actions { display: flex; align-items: center; gap: 6px; }
+
+.sce-tool-btn {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #262a30;
+  color: #f2f5f7;
+  cursor: pointer;
+  font-size: 12px;
+}
+.sce-tool-btn:hover { background: #313640; }
+
+.sce-save,
+.sce-close {
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #262a30;
+  color: #f2f5f7;
+  cursor: pointer;
+  font-size: 12px;
+}
+.sce-save.is-dirty { border-color: #5bd6a0; color: #9af0c8; }
+.sce-close { width: 28px; padding: 0; }
+.sce-save:hover,
+.sce-close:hover { background: #313640; }
+
+.sce-body {
+  display: grid;
+  grid-template-columns: 180px 1fr 220px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sce-left {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  overflow-y: auto;
+  background: #181b1f;
+}
+
+.sce-section-title {
+  padding: 8px 12px 4px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6a7880;
+}
+
+.sce-palette { padding: 0 8px 8px; display: flex; flex-direction: column; gap: 3px; }
+
+.sce-palette-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #e6ebee;
+  cursor: pointer;
+  text-align: left;
+  font-size: 12px;
+}
+.sce-palette-item:hover { background: rgba(255, 255, 255, 0.07); border-color: rgba(255, 255, 255, 0.14); }
+.sce-palette-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--sce-color, #5bd6a0);
+  flex-shrink: 0;
+}
+
+.sce-validation { padding: 0 8px 8px; display: flex; flex-direction: column; gap: 4px; }
+.sce-ok { font-size: 11px; color: #6fd0a4; }
+.sce-issue { font-size: 11px; color: #f0a050; line-height: 1.4; }
+
+.sce-graph-wrap {
+  overflow: auto;
+  background: #141619;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 24px 24px;
+  position: relative;
+}
+
+.sce-graph-host {
+  position: relative;
+}
+
+.sce-svg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.sce-conn {
+  fill: none;
+  stroke: #4a5a68;
+  stroke-width: 2;
+}
+
+.sce-node {
+  position: absolute;
+  border-radius: 6px;
+  background: #20242a;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: border-color 0.1s;
+}
+.sce-node:hover { border-color: rgba(255, 255, 255, 0.22); }
+.sce-node.is-selected { border-color: var(--sce-color, #5bd6a0); box-shadow: 0 0 0 1px var(--sce-color, #5bd6a0), 0 4px 14px rgba(0,0,0,0.4); }
+
+.sce-node-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: var(--sce-color, #5bd6a0);
+  color: #0d1014;
+  font-size: 11px;
+  font-weight: 600;
+  height: 24px;
+  flex-shrink: 0;
+}
+.sce-node-kind { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sce-node-del {
+  background: none;
+  border: none;
+  color: #0d1014;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+.sce-node-del:hover { opacity: 1; }
+
+.sce-node-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  min-width: 0;
+}
+.sce-node-sub {
+  font-size: 11px;
+  color: #8a949a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.sce-port {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #3a4a58;
+  border: 1px solid #5a6a78;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.sce-port-in  { left: -5px; }
+.sce-port-out { right: -5px; }
+
+/* ─── Details panel ─────────────────────────────────────────────────── */
+
+.sce-details {
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  overflow-y: auto;
+  background: #181b1f;
+}
+
+.sce-det-empty {
+  padding: 16px 12px;
+  font-size: 12px;
+  color: #6a7880;
+  line-height: 1.5;
+}
+
+.sce-det-inner { padding: 8px 0; }
+
+.sce-det-row {
+  display: flex;
+  align-items: center;
+  padding: 4px 12px;
+  gap: 8px;
+  min-height: 28px;
+}
+.sce-det-row label {
+  width: 80px;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #8a949a;
+}
+.sce-det-row input[type="number"],
+.sce-det-row select {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  padding: 0 6px;
+  background: #262a30;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  color: #f2f5f7;
+  font-size: 12px;
+}
+.sce-det-row input[type="number"]:focus,
+.sce-det-row select:focus { outline: none; border-color: #5bd6a0; }
+.sce-det-row span { font-size: 12px; }
+.sce-det-id span { color: #6a7880; font-size: 11px; font-family: monospace; }
+
+.sce-kind-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sce-color, #5bd6a0);
+  background: color-mix(in srgb, var(--sce-color, #5bd6a0) 15%, transparent);
+  padding: 1px 7px;
+  border-radius: 3px;
+}
+
+.sce-det-section {
+  padding: 10px 12px 4px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6a7880;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 4px;
+}
+
+/* ─── Status bar ────────────────────────────────────────────────────── */
+
+.sce-status {
+  height: 26px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: #15171a;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  color: #aeb8bd;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.sce-status[data-tone="success"] { color: #9af0c8; }
+.sce-status[data-tone="error"]   { color: #ff8a8a; }
+.sce-status[data-tone="warning"] { color: #f0c070; }
+.sce-status[data-tone="info"]    { color: #7abde8; }

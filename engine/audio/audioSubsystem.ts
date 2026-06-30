@@ -4,6 +4,17 @@ import {
   audioClipById,
   type AudioClipManifest,
 } from "../assets/audio";
+import {
+  AUDIO_BUS_IDS,
+  DEFAULT_AUDIO_BUS,
+  createDefaultBusVolumes,
+  isAudioBusId,
+  mergeMixSnapshot,
+  normalizeBusVolume,
+  type AudioBusId,
+  type BusMixSnapshot,
+  type BusVolumes,
+} from "./audioBus";
 
 export const AUDIO_SUBSYSTEM_ID = "audio";
 export type AudioBackend = "none" | "web-audio";
@@ -23,6 +34,8 @@ export interface AudioPlayOptions {
   maxDistance?: number;
   /** Spatial attenuation rolloff factor (higher = quieter sooner). */
   rolloff?: number;
+  /** Mix bus this play routes through. Defaults to {@link DEFAULT_AUDIO_BUS}. */
+  bus?: AudioBusId;
 }
 
 /** Resolved sphere-attenuation parameters for a spatial `PannerNode`. */
@@ -240,6 +253,10 @@ export class AudioSubsystem implements Subsystem, AudioBus {
   /** Latest listener pose (camera), applied to the context once it exists. */
   private listenerPosition: AudioVec3 | null = null;
   private listenerForward: AudioVec3 = [0, 0, -1];
+  /** Linear gain per mix bus; the source of truth, mirrored onto live GainNodes. */
+  private readonly busVolumes: BusVolumes = createDefaultBusVolumes();
+  /** Live bus GainNodes, created lazily with the context (`master` → destination). */
+  private busNodes: Map<AudioBusId, GainNode> | null = null;
 
   constructor(options: AudioSubsystemOptions = {}) {
     this.backend = options.backend ?? "none";
@@ -267,6 +284,65 @@ export class AudioSubsystem implements Subsystem, AudioBus {
     if (this.context) this.applyListener(this.context);
   }
 
+  /** Current linear gain of a mix bus (headless-safe; reads the stored table). */
+  getBusVolume(bus: AudioBusId): number {
+    return this.busVolumes[bus];
+  }
+
+  /**
+   * Sets a mix bus's linear gain, optionally ramping a live GainNode over
+   * `fadeSeconds`. Stored even with no context so the value applies once a bus
+   * graph is built. Non-finite/negative values clamp to a sane gain.
+   */
+  setBusVolume(bus: AudioBusId, value: number, fadeSeconds = 0): void {
+    const next = normalizeBusVolume(value);
+    this.busVolumes[bus] = next;
+    const node = this.busNodes?.get(bus);
+    const context = this.context;
+    if (!node || !context) return;
+    const now = context.currentTime;
+    const fade = Math.max(0, fadeSeconds);
+    node.gain.cancelScheduledValues(now);
+    node.gain.setValueAtTime(node.gain.value, now);
+    if (fade > 0) node.gain.linearRampToValueAtTime(next, now + fade);
+    else node.gain.setValueAtTime(next, now);
+  }
+
+  /** Applies a partial mix snapshot (e.g. a pause/menu duck) to several buses. */
+  applyMixSnapshot(snapshot: BusMixSnapshot, fadeSeconds = 0): void {
+    const next = mergeMixSnapshot(this.busVolumes, snapshot);
+    for (const id of AUDIO_BUS_IDS) {
+      if (next[id] !== this.busVolumes[id]) this.setBusVolume(id, next[id], fadeSeconds);
+    }
+  }
+
+  /** Restores every bus to unity gain (the default mix). */
+  resetMix(fadeSeconds = 0): void {
+    for (const id of AUDIO_BUS_IDS) this.setBusVolume(id, 1, fadeSeconds);
+  }
+
+  /**
+   * Builds the bus gain graph once per context: `master` → destination, then
+   * music/sfx/ui/ambience → master. Each node starts at its stored bus volume so
+   * a mix set before the context existed is preserved.
+   */
+  private ensureBusGraph(context: BrowserAudioContext): Map<AudioBusId, GainNode> {
+    if (this.busNodes) return this.busNodes;
+    const nodes = new Map<AudioBusId, GainNode>();
+    for (const id of AUDIO_BUS_IDS) {
+      const gain = context.createGain();
+      gain.gain.value = this.busVolumes[id];
+      nodes.set(id, gain);
+    }
+    const master = nodes.get("master")!;
+    master.connect(context.destination);
+    for (const id of AUDIO_BUS_IDS) {
+      if (id !== "master") nodes.get(id)!.connect(master);
+    }
+    this.busNodes = nodes;
+    return nodes;
+  }
+
   private applyListener(context: BrowserAudioContext): void {
     const position = this.listenerPosition;
     if (!position) return;
@@ -280,18 +356,26 @@ export class AudioSubsystem implements Subsystem, AudioBus {
     );
   }
 
+  /** Resolves the bus GainNode a request routes into (building the graph if new). */
+  private busOutput(context: BrowserAudioContext, request: AudioPlayRequest): GainNode {
+    const nodes = this.ensureBusGraph(context);
+    const bus = request.bus && isAudioBusId(request.bus) ? request.bus : DEFAULT_AUDIO_BUS;
+    return nodes.get(bus) ?? nodes.get("master")!;
+  }
+
   /**
-   * Connects a play's gain to the output. Spatial plays with a position route
-   * through a `PannerNode` (sphere attenuation); everything else goes straight
-   * to the destination.
+   * Connects a play's gain to its mix bus. Spatial plays with a position route
+   * through a `PannerNode` (sphere attenuation) first; everything else feeds the
+   * bus directly. The bus graph chains to the destination.
    */
   private connectSpatialOutput(
     context: BrowserAudioContext,
     gain: GainNode,
     request: AudioPlayRequest,
   ): void {
+    const output = this.busOutput(context, request);
     if (!request.spatial || !request.position) {
-      gain.connect(context.destination);
+      gain.connect(output);
       return;
     }
     const panner = context.createPanner();
@@ -306,7 +390,7 @@ export class AudioSubsystem implements Subsystem, AudioBus {
       panner.setPosition?.(p[0], p[1], p[2]),
     );
     gain.connect(panner);
-    panner.connect(context.destination);
+    panner.connect(output);
   }
 
   playOneShot(clipId: string, options: AudioPlayOptions = {}): void {
@@ -336,8 +420,16 @@ export class AudioSubsystem implements Subsystem, AudioBus {
         continue;
       }
       this.played.push(request);
-      if (this.backend === "web-audio") this.playWebAudio(request, handle);
-      else if (!request.loop) handle.stop();
+      if (this.backend === "web-audio") {
+        // A failed clip (bad node param, decode error, etc.) must never throw out
+        // of the per-frame update and kill the engine loop.
+        try {
+          this.playWebAudio(request, handle);
+        } catch (error) {
+          console.error(`[audio] playback failed for "${request.clipId}":`, error);
+          handle.stop();
+        }
+      } else if (!request.loop) handle.stop();
     }
   }
 
@@ -348,6 +440,7 @@ export class AudioSubsystem implements Subsystem, AudioBus {
     this.active.clear();
     this.played = [];
     this.buffers.clear();
+    this.busNodes = null;
     void this.context?.close();
     this.context = null;
   }

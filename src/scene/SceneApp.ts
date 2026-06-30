@@ -198,6 +198,8 @@ import {
 } from "@engine/scene/lights";
 import {
   formatShapeType,
+  isAmbientSoundAssetId,
+  isMarkerAssetId,
   isPlayerStartAssetId,
   parseShapeAssetId,
   PLAYER_START_ASSET_ID,
@@ -206,8 +208,12 @@ import {
   type ShapePrimitiveType,
 } from "@engine/scene/shapes";
 import { createProceduralAssetGltf } from "./shapePrimitives";
-import { PLAYER_START_CAPSULE_CENTER_Y } from "./markerPrimitives";
+import {
+  AMBIENT_SOUND_MARKER_CENTER_Y,
+  PLAYER_START_CAPSULE_CENTER_Y,
+} from "./markerPrimitives";
 import { createPlayerStartIcon } from "./playerStartIcon";
+import { createAmbientSoundIcon } from "./ambientSoundIcon";
 import { loadForgeMaterial } from "./materialAssets";
 import {
   readPivot,
@@ -498,8 +504,8 @@ export class SceneApp {
   private instanceGroups = new Map<string, Group>();
   private instanceMeshes = new Map<string, InstancedMesh[]>();
   private instanceOverrideObjects = new Map<string, Object3D[]>();
-  /** Player Start editor helpers are line/sprite objects, not InstancedMesh surfaces. */
-  private playerStartObjects = new Map<string, Object3D[]>();
+  /** Marker gizmos (Player Start / Ambient Sound) are line/sprite objects, not InstancedMesh surfaces. */
+  private markerObjects = new Map<string, Object3D[]>();
   /** Per-asset materials cloned to carry a probe envMap; disposed on instance-group rebuild. */
   private instanceProbeMaterials = new Map<string, Material[]>();
   private readonly textureLoader = new TextureLoader();
@@ -642,7 +648,7 @@ export class SceneApp {
         for (const objectsForAsset of this.instanceOverrideObjects.values()) {
           objects.push(...objectsForAsset);
         }
-        for (const objectsForAsset of this.playerStartObjects.values()) {
+        for (const objectsForAsset of this.markerObjects.values()) {
           objects.push(...objectsForAsset);
         }
         objects.push(...this.characterObjects);
@@ -1972,6 +1978,13 @@ export class SceneApp {
       placement.name = this.uniqueInstanceName("Player Start");
       placement.collision = false;
     }
+    if (isAmbientSoundAssetId(assetId)) {
+      placement.name = this.uniqueInstanceName("Ambient Sound");
+      placement.collision = false;
+      // An Ambient Sound ships with an Audio component already attached, looping
+      // spatially on scene load — the placement's transform is the emitter point.
+      placement.audio = this.defaultAmbientSoundAudio();
+    }
 
     const instance = this.layout.instances.find((entry) => entry.assetId === assetId);
     const placementIndex = instance?.placements.length ?? 0;
@@ -1987,6 +2000,21 @@ export class SceneApp {
         this.select(null);
       },
     });
+  }
+
+  /**
+   * Default Audio component seeded onto a freshly-placed Ambient Sound: the first
+   * manifest sound clip (so it is audible on Play) or the built-in chime tone,
+   * looping spatially with auto-play. The user re-points it from the Details panel.
+   */
+  private defaultAmbientSoundAudio(): LayoutAudio {
+    const firstSound = this.manifest?.assets.find((asset) => assetType(asset) === "sound");
+    return {
+      clipId: firstSound?.id ?? "collision-chime",
+      autoPlay: true,
+      loop: true,
+      spatial: true,
+    };
   }
 
   addLightActorAt(type: LayoutLightActor["type"], clientX: number, clientY: number): void {
@@ -2171,8 +2199,8 @@ export class SceneApp {
       console.warn(`[editor] skipping placement for unloaded asset: ${assetId}`);
       return new Group();
     }
-    if (isPlayerStartAssetId(assetId)) {
-      return this.createPlayerStartInstanceGroup(assetId, placements, gltf);
+    if (isMarkerAssetId(assetId)) {
+      return this.createMarkerInstanceGroup(assetId, placements, gltf);
     }
     const renderedOverrideObjects: Object3D[] = [];
     const clonedMaterials: Material[] = [];
@@ -2227,18 +2255,30 @@ export class SceneApp {
     return group;
   }
 
-  private createPlayerStartInstanceGroup(
+  /**
+   * Build the instance group for an editor-only marker gizmo (Player Start /
+   * Ambient Sound). Each placement is a clone of the procedural line geometry
+   * plus a billboard icon; the lines are excluded from raycasting so picking
+   * resolves through the icon/clone. These are not InstancedMesh surfaces, so
+   * they are tracked in `markerObjects` for the show-collision picking sweep.
+   */
+  private createMarkerInstanceGroup(
     assetId: string,
     placements: LayoutPlacement[],
     gltf: GLTF,
   ): Group {
+    const isAmbient = isAmbientSoundAssetId(assetId);
+    const makeIcon = isAmbient ? createAmbientSoundIcon : createPlayerStartIcon;
+    const iconY = isAmbient ? AMBIENT_SOUND_MARKER_CENTER_Y : PLAYER_START_CAPSULE_CENTER_Y;
+    const baseLabel = isAmbient ? "Ambient Sound" : "Player Start";
+
     const group = new Group();
     const objects: Object3D[] = [];
     group.name = `instanced-${assetId}`;
 
     placements.forEach((placement, placementIndex) => {
       const object = gltf.scene.clone(true);
-      object.name = placement.name ?? `Player Start ${placementIndex + 1}`;
+      object.name = placement.name ?? `${baseLabel} ${placementIndex + 1}`;
       object.matrix.copy(composePlacementMatrix(placement));
       object.matrixAutoUpdate = false;
       object.visible = !(placement.hidden ?? false);
@@ -2257,8 +2297,8 @@ export class SceneApp {
         child.receiveShadow = false;
       });
 
-      const icon = createPlayerStartIcon();
-      icon.position.set(0, PLAYER_START_CAPSULE_CENTER_Y, 0);
+      const icon = makeIcon();
+      icon.position.set(0, iconY, 0);
       icon.userData.assetId = assetId;
       icon.userData.placementIndex = placementIndex;
       object.add(icon);
@@ -2270,7 +2310,7 @@ export class SceneApp {
     this.instanceGroups.set(assetId, group);
     this.instanceMeshes.set(assetId, []);
     this.instanceOverrideObjects.delete(assetId);
-    this.playerStartObjects.set(assetId, objects);
+    this.markerObjects.set(assetId, objects);
     this.instanceProbeMaterials.set(assetId, []);
     return group;
   }
@@ -2373,7 +2413,7 @@ export class SceneApp {
     this.instanceGroups.delete(assetId);
     this.instanceMeshes.delete(assetId);
     this.instanceOverrideObjects.delete(assetId);
-    this.playerStartObjects.delete(assetId);
+    this.markerObjects.delete(assetId);
 
     const instance = this.layout.instances.find((entry) => entry.assetId === assetId);
     if (!instance) return;

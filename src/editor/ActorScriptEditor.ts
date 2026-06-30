@@ -751,6 +751,7 @@ export class ActorScriptEditor {
       node.component === "MeshRenderer" ? this.montageInputField(node) : "";
     const lightField = node.component === "Light" ? lightFields(node) : "";
     const particleField = node.component === "ParticleEmitter" ? this.particleFields(node) : "";
+    const audioField = node.component === "Audio" ? this.audioFields(node) : "";
     const characterMovementField =
       node.component === "CharacterMovement" ? characterMovementFields(node) : "";
     const cameraField = node.component === "Camera" ? cameraFields(node) : "";
@@ -783,6 +784,7 @@ export class ActorScriptEditor {
       ${montageInputField}
       ${lightField}
       ${particleField}
+      ${audioField}
       ${characterMovementField}
       ${springArmField}
       ${cameraField}
@@ -938,6 +940,94 @@ export class ActorScriptEditor {
     `;
   }
 
+  /** Raw `sound` clip assets ({id,name}) for the Audio "Sound" picker, name-sorted. */
+  private soundAssets(): Array<{ id: string; name: string }> {
+    return (this.options.assets ?? [])
+      .filter((asset) => asset.assetType === "sound")
+      .map((asset) => ({ id: asset.id, name: asset.name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /** Sound Cue graph assets ({id,name}) for the Audio "Cue" picker, name-sorted. */
+  private cueAssets(): Array<{ id: string; name: string }> {
+    return (this.options.assets ?? [])
+      .filter(
+        (asset) =>
+          asset.assetType === "soundCue" || asset.path.toLowerCase().endsWith(".soundcue.json"),
+      )
+      .map((asset) => ({ id: asset.id, name: asset.name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /**
+   * The Audio component form (Unreal AudioComponent parity, lite): a Sound / Sound
+   * Cue source picker plus Volume, Pitch, the Auto Play / Loop / Spatial flags, and
+   * a sphere-attenuation block (Min/Max Distance, Rolloff). Writes straight onto
+   * `node.props` so the instantiated entity's "Audio" component data matches what
+   * `readAudioComponent` expects (clipId/sourceId/sourceType/volume/pitch/…).
+   */
+  private audioFields(node: ComponentTemplateNode): string {
+    const props = node.props;
+    const sourceType = props.sourceType === "soundCue" ? "soundCue" : "sound";
+    const isCue = sourceType === "soundCue";
+    const clipId = typeof props.clipId === "string" ? props.clipId : "";
+    const sourceId = typeof props.sourceId === "string" ? props.sourceId : "";
+    const autoPlay = props.autoPlay === true;
+    const loop = props.loop === true;
+    const spatial = props.spatial === true;
+
+    const picker = (
+      current: string,
+      assets: Array<{ id: string; name: string }>,
+    ): string => {
+      const known = assets.some((asset) => asset.id === current);
+      return [
+        `<option value="" ${current ? "" : "selected"}>— none —</option>`,
+        ...assets.map(
+          (asset) =>
+            `<option value="${escapeHtml(asset.id)}" ${asset.id === current ? "selected" : ""}>${escapeHtml(asset.name)}</option>`,
+        ),
+        ...(current && !known
+          ? [`<option value="${escapeHtml(current)}" selected>${escapeHtml(current)} (unknown)</option>`]
+          : []),
+      ].join("");
+    };
+
+    const sourceRow = isCue
+      ? `<label class="as-field"><span>Cue</span><select data-as-audio-source>${picker(sourceId, this.cueAssets())}</select></label>`
+      : `<label class="as-field"><span>Sound</span><select data-as-audio-clip>${picker(clipId, this.soundAssets())}</select></label>`;
+
+    return `
+      <div class="as-section-label">Sound</div>
+      <label class="as-field">
+        <span>Source Type</span>
+        <select data-as-audio-sourcetype>
+          <option value="sound" ${isCue ? "" : "selected"}>Sound (Raw Clip)</option>
+          <option value="soundCue" ${isCue ? "selected" : ""}>Sound Cue (Graph)</option>
+        </select>
+      </label>
+      ${sourceRow}
+      ${numberPropField(props, "volume", "Volume", 1, 'min="0" max="1" step="0.05"')}
+      ${numberPropField(props, "pitch", "Pitch", 1, 'min="0.01" max="8" step="0.05"')}
+      <label class="as-field as-check">
+        <input type="checkbox" data-as-audio-flag="autoPlay" ${autoPlay ? "checked" : ""} />
+        <span>Auto Play</span>
+      </label>
+      <label class="as-field as-check">
+        <input type="checkbox" data-as-audio-flag="loop" ${loop ? "checked" : ""} />
+        <span>Loop</span>
+      </label>
+      <label class="as-field as-check">
+        <input type="checkbox" data-as-audio-flag="spatial" ${spatial ? "checked" : ""} />
+        <span>Spatial</span>
+      </label>
+      <div class="as-section-label">Attenuation <small>(spatial)</small></div>
+      ${numberPropField(props, "refDistance", "Min Distance", 4, 'min="0" step="0.5"')}
+      ${numberPropField(props, "maxDistance", "Max Distance", 60, 'min="0" step="1"')}
+      ${numberPropField(props, "rolloff", "Rolloff", 1, 'min="0" step="0.1"')}
+    `;
+  }
+
   private bindComponentDetails(): void {
     const node = this.selectedComponent();
     if (!node) return;
@@ -993,6 +1083,7 @@ export class ActorScriptEditor {
     this.bindColliderDetails(node);
     this.bindLightDetails(node);
     this.bindParticleDetails(node);
+    this.bindAudioDetails(node);
     this.bindCharacterMovementDetails(node);
     this.bindSpringArmDetails(node);
     this.bindCameraDetails(node);
@@ -1177,6 +1268,58 @@ export class ActorScriptEditor {
       this.markDirty();
       this.renderDetails();
     });
+  }
+
+  /**
+   * Wires the Audio Details controls. Numeric fields (volume/pitch/attenuation)
+   * are bound generically via `data-as-num`; here we handle the Source Type swap,
+   * the Sound/Cue pickers, and the Auto Play / Loop / Spatial flags. Switching
+   * Source Type re-renders so the matching picker is shown.
+   */
+  private bindAudioDetails(node: ComponentTemplateNode): void {
+    const sourceType = this.detailsHost.querySelector<HTMLSelectElement>(
+      "[data-as-audio-sourcetype]",
+    );
+    sourceType?.addEventListener("change", () => {
+      if (sourceType.value === "soundCue") {
+        node.props.sourceType = "soundCue";
+        // Default to the first cue so a freshly-switched cue source is non-empty
+        // (an empty sourceId leaves the actor silent in Play).
+        if (typeof node.props.sourceId !== "string" || node.props.sourceId.length === 0) {
+          const firstCue = this.cueAssets()[0];
+          if (firstCue) node.props.sourceId = firstCue.id;
+        }
+      } else {
+        delete node.props.sourceType;
+      }
+      this.markDirty();
+      this.renderDetails();
+    });
+    const clip = this.detailsHost.querySelector<HTMLSelectElement>("[data-as-audio-clip]");
+    clip?.addEventListener("change", () => {
+      if (clip.value) node.props.clipId = clip.value;
+      else node.props.clipId = "";
+      this.markDirty();
+      this.render(); // sync the raw-props view
+    });
+    const source = this.detailsHost.querySelector<HTMLSelectElement>("[data-as-audio-source]");
+    source?.addEventListener("change", () => {
+      if (source.value) node.props.sourceId = source.value;
+      else delete node.props.sourceId;
+      this.markDirty();
+      this.render();
+    });
+    this.detailsHost
+      .querySelectorAll<HTMLInputElement>("[data-as-audio-flag]")
+      .forEach((input) => {
+        const key = input.dataset.asAudioFlag;
+        if (!key) return;
+        input.addEventListener("change", () => {
+          node.props[key] = input.checked;
+          this.markDirty();
+          this.renderDetails();
+        });
+      });
   }
 
   private bindCharacterMovementDetails(node: ComponentTemplateNode): void {
@@ -2112,6 +2255,12 @@ function defaultComponentProps(kind: ActorComponentKind): Record<string, SceneJs
   }
   if (kind === "Camera") {
     return { fieldOfView: 44, nearClip: 0.1, farClip: 100, enableSprintCameraShake: true };
+  }
+  if (kind === "Audio") {
+    // Minimum shape `readAudioComponent` accepts; the user picks a Sound/Cue next.
+    // `autoPlay` defaults true (Unreal AudioComponent Auto Activate parity) so a
+    // picked sound is audible in Play without an extra toggle.
+    return { clipId: "", volume: 1, loop: false, spatial: false, autoPlay: true };
   }
   return {};
 }

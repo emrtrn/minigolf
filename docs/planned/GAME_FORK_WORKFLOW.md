@@ -90,7 +90,7 @@ Oyun reposunda yapılacaklar (yalnızca `public/` ve `src/game` içinde):
 
 1. **GDD yaz** → `docs/GDD.md`
    - Çekirdek döngü, asset listesi, gereken sistemler, dikey kesit.
-   - Fikir havuzuna (`Forge/docs/planned/KENNEY_GAME_IDEAS.md`) bakarak bağlam kur.
+   - Fikir havuzuna (`Forge/docs/kenney/KENNEY_GAME_IDEAS.md`) bakarak bağlam kur.
 
 2. **Asset'leri çek** — Kenney arşivinden (`C:/Users/emret/Documents/Kenney`)
    yalnızca ihtiyaç duyulan dosyaları `public/assets/...`'a kopyala.
@@ -189,7 +189,7 @@ git push origin main
 
 | Doküman | Repo | Açıklama |
 | --- | --- | --- |
-| `KENNEY_GAME_IDEAS.md` | **Forge** `docs/planned/` | Genel fikir havuzu, tüm oyunlara ortak |
+| `KENNEY_GAME_IDEAS.md` | **Forge** `docs/kenney/` | Genel fikir havuzu, tüm oyunlara ortak |
 | `GAME_FORK_WORKFLOW.md` | **Forge** `docs/planned/` | Bu doküman — iş akışı referansı |
 | `docs/GDD.md` | **Oyun reposu** | O oyuna özel tasarım dokümanı |
 | `docs/ASSET_CREDITS.md` | **Oyun reposu** | O oyunda kullanılan Kenney asset'leri + lisans |

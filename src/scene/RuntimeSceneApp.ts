@@ -24,6 +24,8 @@ import {
 } from "@engine/behavior/behaviorSubsystem";
 import { PhysicsSubsystem } from "@engine/physics/physicsSubsystem";
 import { AudioSubsystem, type AudioPlayOptions } from "@engine/audio/audioSubsystem";
+import { evaluateSoundCue } from "@engine/audio/soundCueEvaluator";
+import type { SoundCueAsset } from "@engine/audio/soundCueTypes";
 import { KeyboardInputSource } from "@/input/keyboardInputSource";
 import { GamepadInputSource } from "@/input/gamepadInputSource";
 import { TouchInputSource, isTouchLikely } from "@/input/touchInputSource";
@@ -178,7 +180,7 @@ import {
   type ActorScriptDef,
 } from "@engine/scene/actorScript";
 import { createCharacterSceneObject, entityCharacterItem } from "@engine/render-three/models";
-import { isPlayerStartAssetId, shapeAssetCollisionDef } from "@engine/scene/shapes";
+import { isMarkerAssetId, shapeAssetCollisionDef } from "@engine/scene/shapes";
 import { loadAssetCollision } from "@/scene/assetCollisionLoader";
 import {
   applyAssetUvwMapping,
@@ -310,6 +312,10 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
   private readonly characterMovementSubsystem: CharacterMovementSubsystem;
   /** Manifest sound asset id -> fetchable file URL, filled after the manifest loads. */
   private readonly soundUrlById = new Map<string, string>();
+  /** Manifest soundCue asset id -> fetchable file URL. */
+  private readonly soundCueUrlById = new Map<string, string>();
+  /** Parsed soundCue assets, cached by id. */
+  private readonly soundCueDefs = new Map<string, SoundCueAsset | null>();
   /** Manifest effect (`.effect.json`) asset id -> fetchable file URL. */
   private readonly effectUrlById = new Map<string, string>();
   /** Parsed effect definitions, cached by effect id. */
@@ -801,9 +807,11 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
 
     buildSceneEntities(this.layout, {
       addInstance: (assetId, placements) => {
-        // Player Start markers are editor-only authoring gizmos; the runtime reads
-        // their transform (TPS spawn) but never renders them.
-        if (isPlayerStartAssetId(assetId)) return;
+        // Marker gizmos (Player Start, Ambient Sound) are editor-only authoring
+        // helpers: the runtime never renders the gizmo mesh. It still reads their
+        // transform — Player Start as the TPS spawn, Ambient Sound as the emitter
+        // point for its (separately-built) audio entity.
+        if (isMarkerAssetId(assetId)) return;
         this.scene.add(this.createInstancedModel(assetId, placements));
       },
       addCharacter: (assetId, character) => this.addCharacter(this.models.get(assetId), character),
@@ -858,7 +866,14 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
       behavior: this.behaviorSubsystem,
       engineApp: this.engineApp,
     });
-    this.playAutoPlayAudio(sceneDocument);
+    // Auto-play audio/particles must never abort scene start: a single bad cue or
+    // emitter cannot be allowed to stop the game mode + UI (lines below) from
+    // initialising, which would look like "Play won't start".
+    try {
+      this.playAutoPlayAudio(sceneDocument);
+    } catch (error) {
+      console.error("[runtime] auto-play audio failed:", error);
+    }
     void this.playAutoPlayParticles(sceneDocument);
 
     // Character skeletal metadata (blend spaces / anim-set) drives the Game Mode's
@@ -1237,29 +1252,96 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
     );
   }
 
-  /** Maps manifest `sound` + effect (`.effect.json`) asset ids to fetchable file URLs. */
+  /** Maps manifest `sound`, `soundCue`, and effect asset ids to fetchable file URLs. */
   private async populateAssetUrls(): Promise<void> {
     if (!this.assetLoader) return;
     const manifest = await this.assetLoader.loadManifest();
     for (const asset of manifest.assets) {
       const path = assetPath(asset);
       if (assetType(asset) === "sound") this.soundUrlById.set(asset.id, projectFileUrl(path));
+      if (assetType(asset) === "soundCue") this.soundCueUrlById.set(asset.id, projectFileUrl(path));
       if (path.endsWith(".effect.json")) this.effectUrlById.set(asset.id, projectFileUrl(path));
+    }
+  }
+
+  /** Fetches and caches a soundCue asset by id. Returns null on failure. */
+  private async loadSoundCue(cueId: string): Promise<SoundCueAsset | null> {
+    if (this.soundCueDefs.has(cueId)) return this.soundCueDefs.get(cueId) ?? null;
+    const url = this.soundCueUrlById.get(cueId);
+    if (!url) { this.soundCueDefs.set(cueId, null); return null; }
+    try {
+      const response = await fetch(url, { cache: "no-cache" });
+      if (!response.ok) { this.soundCueDefs.set(cueId, null); return null; }
+      const data = (await response.json()) as SoundCueAsset;
+      this.soundCueDefs.set(cueId, data);
+      return data;
+    } catch {
+      this.soundCueDefs.set(cueId, null);
+      return null;
     }
   }
 
   /** Plays every Audio component flagged `autoPlay` once the scene is built (ambient). */
   private playAutoPlayAudio(document: SceneDocument): void {
     for (const entity of document.entities) {
+      try {
+        this.playAutoPlayAudioEntity(entity);
+      } catch (error) {
+        // One unplayable emitter must not stop the rest (or the scene start).
+        console.error(`[runtime] auto-play audio failed for ${entity.id}:`, error);
+      }
+    }
+  }
+
+  private playAutoPlayAudioEntity(entity: Entity): void {
+    {
       const audio = readAudioComponent(entity);
-      if (!audio?.autoPlay) continue;
+      if (!audio?.autoPlay) return;
       const position = audio.spatial ? readTransformComponent(entity)?.position : undefined;
-      this.audioSubsystem.playOneShot(audio.clipId, {
-        volume: audio.volume,
-        loop: audio.loop,
-        spatial: audio.spatial,
-        ...(position ? { position: [position[0], position[1], position[2]] as const } : {}),
-      });
+      // Spatial placement + authored sphere-attenuation overrides for the PannerNode.
+      const spatialOpts =
+        audio.spatial && position
+          ? {
+              position: [position[0], position[1], position[2]] as const,
+              ...(audio.refDistance !== undefined ? { refDistance: audio.refDistance } : {}),
+              ...(audio.maxDistance !== undefined ? { maxDistance: audio.maxDistance } : {}),
+              ...(audio.rolloff !== undefined ? { rolloff: audio.rolloff } : {}),
+            }
+          : {};
+      const componentPitch = audio.pitch ?? 1;
+
+      if (audio.sourceType === "soundCue" && audio.sourceId) {
+        // Async: load cue, evaluate graph, fire each resolved event.
+        void this.loadSoundCue(audio.sourceId).then((cue) => {
+          if (!cue) return;
+          const events = evaluateSoundCue(cue);
+          for (const ev of events) {
+            const opts = {
+              volume: ev.volume * audio.volume,
+              loop: ev.loop || audio.loop,
+              // The component's pitch multiplier scales the cue's own pitch (Unreal parity).
+              pitch: ev.pitch * componentPitch,
+              spatial: audio.spatial,
+              // Route the cue through its authored mix bus (default master).
+              ...(cue.output.bus ? { bus: cue.output.bus } : {}),
+              ...spatialOpts,
+            };
+            if (ev.delaySeconds > 0) {
+              setTimeout(() => this.audioSubsystem.playOneShot(ev.clipId, opts), ev.delaySeconds * 1000);
+            } else {
+              this.audioSubsystem.playOneShot(ev.clipId, opts);
+            }
+          }
+        });
+      } else {
+        this.audioSubsystem.playOneShot(audio.clipId, {
+          volume: audio.volume,
+          loop: audio.loop,
+          spatial: audio.spatial,
+          ...(audio.pitch !== undefined ? { pitch: audio.pitch } : {}),
+          ...spatialOpts,
+        });
+      }
     }
   }
 
@@ -2071,7 +2153,7 @@ export class RuntimeSceneApp implements RuntimeStatsApp {
     this.disposeInstanceProbeMaterials();
     this.instanceOverrideObjects.clear();
     for (const instance of this.layout.instances) {
-      if (isPlayerStartAssetId(instance.assetId)) continue;
+      if (isMarkerAssetId(instance.assetId)) continue;
       const previous = this.instanceGroups.get(instance.assetId);
       if (previous) this.scene.remove(previous);
       this.scene.add(this.createInstancedModel(instance.assetId, instance.placements));

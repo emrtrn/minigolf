@@ -42,6 +42,7 @@ import type {
   Vec3,
 } from "@engine/scene/layout";
 import {
+  AMBIENT_SOUND_ASSET_ID,
   isShapePrimitiveType,
   PLAYER_START_ASSET_ID,
   shapeAssetId,
@@ -392,6 +393,8 @@ export class EditorUi {
               <button type="button" data-add-reflective-surface>Reflective Surface</button>
               <button type="button" data-add-reflection-capture>Sphere Reflection Capture</button>
               <button type="button" data-add-post-process>Post Process</button>
+              <div class="add-actor-section-title">Sounds</div>
+              <button type="button" data-add-ambient-sound>Ambient Sound</button>
               <div class="add-actor-section-title">UI</div>
               <button type="button" data-add-world-widget>World Widget</button>
               <div class="add-actor-section-title">Gameplay</div>
@@ -657,6 +660,24 @@ export class EditorUi {
         this.app.endAssetDragPreview();
       });
       playerStartButton.addEventListener("click", () => {
+        this.setStatus("Drag the actor into the viewport to place it.", "info");
+      });
+    }
+
+    const ambientSoundButton = this.root.querySelector<HTMLButtonElement>("[data-add-ambient-sound]");
+    if (ambientSoundButton) {
+      ambientSoundButton.draggable = true;
+      ambientSoundButton.addEventListener("dragstart", (event) => {
+        event.dataTransfer?.setData("application/x-3dgamedev-asset", AMBIENT_SOUND_ASSET_ID);
+        event.dataTransfer!.effectAllowed = "copy";
+        event.dataTransfer?.setDragImage(this.getEmptyDragImage(), 0, 0);
+        this.app.beginAssetDragPreview(AMBIENT_SOUND_ASSET_ID);
+        this.setStatus("Dragging Ambient Sound - drop in the viewport to place.");
+      });
+      ambientSoundButton.addEventListener("dragend", () => {
+        this.app.endAssetDragPreview();
+      });
+      ambientSoundButton.addEventListener("click", () => {
         this.setStatus("Drag the actor into the viewport to place it.", "info");
       });
     }
@@ -1435,6 +1456,12 @@ export class EditorUi {
         void this.openMaterialEditor(item);
       });
     }
+    if (item.type === "soundCue") {
+      card.addEventListener("dblclick", (event) => {
+        event.preventDefault();
+        void this.openSoundCueEditor(item);
+      });
+    }
     if (isLevelItem(item) && !activeLevel) {
       card.addEventListener("dblclick", (event) => {
         event.preventDefault();
@@ -1579,6 +1606,7 @@ export class EditorUi {
     if (item.type === "material") return () => void this.openMaterialEditor(item);
     if (isUiWidgetItem(item)) return () => void this.openUiWidgetEditor(item);
     if (isActorScriptItem(item)) return () => void this.openActorScriptEditor(item);
+    if (item.type === "soundCue") return () => void this.openSoundCueEditor(item);
     if (item.type !== "file" && isModelAssetType(item.type)) {
       return () => void this.openMeshEditor(item);
     }
@@ -2065,6 +2093,33 @@ export class EditorUi {
     } catch (error) {
       this.setStatus(
         `Could not open UI Widget editor: ${error instanceof Error ? error.message : String(error)}`,
+        "error",
+      );
+    }
+  }
+
+  /**
+   * Opens the node-graph Sound Cue editor for a `*.soundcue.json` asset.
+   * Kept behind a dynamic import like the other asset editors.
+   */
+  private async openSoundCueEditor(item: BrowserAssetItem): Promise<void> {
+    try {
+      const { SoundCueEditor } = await import("@/editor/SoundCueEditor");
+      await SoundCueEditor.open({
+        path: item.path,
+        label: item.label.replace(/\.soundcue\.json$/i, ""),
+        assets: this.editableAssets.map((asset) => ({
+          id: asset.id,
+          name: asset.displayName ?? asset.name,
+          assetType: assetType(asset),
+          path: assetPath(asset),
+        })),
+        onStatus: (message, tone) => this.setStatus(message, tone),
+        onSaved: () => this.renderContentAssets(),
+      });
+    } catch (error) {
+      this.setStatus(
+        `Could not open Sound Cue editor: ${error instanceof Error ? error.message : String(error)}`,
         "error",
       );
     }
@@ -2807,6 +2862,12 @@ export class EditorUi {
 
     this.detailsScale = [...selection.scale];
 
+    // An Ambient Sound emitter is a transform + Audio component only: it has no
+    // mesh/material, no collision/physics, and no pivot/placement affordances, so
+    // those Details sections are hidden to keep the panel focused on the sound.
+    const isAmbientSound =
+      selection.kind === "instance" && selection.assetId === AMBIENT_SOUND_ASSET_ID;
+
     const lockedAttr = selection.locked ? "disabled" : "";
     const wallDisabled = selection.locked || selection.kind === "character" ? "disabled" : "";
     const castShadowToggle =
@@ -2837,8 +2898,8 @@ export class EditorUi {
       ${vectorRow("Location", "p", selection.position, 0.1, selection.locked)}
       ${vectorRow("Rotation", "r", selection.rotation, 1, selection.locked)}
       ${scaleRow(selection.scale, selection.scaleLocked, selection.locked)}
-      ${pivotRow(selection.pivot, selection.locked, this.app.isPivotEditMode())}
-      ${this.renderMaterialSection(selection)}
+      ${isAmbientSound ? "" : pivotRow(selection.pivot, selection.locked, this.app.isPivotEditMode())}
+      ${isAmbientSound ? "" : this.renderMaterialSection(selection)}
       <div class="detail-section">
         <div class="detail-actions-row">
           <button type="button" data-detail-action="reset" ${lockedAttr}
@@ -2849,7 +2910,10 @@ export class EditorUi {
             title="Paste the copied transform">Paste</button>
         </div>
       </div>
-      <div class="detail-section">
+      ${
+        isAmbientSound
+          ? ""
+          : `<div class="detail-section">
         <div class="detail-section-title">Placement</div>
         <div class="detail-actions-row">
           <button type="button" data-detail-action="snap-floor" ${lockedAttr}
@@ -2862,9 +2926,10 @@ export class EditorUi {
           <span>Lock Movement</span>
         </label>
         ${castShadowToggle}
-      </div>
-      ${this.renderCollisionSection(selection)}
-      ${this.renderPhysicsSection(selection, selection.locked)}
+      </div>`
+      }
+      ${isAmbientSound ? "" : this.renderCollisionSection(selection)}
+      ${isAmbientSound ? "" : this.renderPhysicsSection(selection, selection.locked)}
       ${this.renderComponentsSection(selection)}
       ${this.renderMetadataSections(selection)}
     `;
@@ -3287,15 +3352,17 @@ export class EditorUi {
   }
 
   private renderAudioFields(audio: LayoutAudio): string {
+    const isCue = audio.sourceType === "soundCue";
     const sounds = this.editableAssets.filter((asset) => assetType(asset) === "sound");
-    const inList = sounds.some((asset) => asset.id === audio.clipId);
-    // Preserve the current clip as an option even if it is not a manifest sound
-    // asset (e.g. a built-in tone like "collision-chime") so it is not lost.
-    const preserved = inList
+    const cues = this.editableAssets.filter((asset) => assetType(asset) === "soundCue");
+
+    // Raw clip dropdown (used when sourceType is "sound" or absent)
+    const clipInList = sounds.some((asset) => asset.id === audio.clipId);
+    const clipPreserved = clipInList
       ? ""
       : `<option value="${escapeHtml(audio.clipId)}" selected>${escapeHtml(audio.clipId)}</option>`;
-    const options =
-      preserved +
+    const clipOptions =
+      clipPreserved +
       sounds
         .map(
           (asset) =>
@@ -3304,15 +3371,50 @@ export class EditorUi {
             }>${escapeHtml(asset.displayName)}</option>`,
         )
         .join("");
+
+    // Sound Cue dropdown (used when sourceType is "soundCue")
+    const cueId = audio.sourceId ?? "";
+    const cueInList = cues.some((asset) => asset.id === cueId);
+    const cuePreserved = !cueInList && cueId
+      ? `<option value="${escapeHtml(cueId)}" selected>${escapeHtml(cueId)}</option>`
+      : "";
+    const cueOptions =
+      cuePreserved +
+      cues
+        .map(
+          (asset) =>
+            `<option value="${escapeHtml(asset.id)}" ${
+              asset.id === cueId ? "selected" : ""
+            }>${escapeHtml(asset.displayName)}</option>`,
+        )
+        .join("");
+
     return `
       <label class="detail-row">
-        <span>Clip</span>
-        <select data-audio="clipId">${options}</select>
+        <span>Source Type</span>
+        <select data-audio="sourceType">
+          <option value="sound"${!isCue ? " selected" : ""}>Sound (Raw Clip)</option>
+          <option value="soundCue"${isCue ? " selected" : ""}>Sound Cue (Graph)</option>
+        </select>
       </label>
+      ${isCue ? `
+      <label class="detail-row">
+        <span>Cue</span>
+        <select data-audio="sourceId">${cueOptions}</select>
+      </label>` : `
+      <label class="detail-row">
+        <span>Clip</span>
+        <select data-audio="clipId">${clipOptions}</select>
+      </label>`}
       <label class="detail-row">
         <span>Volume</span>
         <input type="number" data-audio="volume" min="0" max="1" step="0.05"
           value="${audio.volume ?? ""}" placeholder="1" />
+      </label>
+      <label class="detail-row">
+        <span>Pitch</span>
+        <input type="number" data-audio="pitch" min="0.01" max="8" step="0.05"
+          value="${audio.pitch ?? ""}" placeholder="1" />
       </label>
       <label class="detail-toggle">
         <input type="checkbox" data-audio="autoPlay" ${audio.autoPlay ? "checked" : ""} />
@@ -3325,6 +3427,23 @@ export class EditorUi {
       <label class="detail-toggle">
         <input type="checkbox" data-audio="spatial" ${audio.spatial ? "checked" : ""} />
         <span>Spatial</span>
+      </label>
+      <div class="detail-subhead">Attenuation</div>
+      <div class="detail-hint">Applies when Spatial is on. Blank = runtime default.</div>
+      <label class="detail-row">
+        <span>Min Distance</span>
+        <input type="number" data-audio="refDistance" min="0" step="0.5"
+          value="${audio.refDistance ?? ""}" placeholder="4" />
+      </label>
+      <label class="detail-row">
+        <span>Max Distance</span>
+        <input type="number" data-audio="maxDistance" min="0" step="1"
+          value="${audio.maxDistance ?? ""}" placeholder="60" />
+      </label>
+      <label class="detail-row">
+        <span>Rolloff</span>
+        <input type="number" data-audio="rolloff" min="0" step="0.1"
+          value="${audio.rolloff ?? ""}" placeholder="1" />
       </label>`;
   }
 
@@ -3460,12 +3579,33 @@ export class EditorUi {
   }
 
   private commitAudioInput(): void {
-    const clip = this.detailsBody.querySelector<HTMLSelectElement | HTMLInputElement>(
-      '[data-audio="clipId"]',
-    );
-    const clipId = clip?.value.trim();
-    if (!clipId) return;
-    const audio: LayoutAudio = { clipId };
+    const sourceTypeEl = this.detailsBody.querySelector<HTMLSelectElement>('[data-audio="sourceType"]');
+    const sourceType = sourceTypeEl?.value as "sound" | "soundCue" | undefined;
+    const isCue = sourceType === "soundCue";
+
+    let audio: LayoutAudio;
+    if (isCue) {
+      const sourceIdEl = this.detailsBody.querySelector<HTMLSelectElement>('[data-audio="sourceId"]');
+      // The cue dropdown may not be mounted yet (the user just toggled Source Type,
+      // so the panel still shows the clip dropdown): fall back to the prior cue,
+      // else the first available cue. A cue source with an empty sourceId fails
+      // save validation ("sourceId is required"), which aborts Play.
+      const sourceId =
+        sourceIdEl?.value.trim() ||
+        this.selected?.audio?.sourceId ||
+        this.editableAssets.find((asset) => assetType(asset) === "soundCue")?.id ||
+        "";
+      // Keep clipId as legacy fallback (empty string is fine for cue-sourced audio)
+      audio = { clipId: "", sourceId, sourceType: "soundCue" };
+    } else {
+      const clip = this.detailsBody.querySelector<HTMLSelectElement | HTMLInputElement>(
+        '[data-audio="clipId"]',
+      );
+      const clipId = clip?.value.trim();
+      if (!clipId) return;
+      audio = { clipId };
+    }
+
     const volumeRaw = this.detailsBody
       .querySelector<HTMLInputElement>('[data-audio="volume"]')
       ?.value.trim();
@@ -3473,6 +3613,22 @@ export class EditorUi {
       const volume = Number(volumeRaw);
       if (Number.isFinite(volume) && volume >= 0 && volume <= 1) audio.volume = volume;
     }
+    const readAudioNumber = (field: string, min: number, max: number): number | undefined => {
+      const raw = this.detailsBody
+        .querySelector<HTMLInputElement>(`[data-audio="${field}"]`)
+        ?.value.trim();
+      if (!raw) return undefined;
+      const value = Number(raw);
+      return Number.isFinite(value) && value >= min && value <= max ? value : undefined;
+    };
+    const pitch = readAudioNumber("pitch", 0.01, 8);
+    if (pitch !== undefined) audio.pitch = pitch;
+    const refDistance = readAudioNumber("refDistance", 0, 100000);
+    if (refDistance !== undefined) audio.refDistance = refDistance;
+    const maxDistance = readAudioNumber("maxDistance", 0, 100000);
+    if (maxDistance !== undefined) audio.maxDistance = maxDistance;
+    const rolloff = readAudioNumber("rolloff", 0, 100);
+    if (rolloff !== undefined) audio.rolloff = rolloff;
     if (this.detailsBody.querySelector<HTMLInputElement>('[data-audio="autoPlay"]')?.checked) {
       audio.autoPlay = true;
     }

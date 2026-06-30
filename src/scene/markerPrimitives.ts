@@ -167,3 +167,65 @@ export function createPlayerStartMarkerGltf(): GLTF {
     userData: {},
   } as unknown as GLTF;
 }
+
+/** Ambient Sound gizmo colour (gizmo blue, matching the speaker icon). */
+const AMBIENT_SOUND_COLOR = "#2b7fff";
+/** Ambient Sound wire-sphere radius (world units). */
+const AMBIENT_SOUND_RADIUS = 0.22;
+/** Lift so the gizmo floats slightly above the placement point. */
+export const AMBIENT_SOUND_MARKER_CENTER_Y = AMBIENT_SOUND_RADIUS + 0.08;
+
+/** Three orthogonal wire rings forming a sphere outline, centred on the gizmo. */
+function pushSphereRingSegments(positions: number[], plane: "xy" | "xz" | "yz"): void {
+  const segments = 40;
+  const r = AMBIENT_SOUND_RADIUS;
+  const cy = AMBIENT_SOUND_MARKER_CENTER_Y;
+  const at = (t: number): [number, number, number] => {
+    const c = Math.cos(t) * r;
+    const s = Math.sin(t) * r;
+    if (plane === "xy") return [c, cy + s, 0];
+    if (plane === "xz") return [c, cy, s];
+    return [0, cy + c, s];
+  };
+  for (let i = 0; i < segments; i += 1) {
+    const a = at((i / segments) * Math.PI * 2);
+    const b = at(((i + 1) / segments) * Math.PI * 2);
+    positions.push(a[0], a[1], a[2], b[0], b[1], b[2]);
+  }
+}
+
+/**
+ * Build the Ambient Sound marker as a minimal GLTF-shaped object: a small blue
+ * wire sphere acting as the pickable anchor. The speaker billboard icon is added
+ * by the scene layer per placement. The runtime never renders this gizmo.
+ */
+export function createAmbientSoundMarkerGltf(): GLTF {
+  const material = new LineBasicMaterial({
+    color: AMBIENT_SOUND_COLOR,
+    transparent: true,
+    opacity: 0.9,
+    depthWrite: false,
+  });
+
+  const positions: number[] = [];
+  pushSphereRingSegments(positions, "xy");
+  pushSphereRingSegments(positions, "xz");
+  pushSphereRingSegments(positions, "yz");
+  const geometry = new BufferGeometry();
+  geometry.setAttribute("position", new Float32BufferAttribute(positions, 3));
+  const wire = new LineSegments(geometry, material);
+  wire.name = "ambient-sound-wire";
+
+  const scene = new Group();
+  scene.name = "ambient-sound-marker-root";
+  scene.add(wire);
+
+  return {
+    scene,
+    scenes: [scene],
+    animations: [],
+    cameras: [],
+    asset: { version: "2.0", generator: "forge-ambient-sound-marker" },
+    userData: {},
+  } as unknown as GLTF;
+}

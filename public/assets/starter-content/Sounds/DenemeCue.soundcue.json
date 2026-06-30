@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "type": "soundCue",
+  "name": "DenemeCue",
+  "output": {
+    "volume": 1,
+    "pitch": 1,
+    "bus": "sfx"
+  },
+  "nodes": [
+    {
+      "id": "output",
+      "kind": "output",
+      "volume": 1,
+      "pitch": 1
+    },
+    {
+      "id": "mixer-2",
+      "kind": "mixer"
+    },
+    {
+      "id": "source-2",
+      "kind": "source",
+      "clipId": "starter-snd-collapse-01",
+      "loop": true,
+      "volume": 1,
+      "pitch": 1
+    },
+    {
+      "id": "source-3",
+      "kind": "source",
+      "clipId": "starter-snd-fire-01",
+      "volume": 1,
+      "pitch": 1
+    }
+  ],
+  "connections": [
+    {
+      "from": "source-2",
+      "to": "mixer-2"
+    },
+    {
+      "from": "source-3",
+      "to": "mixer-2"
+    },
+    {
+      "from": "mixer-2",
+      "to": "output"
+    }
+  ]
+}

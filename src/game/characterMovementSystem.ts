@@ -175,6 +175,8 @@ export class CharacterMovementSubsystem implements Subsystem {
       } else if (ground) {
         vertical.floorY = ground.floorY;
         vertical.state = groundedAt(ground.floorY);
+      } else if (!this.hasGroundProbe()) {
+        vertical.state = groundedAt(vertical.floorY);
       } else {
         vertical.floorY = previousY;
         vertical.state = { y: previousY, velocityY: 0, grounded: false };
@@ -192,6 +194,12 @@ export class CharacterMovementSubsystem implements Subsystem {
       if (landing) {
         vertical.floorY = landing.floorY;
         vertical.state = groundedAt(landing.floorY);
+      } else if (
+        !this.hasGroundProbe() &&
+        previousY >= vertical.floorY &&
+        vertical.state.y <= vertical.floorY
+      ) {
+        vertical.state = groundedAt(vertical.floorY);
       }
     }
     runtime.transform.position[1] = vertical.state.y;
@@ -241,6 +249,11 @@ export class CharacterMovementSubsystem implements Subsystem {
       maxStepUp: this.maxStepHeight(runtime),
       maxStepDown: DEFAULT_MAX_STEP_DOWN,
     });
+  }
+
+  private hasGroundProbe(): boolean {
+    const blockers = this.physics?.staticBlockerAabbs();
+    return !!blockers && blockers.length > 0;
   }
 
   private footprintHalf(runtime: CharacterMovementRuntime): [number, number] {

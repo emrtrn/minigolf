@@ -137,6 +137,8 @@ const ASSET_FILE_EXTENSIONS = new Set([
   ...SOUND_EXTENSIONS,
   "json",
 ]);
+const DEVELOPMENT_CONTENT_VARIANT_PARENT_TEXTURE =
+  /^assets\/DevelopmentContent\/Textures\/(?:LightMasks|Particle)\/[^/]+\.png$/;
 const PLACEMENT_SURFACES: readonly PlacementSurface[] = ["floor", "wall", "room", "character"];
 export const ASSET_TYPES: readonly AssetType[] = [
   "staticMesh",
@@ -383,6 +385,16 @@ export function validateAssetManifest(
     } else {
       manifestPaths.add(path);
       validateRelativePath(path, "asset-path", assetId, addIssue);
+      if (normalizedType === "texture" && isDevelopmentContentVariantParentTexture(path)) {
+        addIssue({
+          level: "error",
+          code: "asset-texture-variant-parent",
+          assetId,
+          path,
+          message:
+            "DevelopmentContent LightMasks/Particle textures must reference a concrete variant folder such as Black or Transparent.",
+        });
+      }
       if (normalizedType && isModelAssetType(normalizedType) && !MODEL_EXTENSIONS.has(extensionOf(path))) {
         addIssue({
           level: "error",
@@ -606,6 +618,10 @@ function isHealthCheckAssetFile(path: string): boolean {
   if (lower.endsWith(".materials.json")) return false;
   if (lower.endsWith(".uvw.json")) return false;
   return ASSET_FILE_EXTENSIONS.has(extensionOf(lower));
+}
+
+function isDevelopmentContentVariantParentTexture(path: string): boolean {
+  return DEVELOPMENT_CONTENT_VARIANT_PARENT_TEXTURE.test(path);
 }
 
 function normalizePublicPath(path: string): string {

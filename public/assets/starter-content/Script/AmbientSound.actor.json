@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "type": "actor",
+  "name": "AmbientSound",
+  "parentClass": "actor",
+  "variables": [],
+  "components": [
+    {
+      "id": "root",
+      "component": "Transform",
+      "props": {}
+    },
+    {
+      "id": "audio",
+      "component": "Audio",
+      "props": {
+        "sourceType": "soundCue",
+        "sourceId": "denemecue-soundcue",
+        "loop": true,
+        "autoPlay": true,
+        "spatial": true
+      },
+      "parent": "root"
+    }
+  ],
+  "interfaces": [],
+  "references": [],
+  "dispatchers": [],
+  "eventBindings": [],
+  "messageBindings": [],
+  "construction": null
+}

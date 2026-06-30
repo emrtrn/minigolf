@@ -58,12 +58,30 @@ export function isPlayerStartAssetId(assetId: string): boolean {
 }
 
 /**
+ * Synthetic asset id for an Ambient Sound emitter (Unreal's AmbientSound). Like
+ * the Player Start marker it persists as an ordinary instance placement (so it
+ * reuses selection / gizmo / outliner / save), and its placement carries an
+ * `audio` component that the runtime plays. The editor draws a speaker gizmo;
+ * the runtime skips rendering the gizmo but still plays the authored audio.
+ */
+export const AMBIENT_SOUND_ASSET_ID = "marker:ambientSound";
+
+export function isAmbientSoundAssetId(assetId: string): boolean {
+  return assetId === AMBIENT_SOUND_ASSET_ID;
+}
+
+/** True for any editor-only marker gizmo the runtime must not render as a mesh. */
+export function isMarkerAssetId(assetId: string): boolean {
+  return isPlayerStartAssetId(assetId) || isAmbientSoundAssetId(assetId);
+}
+
+/**
  * True for any synthetic, procedurally-built asset id (shapes + markers). These
  * are registered locally rather than loaded from the manifest, so loaders must
  * exclude them.
  */
 export function isProceduralAssetId(assetId: string): boolean {
-  return isShapeAssetId(assetId) || isPlayerStartAssetId(assetId);
+  return isShapeAssetId(assetId) || isMarkerAssetId(assetId);
 }
 
 export function isShapePrimitiveType(value: unknown): value is ShapePrimitiveType {

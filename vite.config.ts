@@ -25,6 +25,7 @@ import {
   validateSaveSkeletonPayload,
   validateSaveUiPayload,
   validateSaveUvwPayload,
+  validateSaveSoundCuePayload,
   validateOpenLevelPayload,
 } from "./tools/saveValidator";
 
@@ -671,6 +672,7 @@ const PRIVILEGED_URLS = new Set([
   "/__save-collision",
   "/__save-material-slots",
   "/__save-skeleton",
+  "/__save-soundcue",
   "/__save-ui",
   "/__save-uvw",
   "/__content-new",
@@ -922,6 +924,33 @@ function layoutEditorPlugin(): Plugin {
             const filePath = resolvePublicPath(payload.path);
             const previous = await readFile(filePath, "utf8").catch(() => null);
             const next = `${JSON.stringify(payload.ui, null, 2)}\n`;
+            await writeFile(filePath, next, "utf8");
+            res.setHeader("Content-Type", "application/json; charset=utf-8");
+            res.end(JSON.stringify({ ok: true, path: payload.path, changed: previous !== next }));
+          } catch (error) {
+            res.statusCode = 400;
+            res.setHeader("Content-Type", "application/json; charset=utf-8");
+            res.end(
+              JSON.stringify({ ok: false, error: error instanceof Error ? error.message : String(error) }),
+            );
+          }
+          return;
+        }
+
+        // Sound Cue editor save: writes a `<name>.soundcue.json` asset.
+        // Validated/normalized server-side (validateSaveSoundCuePayload), kept
+        // inside public/ by resolvePublicPath.
+        if (req.url === "/__save-soundcue") {
+          if (req.method !== "POST") {
+            res.statusCode = 405;
+            res.end("Method not allowed");
+            return;
+          }
+          try {
+            const payload = validateSaveSoundCuePayload(await readJsonBody(req));
+            const filePath = resolvePublicPath(payload.path);
+            const previous = await readFile(filePath, "utf8").catch(() => null);
+            const next = `${JSON.stringify(payload.cue, null, 2)}\n`;
             await writeFile(filePath, next, "utf8");
             res.setHeader("Content-Type", "application/json; charset=utf-8");
             res.end(JSON.stringify({ ok: true, path: payload.path, changed: previous !== next }));

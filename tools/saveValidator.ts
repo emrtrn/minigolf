@@ -194,19 +194,52 @@ function validateBehavior(value: unknown, label: string): Record<string, unknown
   return behavior;
 }
 
-/** Validates an optional audio cue reference (`{ clipId, volume?, loop?, spatial? }`). */
+const AUDIO_SOURCE_TYPES = new Set(["sound", "soundCue"]);
+
+/**
+ * Validates an optional audio component.
+ * When `sourceType` is `"soundCue"`, `clipId` may be empty and `sourceId` must be present.
+ * Otherwise `clipId` must be a non-empty string (legacy raw clip reference).
+ */
 function validateAudio(value: unknown, label: string): Record<string, unknown> | undefined {
   if (value === undefined) return undefined;
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error(`${label} audio must be an object`);
   }
   const input = value as Record<string, unknown>;
-  if (typeof input.clipId !== "string" || input.clipId.length === 0) {
+  if (typeof input.clipId !== "string") {
+    throw new Error(`${label} audio.clipId must be a string`);
+  }
+  const isCue = input.sourceType === "soundCue";
+  if (!isCue && input.clipId.length === 0) {
     throw new Error(`${label} audio.clipId must be a non-empty string`);
   }
   const audio: Record<string, unknown> = { clipId: input.clipId };
+  if (input.sourceId !== undefined) {
+    if (typeof input.sourceId !== "string" || input.sourceId.length === 0) {
+      throw new Error(`${label} audio.sourceId must be a non-empty string`);
+    }
+    audio.sourceId = input.sourceId;
+  }
+  if (isCue && !audio.sourceId) {
+    throw new Error(`${label} audio.sourceId is required when sourceType is "soundCue"`);
+  }
+  if (input.sourceType !== undefined) {
+    if (!AUDIO_SOURCE_TYPES.has(input.sourceType as string)) {
+      throw new Error(`${label} audio.sourceType must be "sound" or "soundCue"`);
+    }
+    audio.sourceType = input.sourceType;
+  }
   const volume = validateOptionalNumber(input.volume, `${label} audio.volume`, 0, 1);
   if (volume !== undefined) audio.volume = volume;
+  const pitch = validateOptionalNumber(input.pitch, `${label} audio.pitch`, 0.01, 8);
+  if (pitch !== undefined) audio.pitch = pitch;
+  const refDistance = validateOptionalNumber(input.refDistance, `${label} audio.refDistance`, 0, 100000);
+  if (refDistance !== undefined) audio.refDistance = refDistance;
+  const maxDistance = validateOptionalNumber(input.maxDistance, `${label} audio.maxDistance`, 0, 100000);
+  if (maxDistance !== undefined) audio.maxDistance = maxDistance;
+  const rolloff = validateOptionalNumber(input.rolloff, `${label} audio.rolloff`, 0, 100);
+  if (rolloff !== undefined) audio.rolloff = rolloff;
   if (input.loop !== undefined) {
     if (typeof input.loop !== "boolean") throw new Error(`${label} audio.loop must be boolean`);
     audio.loop = input.loop;
@@ -2291,6 +2324,163 @@ export function validateAssetUvwDef(value: unknown): Record<string, unknown> {
       if (axis <= 0 || axis > 1_000_000) throw new Error("uvw.scale values must be positive");
       return Number(axis.toFixed(4));
     }),
+  };
+}
+
+// ─── Sound Cue asset validation ────────────────────────────────────────────
+
+const SOUND_CUE_BUS_IDS = new Set(["master", "music", "sfx", "ui", "ambience"]);
+const SOUND_CUE_NODE_KINDS = new Set(["output", "source", "mixer", "random", "modulator", "loop", "delay"]);
+
+function validateSoundCueNode(value: unknown, idx: number): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`soundCue.nodes[${idx}] must be an object`);
+  }
+  const input = value as Record<string, unknown>;
+  if (typeof input.id !== "string" || input.id.length === 0) {
+    throw new Error(`soundCue.nodes[${idx}].id must be a non-empty string`);
+  }
+  if (!SOUND_CUE_NODE_KINDS.has(input.kind as string)) {
+    throw new Error(`soundCue.nodes[${idx}].kind "${input.kind}" is not a valid node kind`);
+  }
+  const node: Record<string, unknown> = { id: input.id, kind: input.kind };
+
+  if (input.kind === "source") {
+    if (typeof input.clipId !== "string" || input.clipId.length === 0) {
+      throw new Error(`soundCue.nodes[${idx}] (source) must have a non-empty clipId`);
+    }
+    node.clipId = input.clipId;
+    if (input.loop !== undefined) {
+      if (typeof input.loop !== "boolean") throw new Error(`soundCue.nodes[${idx}].loop must be boolean`);
+      node.loop = input.loop;
+    }
+  }
+
+  for (const key of ["volume", "pitch"] as const) {
+    if (input[key] !== undefined) {
+      const v = validateOptionalNumber(input[key], `soundCue.nodes[${idx}].${key}`, 0, 10);
+      if (v !== undefined) node[key] = v;
+    }
+  }
+
+  if (input.kind === "modulator") {
+    for (const key of ["volumeMin", "volumeMax"] as const) {
+      if (input[key] !== undefined) {
+        const v = validateOptionalNumber(input[key], `soundCue.nodes[${idx}].${key}`, 0, 10);
+        if (v !== undefined) node[key] = v;
+      }
+    }
+    for (const key of ["pitchMin", "pitchMax"] as const) {
+      if (input[key] !== undefined) {
+        const v = validateOptionalNumber(input[key], `soundCue.nodes[${idx}].${key}`, 0.01, 10);
+        if (v !== undefined) node[key] = v;
+      }
+    }
+  }
+
+  if (input.kind === "delay") {
+    for (const key of ["secondsMin", "secondsMax"] as const) {
+      if (input[key] !== undefined) {
+        const v = validateOptionalNumber(input[key], `soundCue.nodes[${idx}].${key}`, 0, 60);
+        if (v !== undefined) node[key] = v;
+      }
+    }
+  }
+
+  if (input.kind === "random") {
+    if (input.weights !== undefined) {
+      if (!Array.isArray(input.weights)) throw new Error(`soundCue.nodes[${idx}].weights must be an array`);
+      node.weights = (input.weights as unknown[]).map((w, wi) => {
+        if (typeof w !== "number" || !Number.isFinite(w) || w < 0) {
+          throw new Error(`soundCue.nodes[${idx}].weights[${wi}] must be a non-negative number`);
+        }
+        return w;
+      });
+    }
+    if (input.withoutReplacement !== undefined) {
+      if (typeof input.withoutReplacement !== "boolean") {
+        throw new Error(`soundCue.nodes[${idx}].withoutReplacement must be boolean`);
+      }
+      node.withoutReplacement = input.withoutReplacement;
+    }
+  }
+
+  return node;
+}
+
+function validateSoundCueConnection(value: unknown, idx: number): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`soundCue.connections[${idx}] must be an object`);
+  }
+  const input = value as Record<string, unknown>;
+  if (typeof input.from !== "string" || input.from.length === 0) {
+    throw new Error(`soundCue.connections[${idx}].from must be a non-empty string`);
+  }
+  if (typeof input.to !== "string" || input.to.length === 0) {
+    throw new Error(`soundCue.connections[${idx}].to must be a non-empty string`);
+  }
+  return { from: input.from, to: input.to };
+}
+
+export function validateSoundCueAsset(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("soundCue must be an object");
+  }
+  const input = value as Record<string, unknown>;
+  if (input.schema !== 1) throw new Error("soundCue.schema must be 1");
+  if (input.type !== "soundCue") throw new Error('soundCue.type must be "soundCue"');
+  if (typeof input.name !== "string" || input.name.trim().length === 0) {
+    throw new Error("soundCue.name must be a non-empty string");
+  }
+  if (!input.output || typeof input.output !== "object" || Array.isArray(input.output)) {
+    throw new Error("soundCue.output must be an object");
+  }
+  const outputInput = input.output as Record<string, unknown>;
+  const outputObj: Record<string, unknown> = {};
+  if (outputInput.volume !== undefined) {
+    const v = validateOptionalNumber(outputInput.volume, "soundCue.output.volume", 0, 10);
+    if (v !== undefined) outputObj.volume = v;
+  }
+  if (outputInput.pitch !== undefined) {
+    const v = validateOptionalNumber(outputInput.pitch, "soundCue.output.pitch", 0.01, 10);
+    if (v !== undefined) outputObj.pitch = v;
+  }
+  if (outputInput.bus !== undefined) {
+    if (!SOUND_CUE_BUS_IDS.has(outputInput.bus as string)) {
+      throw new Error(`soundCue.output.bus "${outputInput.bus}" is not a valid bus id`);
+    }
+    outputObj.bus = outputInput.bus;
+  }
+  if (!Array.isArray(input.nodes)) throw new Error("soundCue.nodes must be an array");
+  if (!Array.isArray(input.connections)) throw new Error("soundCue.connections must be an array");
+
+  return {
+    schema: 1,
+    type: "soundCue",
+    name: input.name.trim(),
+    output: outputObj,
+    nodes: (input.nodes as unknown[]).map((n, i) => validateSoundCueNode(n, i)),
+    connections: (input.connections as unknown[]).map((c, i) => validateSoundCueConnection(c, i)),
+  };
+}
+
+export function validateSaveSoundCuePayload(value: unknown): {
+  path: string;
+  cue: Record<string, unknown>;
+} {
+  if (!value || typeof value !== "object") {
+    throw new Error("soundCue payload must be an object");
+  }
+  const input = value as Record<string, unknown>;
+  if (typeof input.path !== "string" || !input.path.endsWith(".soundcue.json")) {
+    throw new Error("soundCue payload path must end with .soundcue.json");
+  }
+  if (input.path.includes("..")) {
+    throw new Error("soundCue payload path must not contain ..");
+  }
+  return {
+    path: input.path,
+    cue: validateSoundCueAsset(input.cue),
   };
 }
 

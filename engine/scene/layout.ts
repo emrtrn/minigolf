@@ -30,10 +30,33 @@ export interface LayoutBehavior {
 }
 
 export interface LayoutAudio {
+  /**
+   * Raw sound clip ID (manifest `sound` asset). Legacy field; use `sourceId` +
+   * `sourceType` for new authoring. When `sourceType` is absent or `"sound"`,
+   * `clipId` is the active reference.
+   */
   clipId: string;
+  /**
+   * Explicit source asset ID when overriding the legacy `clipId` path.
+   * Use together with `sourceType` to point at a Sound Cue or raw sound.
+   */
+  sourceId?: string;
+  /** Distinguishes a raw `"sound"` asset from a `"soundCue"` graph asset. */
+  sourceType?: "sound" | "soundCue";
   volume?: number;
+  /** Pitch / playback-rate multiplier (1 = unchanged). Absent means the runtime default. */
+  pitch?: number;
   loop?: boolean;
   spatial?: boolean;
+  /**
+   * Spatial attenuation (only meaningful when `spatial` is true). These map
+   * directly to the runtime `PannerNode`: `refDistance` is the radius of full
+   * volume, `maxDistance` clamps falloff, `rolloff` is the falloff factor.
+   * Absent fields fall back to the runtime defaults.
+   */
+  refDistance?: number;
+  maxDistance?: number;
+  rolloff?: number;
   /** Play this cue automatically when the scene loads (ambient). Absent means false. */
   autoPlay?: boolean;
 }

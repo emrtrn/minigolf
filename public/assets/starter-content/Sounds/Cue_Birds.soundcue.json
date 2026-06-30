@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "type": "soundCue",
+  "name": "Cue_Birds",
+  "output": {
+    "volume": 1,
+    "pitch": 1,
+    "bus": "sfx"
+  },
+  "nodes": [
+    {
+      "id": "output",
+      "kind": "output",
+      "volume": 1,
+      "pitch": 1
+    },
+    {
+      "id": "source-1",
+      "kind": "source",
+      "clipId": "starter-snd-birds-01",
+      "volume": 1,
+      "pitch": 1
+    }
+  ],
+  "connections": [
+    {
+      "from": "source-1",
+      "to": "output"
+    }
+  ]
+}

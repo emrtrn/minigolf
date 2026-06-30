@@ -78,6 +78,17 @@ import {
   resolveSpatialPannerConfig,
 } from "../engine/audio/audioSubsystem";
 import { DEFAULT_AUDIO_CLIP_MANIFEST, audioClipById } from "../engine/assets/audio";
+import { evaluateSoundCue, validateSoundCueGraph } from "../engine/audio/soundCueEvaluator";
+import type { SoundCueAsset } from "../engine/audio/soundCueTypes";
+import {
+  AUDIO_BUS_IDS,
+  MENU_DUCK_MIX,
+  createDefaultBusVolumes,
+  effectiveBusGain,
+  isAudioBusId,
+  mergeMixSnapshot,
+  normalizeBusVolume,
+} from "../engine/audio/audioBus";
 import { KeyboardInputSource } from "../src/input/keyboardInputSource";
 import {
   facingYawFromMove,
@@ -395,6 +406,9 @@ import {
   type AssetCollisionDef,
 } from "../engine/scene/collision";
 import {
+  AMBIENT_SOUND_ASSET_ID,
+  isAmbientSoundAssetId,
+  isMarkerAssetId,
   isPlayerStartAssetId,
   isProceduralAssetId,
   PLAYER_START_ASSET_ID,
@@ -526,6 +540,19 @@ function listPublicFiles(root: string): string[] {
   return files.sort((a, b) => a.localeCompare(b));
 }
 
+function findManifestStaticMeshFixture(manifest: AssetManifest): AssetRecord {
+  const fixture = manifest.assets.find(
+    (asset) =>
+      assetType(asset) === "staticMesh" &&
+      assetPath(asset).endsWith(".glb") &&
+      asset.runtime &&
+      typeof asset.runtime.loadGroup === "string" &&
+      typeof asset.runtime.bytes === "number",
+  );
+  if (!fixture) throw new Error("Expected at least one static mesh fixture in the asset manifest.");
+  return fixture;
+}
+
 // 1. Entity ids must stay byte-for-byte in sync with editor selectionId.
 check("instance id matches selectionId", () => {
   assert.equal(
@@ -552,6 +579,11 @@ check("actor id matches selectionId", () => {
   assert.equal(actorInstanceEntityId(4), selectionId({ kind: "actor", index: 4 }));
 });
 
+const assetManifest = JSON.parse(
+  readFileSync("public/assets/manifest.json", "utf8"),
+) as AssetManifest;
+const staticMeshFixture = findManifestStaticMeshFixture(assetManifest);
+
 // 2. Round-trip on a self-contained, project-agnostic fixture that exercises the
 // same legacy-adapter paths a real saved scene would: a placed static mesh (mesh +
 // transform components), a default directional light, and a scripted character
@@ -562,7 +594,7 @@ const layout: RoomLayout = {
   schema: 1,
   name: "legacy-adapter-fixture",
   loadGroups: [],
-  instances: [{ assetId: "starter-sm-crate", placements: [{ position: [0, 0, 0] }] }],
+  instances: [{ assetId: staticMeshFixture.id, placements: [{ position: [0, 0, 0] }] }],
   characters: [
     {
       assetId: "demo-character",
@@ -576,9 +608,6 @@ const layout: RoomLayout = {
   worldSettings: { staticObjectsCastShadow: true, ambientIntensity: 1, killZ: -30 },
 };
 ensureDefaultSceneLights(layout);
-const assetManifest = JSON.parse(
-  readFileSync("public/assets/manifest.json", "utf8"),
-) as AssetManifest;
 const doc = roomLayoutToSceneDocument(layout);
 check("asset manifest validates against the public assets tree", () => {
   const report = validateAssetManifest(assetManifest, {
@@ -591,15 +620,44 @@ check("asset manifest validates against the public assets tree", () => {
   assert.equal(report.assetCount, assetManifest.assets.length);
 });
 check("asset manifest helpers expose canonical path, load group, and byte size", () => {
-  const cube = assetManifest.assets.find((asset) => asset.id === "shape-cube");
-  assert.ok(cube);
-  assert.equal(assetType(cube), "staticMesh");
-  assert.equal(
-    assetPath(cube),
-    "assets/starter-content/StaticMeshes/Shapes/Shape_Cube.glb",
-  );
-  assert.equal(assetLoadGroup(cube), "Shapes");
-  assert.equal(assetByteSize(cube), 3932);
+  assert.equal(assetType(staticMeshFixture), "staticMesh");
+  assert.equal(assetPath(staticMeshFixture), staticMeshFixture.path);
+  assert.equal(assetLoadGroup(staticMeshFixture), staticMeshFixture.runtime.loadGroup);
+  assert.equal(assetByteSize(staticMeshFixture), staticMeshFixture.runtime.bytes);
+});
+check("asset manifest rejects stale DevelopmentContent parent texture variants", () => {
+  const report = validateAssetManifest({
+    version: 1,
+    generated: "2026-06-30",
+    ktx2: false,
+    assets: [
+      {
+        id: "stale-lightmask",
+        name: "Stale Lightmask",
+        assetType: "texture",
+        category: "LightMasks",
+        path: "assets/DevelopmentContent/Textures/LightMasks/circle_a.png",
+        tags: [],
+        placeable: false,
+        placement: {
+          surface: "floor",
+          snapToWall: false,
+          allowRotation: false,
+          allowScale: false,
+        },
+        runtime: {
+          loadGroup: "LightMasks",
+          castShadow: false,
+          receiveShadow: false,
+          collision: false,
+          bytes: 1,
+        },
+        license: "Unknown",
+      },
+    ],
+  });
+  assert.equal(report.errorCount, 1);
+  assert.equal(report.issues[0]?.code, "asset-texture-variant-parent");
 });
 check("asset manifest classifies Sound Cue assets separately from prefab JSON", () => {
   const cue = assetManifest.assets.find((asset) => asset.id === "sc-footstep-stone");
@@ -1691,6 +1749,92 @@ check("layout audio maps to a readable audio component", () => {
   });
 });
 
+check("readAudioComponent surfaces cue source + pitch + spatial attenuation overrides", () => {
+  const fixture: RoomLayout = {
+    schema: 1,
+    name: "ambient",
+    loadGroups: [],
+    instances: [
+      {
+        assetId: "marker:ambientSound",
+        placements: [
+          {
+            position: [1, 0, 2],
+            audio: {
+              clipId: "",
+              sourceId: "cue.fire_loop",
+              sourceType: "soundCue",
+              volume: 0.5,
+              pitch: 1.2,
+              loop: true,
+              spatial: true,
+              refDistance: 3,
+              maxDistance: 40,
+              rolloff: 1.5,
+              autoPlay: true,
+            },
+          },
+        ],
+      },
+    ],
+    characters: [],
+    lights: [],
+  };
+
+  const entity = roomLayoutToSceneDocument(fixture).entities.find(
+    (candidate) => candidate.id === instanceEntityId("marker:ambientSound", 0),
+  );
+  // The source type / id must round-trip (a prior bug dropped them, so a cue-sourced
+  // ambient sound silently fell back to the empty clipId at runtime).
+  assert.deepEqual(entity ? readAudioComponent(entity) : undefined, {
+    clipId: "",
+    sourceId: "cue.fire_loop",
+    sourceType: "soundCue",
+    volume: 0.5,
+    pitch: 1.2,
+    loop: true,
+    spatial: true,
+    refDistance: 3,
+    maxDistance: 40,
+    rolloff: 1.5,
+    autoPlay: true,
+  });
+});
+
+check("readAudioComponent tolerates partial Actor Blueprint props (cue, no clipId/volume)", () => {
+  // An Actor Blueprint Audio component stores only the props the author set, with
+  // no adapter defaults (actorInstanceToEntity copies props verbatim). A cue source
+  // typically has no `clipId` and no `volume`; the reader must still surface it
+  // (defaulting volume/loop/spatial) rather than returning undefined — otherwise
+  // the actor is silent in Play.
+  const entity = {
+    id: "actor:0",
+    components: {
+      Audio: {
+        sourceType: "soundCue",
+        sourceId: "denemecue-soundcue",
+        loop: true,
+        spatial: true,
+        autoPlay: true,
+      },
+    },
+  };
+  assert.deepEqual(readAudioComponent(entity as never), {
+    clipId: "",
+    sourceId: "denemecue-soundcue",
+    sourceType: "soundCue",
+    volume: 1,
+    loop: true,
+    spatial: true,
+    autoPlay: true,
+  });
+  // Still rejects an Audio component with neither a clip nor a cue source.
+  assert.equal(
+    readAudioComponent({ id: "x", components: { Audio: { loop: true } } } as never),
+    undefined,
+  );
+});
+
 // 3 Actors & Components: the official component list now includes
 // ParticleEmitter and Interaction. They have no adapter authoring path yet
 // (next slice), so these check the reader validation directly off a hand-built
@@ -1894,6 +2038,317 @@ check("audio subsystem records a spatial play's position; listener pose is safe 
   audio.update({ deltaSeconds: 0.016, elapsedSeconds: 0.016, frame: 1 });
   assert.deepEqual(audio.playedRequests(), [
     { clipId: "footstep", spatial: true, position: [4, 0, -2] },
+  ]);
+});
+
+// --- Sound Cue evaluator (pure, headless) -------------------------------------
+//
+// A deterministic [0,1) generator: returns the queued values in order, then 0.
+// Pass it as the evaluator's `rng` so random/modulator/delay picks are exact.
+const seqRng = (...values: number[]): (() => number) => {
+  let i = 0;
+  return () => values[i++] ?? 0;
+};
+
+// Minimal cue builder: just the node/connection lists with sensible defaults.
+const makeCue = (
+  nodes: SoundCueAsset["nodes"],
+  connections: SoundCueAsset["connections"],
+  output: SoundCueAsset["output"] = {},
+): SoundCueAsset => ({ schema: 1, type: "soundCue", name: "test-cue", output, nodes, connections });
+
+check("sound cue evaluator emits a single event for source → output", () => {
+  const cue = makeCue(
+    [
+      { id: "out", kind: "output" },
+      { id: "src", kind: "source", clipId: "clipA", volume: 0.5, pitch: 1.2 },
+    ],
+    [{ from: "src", to: "out" }],
+  );
+  assert.deepEqual(evaluateSoundCue(cue), [
+    { clipId: "clipA", volume: 0.5, pitch: 1.2, loop: false, delaySeconds: 0 },
+  ]);
+});
+
+check("sound cue evaluator scales by output node, then by cue.output", () => {
+  // Output node volume/pitch override and multiply the source.
+  const viaNode = makeCue(
+    [
+      { id: "out", kind: "output", volume: 0.5, pitch: 2 },
+      { id: "src", kind: "source", clipId: "c" },
+    ],
+    [{ from: "src", to: "out" }],
+  );
+  assert.deepEqual(evaluateSoundCue(viaNode), [
+    { clipId: "c", volume: 0.5, pitch: 2, loop: false, delaySeconds: 0 },
+  ]);
+
+  // When the output node omits volume, cue.output.volume is used as the scale.
+  const viaOutput = makeCue(
+    [
+      { id: "out", kind: "output" },
+      { id: "src", kind: "source", clipId: "c" },
+    ],
+    [{ from: "src", to: "out" }],
+    { volume: 0.25 },
+  );
+  assert.equal(evaluateSoundCue(viaOutput)[0]?.volume, 0.25);
+});
+
+check("sound cue evaluator plays every mixer input simultaneously", () => {
+  const cue = makeCue(
+    [
+      { id: "out", kind: "output" },
+      { id: "mix", kind: "mixer" },
+      { id: "a", kind: "source", clipId: "clipA" },
+      { id: "b", kind: "source", clipId: "clipB" },
+    ],
+    [
+      { from: "a", to: "mix" },
+      { from: "b", to: "mix" },
+      { from: "mix", to: "out" },
+    ],
+  );
+  const events = evaluateSoundCue(cue);
+  assert.deepEqual(
+    events.map((e) => e.clipId),
+    ["clipA", "clipB"],
+  );
+  assert.ok(events.every((e) => e.delaySeconds === 0 && e.loop === false));
+});
+
+check("sound cue evaluator random picks one input by weight and rng", () => {
+  const cue = makeCue(
+    [
+      { id: "out", kind: "output" },
+      { id: "rnd", kind: "random", weights: [3, 1] },
+      { id: "a", kind: "source", clipId: "clipA" },
+      { id: "b", kind: "source", clipId: "clipB" },
+    ],
+    [
+      { from: "a", to: "rnd" },
+      { from: "b", to: "rnd" },
+      { from: "rnd", to: "out" },
+    ],
+  );
+  // total weight 4: cursor < 3 → first input, else second.
+  assert.deepEqual(
+    evaluateSoundCue(cue, seqRng(0.7)).map((e) => e.clipId),
+    ["clipA"],
+  );
+  assert.deepEqual(
+    evaluateSoundCue(cue, seqRng(0.9)).map((e) => e.clipId),
+    ["clipB"],
+  );
+});
+
+check("sound cue evaluator modulator applies deterministic vol/pitch range", () => {
+  const cue = makeCue(
+    [
+      { id: "out", kind: "output" },
+      { id: "mod", kind: "modulator", volumeMin: 0.5, volumeMax: 1.5, pitchMin: 1, pitchMax: 2 },
+      { id: "src", kind: "source", clipId: "c" },
+    ],
+    [
+      { from: "src", to: "mod" },
+      { from: "mod", to: "out" },
+    ],
+  );
+  // rng 0.5 for volume → 1.0, rng 0.5 for pitch → 1.5 (consumed in that order).
+  assert.deepEqual(evaluateSoundCue(cue, seqRng(0.5, 0.5)), [
+    { clipId: "c", volume: 1, pitch: 1.5, loop: false, delaySeconds: 0 },
+  ]);
+});
+
+check("sound cue evaluator loop node forces downstream loop", () => {
+  const cue = makeCue(
+    [
+      { id: "out", kind: "output" },
+      { id: "loop", kind: "loop" },
+      { id: "src", kind: "source", clipId: "c", loop: false },
+    ],
+    [
+      { from: "src", to: "loop" },
+      { from: "loop", to: "out" },
+    ],
+  );
+  assert.equal(evaluateSoundCue(cue)[0]?.loop, true);
+});
+
+check("sound cue evaluator source.loop is honoured without a loop node", () => {
+  const cue = makeCue(
+    [
+      { id: "out", kind: "output" },
+      { id: "src", kind: "source", clipId: "c", loop: true },
+    ],
+    [{ from: "src", to: "out" }],
+  );
+  assert.equal(evaluateSoundCue(cue)[0]?.loop, true);
+});
+
+check("sound cue evaluator delay offsets downstream events", () => {
+  const cue = makeCue(
+    [
+      { id: "out", kind: "output" },
+      { id: "delay", kind: "delay", secondsMin: 0.5, secondsMax: 0.5 },
+      { id: "src", kind: "source", clipId: "c" },
+    ],
+    [
+      { from: "src", to: "delay" },
+      { from: "delay", to: "out" },
+    ],
+  );
+  assert.equal(evaluateSoundCue(cue)[0]?.delaySeconds, 0.5);
+});
+
+check("sound cue evaluator returns nothing without an output node", () => {
+  const cue = makeCue([{ id: "src", kind: "source", clipId: "c" }], []);
+  assert.deepEqual(evaluateSoundCue(cue), []);
+});
+
+check("validateSoundCueGraph accepts a well-formed cue", () => {
+  const cue = makeCue(
+    [
+      { id: "out", kind: "output" },
+      { id: "src", kind: "source", clipId: "c" },
+    ],
+    [{ from: "src", to: "out" }],
+  );
+  assert.deepEqual(validateSoundCueGraph(cue), []);
+});
+
+check("validateSoundCueGraph reports structural problems", () => {
+  const missingOutput = makeCue([{ id: "src", kind: "source", clipId: "c" }], []);
+  assert.deepEqual(validateSoundCueGraph(missingOutput), ["Missing output node"]);
+
+  const twoOutputs = makeCue(
+    [
+      { id: "out1", kind: "output" },
+      { id: "out2", kind: "output" },
+      { id: "src", kind: "source", clipId: "c" },
+    ],
+    [{ from: "src", to: "out1" }],
+  );
+  assert.ok(validateSoundCueGraph(twoOutputs).includes("Multiple output nodes"));
+
+  const dangling = makeCue(
+    [
+      { id: "out", kind: "output" },
+      { id: "src", kind: "source", clipId: "c" },
+    ],
+    [
+      { from: "src", to: "out" },
+      { from: "ghost", to: "out" },
+    ],
+  );
+  assert.ok(
+    validateSoundCueGraph(dangling).includes("Connection references missing node: ghost"),
+  );
+
+  const noClip = makeCue(
+    [
+      { id: "out", kind: "output" },
+      { id: "src", kind: "source", clipId: "" },
+    ],
+    [{ from: "src", to: "out" }],
+  );
+  assert.ok(validateSoundCueGraph(noClip).includes('Source node "src" has no clipId'));
+
+  const orphanOutput = makeCue([{ id: "out", kind: "output" }], []);
+  assert.ok(validateSoundCueGraph(orphanOutput).includes("Output node has no connected inputs"));
+});
+
+check("starter SC_Footstep_Stone cue validates and evaluates to one clip", () => {
+  const raw = JSON.parse(
+    readFileSync("public/assets/starter-content/Sounds/SC_Footstep_Stone.soundcue.json", "utf8"),
+  ) as SoundCueAsset;
+  assert.deepEqual(validateSoundCueGraph(raw), []);
+  assert.deepEqual(evaluateSoundCue(raw), [
+    { clipId: "starter-snd-footstep-stone", volume: 1, pitch: 1, loop: false, delaySeconds: 0 },
+  ]);
+});
+
+// --- Audio Bus Lite (pure mix model) ------------------------------------------
+
+check("createDefaultBusVolumes seeds every bus at unity", () => {
+  assert.deepEqual(createDefaultBusVolumes(), {
+    master: 1,
+    music: 1,
+    sfx: 1,
+    ui: 1,
+    ambience: 1,
+  });
+});
+
+check("normalizeBusVolume clamps to non-negative, defaults junk to 1", () => {
+  assert.equal(normalizeBusVolume(0.5), 0.5);
+  assert.equal(normalizeBusVolume(0), 0);
+  assert.equal(normalizeBusVolume(-2), 0);
+  assert.equal(normalizeBusVolume(undefined), 1);
+  assert.equal(normalizeBusVolume(Number.NaN), 1);
+});
+
+check("effectiveBusGain folds a sub-bus through master, master stands alone", () => {
+  const v = { ...createDefaultBusVolumes(), master: 0.5, music: 0.4 };
+  assert.equal(effectiveBusGain(v, "master"), 0.5);
+  assert.equal(effectiveBusGain(v, "music"), 0.2); // 0.4 × 0.5
+  assert.equal(effectiveBusGain(v, "sfx"), 0.5); // 1 × 0.5
+});
+
+check("mergeMixSnapshot overrides only listed buses without mutating the base", () => {
+  const base = createDefaultBusVolumes();
+  const merged = mergeMixSnapshot(base, { music: 0.25, sfx: -1 });
+  assert.equal(merged.music, 0.25);
+  assert.equal(merged.sfx, 0); // negative normalized to 0
+  assert.equal(merged.ui, 1);
+  assert.equal(base.music, 1); // base table untouched
+  assert.notStrictEqual(merged, base);
+});
+
+check("isAudioBusId guards the bus id union", () => {
+  assert.equal(isAudioBusId("music"), true);
+  assert.equal(isAudioBusId("master"), true);
+  assert.equal(isAudioBusId("nope"), false);
+  assert.equal(isAudioBusId(3), false);
+});
+
+check("MENU_DUCK_MIX ducks music/ambience/sfx but leaves ui and master", () => {
+  const ducked = mergeMixSnapshot(createDefaultBusVolumes(), MENU_DUCK_MIX);
+  assert.ok(ducked.music < 1 && ducked.ambience < 1 && ducked.sfx < 1);
+  assert.equal(ducked.ui, 1);
+  assert.equal(ducked.master, 1);
+});
+
+// --- Audio Bus Lite (subsystem, headless) -------------------------------------
+
+check("audio subsystem seeds every mix bus at unity", () => {
+  const audio = new AudioSubsystem();
+  for (const id of AUDIO_BUS_IDS) assert.equal(audio.getBusVolume(id), 1);
+});
+
+check("audio subsystem setBusVolume stores and clamps without a context", () => {
+  const audio = new AudioSubsystem();
+  audio.setBusVolume("music", 0.3);
+  assert.equal(audio.getBusVolume("music"), 0.3);
+  audio.setBusVolume("sfx", -5);
+  assert.equal(audio.getBusVolume("sfx"), 0);
+});
+
+check("audio subsystem mix snapshot ducks, resetMix restores", () => {
+  const audio = new AudioSubsystem();
+  audio.applyMixSnapshot(MENU_DUCK_MIX);
+  assert.equal(audio.getBusVolume("music"), 0.25);
+  assert.equal(audio.getBusVolume("ui"), 1); // untouched by the duck
+  audio.resetMix();
+  for (const id of AUDIO_BUS_IDS) assert.equal(audio.getBusVolume(id), 1);
+});
+
+check("audio subsystem play routes its bus into the recorded request", () => {
+  const audio = new AudioSubsystem();
+  audio.play("music-loop", { bus: "music", loop: true });
+  audio.update({ deltaSeconds: 0.016, elapsedSeconds: 0.016, frame: 1 });
+  assert.deepEqual(audio.playedRequests(), [
+    { clipId: "music-loop", bus: "music", loop: true },
   ]);
 });
 
@@ -7157,6 +7612,27 @@ check("player start marker is a procedural asset excluded from manifest loading"
     lights: [],
   };
   assert.deepEqual(sceneModelAssetIds(layout), ["furniture.sofa"]);
+});
+
+check("ambient sound marker is a procedural, runtime-non-rendered marker asset", () => {
+  assert.ok(isAmbientSoundAssetId(AMBIENT_SOUND_ASSET_ID));
+  assert.equal(isAmbientSoundAssetId(PLAYER_START_ASSET_ID), false);
+  // Both markers are excluded from manifest loading and from runtime mesh render.
+  assert.ok(isProceduralAssetId(AMBIENT_SOUND_ASSET_ID));
+  assert.ok(isMarkerAssetId(AMBIENT_SOUND_ASSET_ID));
+  assert.ok(isMarkerAssetId(PLAYER_START_ASSET_ID));
+  assert.equal(isMarkerAssetId("shape:cube"), false);
+  // The dispatcher builds a gizmo model for the ambient-sound marker.
+  assert.ok(createProceduralAssetGltf(AMBIENT_SOUND_ASSET_ID)?.scene);
+  const layout: RoomLayout = {
+    schema: 1,
+    name: "ambient",
+    loadGroups: [],
+    instances: [{ assetId: AMBIENT_SOUND_ASSET_ID, placements: [{ position: [0, 0, 0] }] }],
+    characters: [],
+    lights: [],
+  };
+  assert.deepEqual(sceneModelAssetIds(layout), []);
 });
 
 check("computePlayerStartSpawn: a marker sets the player's spawn position and yaw", () => {

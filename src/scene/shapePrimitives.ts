@@ -18,13 +18,17 @@ import {
 import type { BufferGeometry } from "three";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import {
+  isAmbientSoundAssetId,
   isPlayerStartAssetId,
   parseShapeAssetId,
   SHAPE_PLANE_SIZE,
   SHAPE_PRIMITIVE_SIZE,
   type ShapePrimitiveType,
 } from "@engine/scene/shapes";
-import { createPlayerStartMarkerGltf } from "./markerPrimitives";
+import {
+  createAmbientSoundMarkerGltf,
+  createPlayerStartMarkerGltf,
+} from "./markerPrimitives";
 
 /** Neutral, lit material colour shared by every primitive shape. */
 const SHAPE_PRIMITIVE_COLOR = "#b9c0c6";
@@ -98,6 +102,7 @@ export function createShapePrimitiveGltf(type: ShapePrimitiveType): GLTF {
  */
 export function createProceduralAssetGltf(assetId: string): GLTF | null {
   if (isPlayerStartAssetId(assetId)) return createPlayerStartMarkerGltf();
+  if (isAmbientSoundAssetId(assetId)) return createAmbientSoundMarkerGltf();
   const type = parseShapeAssetId(assetId);
   return type ? createShapePrimitiveGltf(type) : null;
 }

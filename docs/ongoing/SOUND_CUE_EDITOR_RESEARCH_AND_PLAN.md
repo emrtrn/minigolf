@@ -262,45 +262,92 @@ Cue playback; saf graph evaluator + ince Web Audio compiler olarak ayrılmalı. 
 ### Faz 1 - Sound Cue Lite
 
 - [x] `soundCue` asset type ve `*.soundcue.json` manifest desteği ekle.
-- [ ] Cue schema, normalize/validate ve loader/store katmanını ekle.
-- [ ] `SoundCueEditor` kabuğunu ekle.
-- [ ] Source, Output, Mixer, Random, Modulator, Loop, Delay node'larını destekle.
-- [ ] Editor preview play/stop akışını ekle.
-- [ ] Runtime cue evaluator'ı headless testlerle doğrula.
-- [ ] Audio component'ten `soundCue` seçip Game Mode'da çal.
-- [ ] `npm run build:verify` gate'ini geçir.
+- [x] Cue schema, normalize/validate ve loader/store katmanını ekle.
+  (`engine/audio/soundCueTypes.ts`, `src/editor/soundCueStore.ts`,
+   `tools/saveValidator.ts#validateSoundCueAsset`, `/__save-soundcue` endpoint)
+- [x] `SoundCueEditor` kabuğunu ekle.
+  (`src/editor/SoundCueEditor.ts`, CSS `src/editor/editorUi.css`)
+- [x] Source, Output, Mixer, Random, Modulator, Loop, Delay node'larını destekle.
+  (evaluator + editor UI)
+- [x] Editor preview play/stop akışını ekle.
+  (`SoundCueEditor.preview()` / `stopPreview()`)
+- [x] Runtime cue evaluator'ı headless testlerle doğrula.
+  (`engine/audio/soundCueEvaluator.ts`; `tools/engine-tests.ts` — 13 check:
+   source/output gain, mixer, weighted random, modulator, loop, delay,
+   `validateSoundCueGraph` ve gerçek `SC_Footstep_Stone` fixture'ı)
+- [x] Audio component'ten `soundCue` seçip Game Mode'da çal.
+  (`LayoutAudio.sourceId/sourceType`, `RuntimeSceneApp.playAutoPlayAudio`)
+- [x] `npm run build:verify` gate'ini geçir.
+  (build + 418 engine check + strict `verify:dist` yeşil)
 
 ### Faz 2 - Audio component ve spatial v1
 
-- [ ] `sourceId/sourceType` modelini `clipId` uyumluluğunu koruyarak ekle.
+- [x] `sourceId/sourceType` modelini `clipId` uyumluluğunu koruyarak ekle.
+  (Faz 1 ile birlikte tamamlandı: `layout.ts`, `components.ts`, `adapter`, `saveValidator`)
 - [x] Playback handle ile loop stop/fade desteği ekle.
 - [x] `spatial: true` için Web Audio `PannerNode` uygula. (emitter pozisyonu
   behavior/autoPlay üzerinden geçiyor; `AudioPlayOptions.position`)
 - [x] Listener konumunu runtime kamera/player üzerinden güncelle.
   (`AudioSubsystem.setListenerPose`, her frame kameradan)
 - [x] Basit sphere attenuation alanlarını ekle. (runtime `refDistance/maxDistance/
-  rolloff` defaultlu, `resolveSpatialPannerConfig`; authored editör alanları sonraya)
+  rolloff` defaultlu, `resolveSpatialPannerConfig`; **authored editör alanları da
+  tamam** — `LayoutAudio.refDistance/maxDistance/rolloff` + Details "Attenuation"
+  bölümü, save allowlist, `playAutoPlayAudio` plumbing)
 - [x] Runtime bundle içinde editor import sızıntısı olmadığını doğrula.
   (`npm run build` yeşil; audioSubsystem editör import etmiyor)
+- [x] Audio component'i Unreal'a yaklaştır: `pitch` (Pitch Multiplier) + Attenuation
+  alanları Details panelinde. (`LayoutAudio.pitch`, `AudioComponent.pitch`)
+  **İki editör yüzeyi de tipli forma kavuştu:** (1) sahne placement Details paneli
+  (`EditorUi.renderAudioFields`), (2) Actor Blueprint editörü
+  (`ActorScriptEditor.audioFields` — Source Type / Sound / Cue picker + Volume /
+  Pitch / Auto Play / Loop / Spatial + Attenuation; daha önce sadece raw-props
+  JSON gösteriyordu). Props `actorInstanceToEntity` üzerinden verbatim entity
+  "Audio" component data'sına akıyor.
+- [x] **AmbientSound aktörü** (Add Actor > Sounds > Ambient Sound): `marker:ambientSound`
+  synthetic marker (PlayerStart deseni), hoparlör billboard ikonu + tel küre gizmo,
+  drag-to-place; placement önceden bağlı bir `audio` component'le gelir (autoPlay+loop+
+  spatial). Runtime gizmo'yu çizmez ama sesi (spatial, transform'da) çalar.
+- [x] **Bug fix:** `readAudioComponent` artık `sourceId/sourceType`'ı yüzeye çıkarıyor
+  ve boş `clipId`'i cue-source için kabul ediyor — daha önce cue-kaynaklı autoPlay
+  sessizce düşüyordu.
 
 ### Faz 3 - Audio Bus Lite
 
-- [ ] `master`, `music`, `sfx`, `ui`, `ambience` bus'larını ekle.
-- [ ] Cue output'u bus'a route et.
-- [ ] Bus gain kontrolleri ve mix snapshot desteği ekle.
-- [ ] Pause/menu ducking örneği ekle.
-- [ ] Bus davranışını gerçek audio output olmadan test et.
+- [x] `master`, `music`, `sfx`, `ui`, `ambience` bus'larını ekle.
+  (`engine/audio/audioBus.ts` saf model + `AudioSubsystem` lazy GainNode graph:
+   `master` → destination, diğerleri → `master`)
+- [x] Cue output'u bus'a route et.
+  (`AudioPlayOptions.bus`; `connectSpatialOutput` bus node'una bağlanıyor;
+   `RuntimeSceneApp.playAutoPlayAudio` `cue.output.bus`'ı geçiyor)
+- [x] Bus gain kontrolleri ve mix snapshot desteği ekle.
+  (`getBusVolume` / `setBusVolume(fade)` / `applyMixSnapshot` / `resetMix`,
+   saf `mergeMixSnapshot` + `effectiveBusGain`)
+- [x] Pause/menu ducking örneği ekle.
+  (`MENU_DUCK_MIX` snapshot + `applyMixSnapshot`/`resetMix` duck→restore döngüsü;
+   somut pause UI'ına bağlama proje tarafında)
+- [x] Bus davranışını gerçek audio output olmadan test et.
+  (`tools/engine-tests.ts` — 13 check: saf bus modeli + headless subsystem
+   gain/snapshot/duck/route)
 
 ### Faz 4 - İleri Unreal parity adayları
 
-- [ ] Parametre tabanlı switch/branch/crossfade node'ları.
-- [ ] Distance crossfade.
-- [ ] Reusable attenuation preset asset'i.
-- [ ] Forge collider'larına karşı occlusion ray testleri.
-- [ ] World Settings içinde reverb/audio volume desteği.
-- [ ] Cue debug overlay.
-- [ ] Voice limit / concurrency.
-- [ ] Procedural MetaSound benzeri node'lar.
+Önceliklendirme (2026-06-30). P1 = en sinerjik/ucuz; P2 = ağır, ertelenebilir kuyruk.
+
+- [ ] (P1) Reusable attenuation preset asset'i. — Unreal "Attenuation Settings" picker
+  karşılığı; AmbientSound'lar ortak bir preset'e referans verir.
+- [ ] (P1) Cue debug overlay (`?debug`). — aktif voice/cue görselleştirme.
+- [ ] (P1) Voice limit / concurrency. — bellek/CPU spike riskini kapatır;
+  Unreal "Priority" / "Play Multiple Instances" parity'si buraya oturur.
+- [ ] (P2) Parametre tabanlı switch/branch/crossfade node'ları. (önce runtime cue param.)
+- [ ] (P2) Distance crossfade.
+- [ ] (P2) World Settings içinde reverb/audio volume desteği.
+- [ ] (P2) Forge collider'larına karşı occlusion ray testleri.
+- [ ] (P2) Lowpass/Highpass filtreler + Source Effect Chain (DSP). — Unreal audio
+  component'inde var; v1'de eklenmedi.
+- [ ] (P2) Procedural MetaSound benzeri node'lar.
+
+Not: editörde AmbientSound önizleme sesi yok (yalnızca Play'de duyulur); Unreal'daki
+Details "Play/Stop" düğmeleri istenirse ayrı bir küçük P1 işi olarak eklenebilir.
 
 ## Riskler ve guardrail'ler
 
